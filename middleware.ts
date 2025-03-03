@@ -1,8 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Use proper catch-all route patterns with (.*)
+// Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
-  "/",
   "/sign-in(.*)", // This matches /sign-in and all routes under it
   "/sign-up(.*)", // This matches /sign-up and all routes under it
 ]);

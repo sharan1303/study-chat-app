@@ -83,11 +83,13 @@ export default function ModulesPage() {
   };
 
   const handleCreateSuccess = () => {
+    console.log("Module creation successful, closing dialog");
     setIsCreating(false);
     fetchModules();
   };
 
   const handleEditSuccess = () => {
+    console.log("Module edit successful, closing dialog");
     setEditingModule(null);
     fetchModules();
   };
@@ -130,14 +132,28 @@ export default function ModulesPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Your Modules</h2>
           {isSignedIn ? (
-            <Dialog open={isCreating} onOpenChange={setIsCreating}>
+            <Dialog
+              open={isCreating}
+              onOpenChange={(open) => {
+                console.log("Dialog open state changed:", open);
+                setIsCreating(open);
+              }}
+            >
               <DialogTrigger asChild>
-                <Button>
+                <Button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("Create Module button clicked");
+                    setIsCreating(true);
+                  }}
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Create Module
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-[600px]">
                 <ModuleForm onSuccess={handleCreateSuccess} />
               </DialogContent>
             </Dialog>

@@ -74,15 +74,17 @@ To learn more about the technologies used in this project:
 
 ## Todo List
 
-- [ ] Implement user authentication and profiles
+- [x] Implement user authentication and profiles
+- [x] Implement module creation and customization
+- [x] Create admin panel for managing modules and resources
 - [ ] Add file upload functionality for study materials
 - [ ] Create a dashboard for tracking study progress
-- [ ] Implement module creation and customization
-- [ ] Add support for more AI models
 - [ ] Improve search capabilities with better context handling
+- [ ] Remodel the UI for better user experience, similar to Perplexity
+- [ ] Implement a dark mode theme
+- [ ] Add support for more AI models
 - [ ] Create mobile-responsive design improvements
 - [ ] Add unit and integration tests
 - [ ] Implement data persistence for chat history
 - [ ] Add export functionality for chat conversations
-- [ ] Create admin panel for managing modules and resources
 - [ ] Implement collaborative study sessions

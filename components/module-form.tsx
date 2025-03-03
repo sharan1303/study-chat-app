@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { z } from "zod";
@@ -60,6 +60,7 @@ interface ModuleFormProps {
 export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,24 +71,53 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
     },
   });
 
+  // Reset form error when form values change
+  const formValues = form.watch();
+  useEffect(() => {
+    setFormError(null);
+  }, [formValues]);
+
   const onSubmit = async (values: FormValues) => {
+    console.log("Form submitted with values:", values);
+    setFormError(null);
+
     try {
       setIsSubmitting(true);
 
       if (initialData) {
         // Update existing module
-        await axios.put(`/api/modules/${initialData.id}`, values);
+        console.log("Updating module:", initialData.id);
+        const response = await axios.put(
+          `/api/modules/${initialData.id}`,
+          values
+        );
+        console.log("Module updated response:", response.data);
         toast.success("Module updated");
       } else {
         // Create new module
-        await axios.post("/api/modules", values);
+        console.log("Creating new module");
+        const response = await axios.post("/api/modules", values, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        console.log("Module created response:", response.data);
         toast.success("Module created");
       }
 
-      onSuccess();
-      router.refresh();
+      // Wait a moment before closing the dialog to ensure the toast is visible
+      setTimeout(() => {
+        onSuccess();
+        router.refresh();
+      }, 500);
     } catch (error) {
       console.error("Error submitting form:", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Axios error details:", error.response?.data);
+        setFormError(error.response?.data?.error || "Failed to create module");
+      } else {
+        setFormError("An unexpected error occurred");
+      }
       toast.error(
         initialData ? "Failed to update module" : "Failed to create module"
       );
@@ -101,6 +131,12 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
       <h2 className="text-xl font-bold mb-4">
         {initialData ? "Edit Module" : "Create New Module"}
       </h2>
+
+      {formError && (
+        <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md mb-4">
+          {formError}
+        </div>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
