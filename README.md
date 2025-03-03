@@ -1,4 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StudyAI - AI-Powered Study Assistant
+
+This is an AI-powered study assistant application built with Next.js that helps students learn and understand their university modules through interactive chat conversations.
+
+## Project Overview
+
+StudyAI provides an intelligent chat interface where students can:
+
+- Ask questions about their course materials
+- Get explanations for complex concepts
+- Study with AI assistants specialized for different modules
+- Access their study modules and resources in one place
+
+The application uses the Vercel AI SDK to power conversations with AI models and provides a clean, modern UI built with shadcn/ui components.
+
+## Features
+
+- **AI Chat Interface**: Engage in natural conversations with AI about your study materials
+- **Module-Specific Assistants**: Each module has its own specialized AI assistant
+- **Resource Management**: Upload and organize study materials
+- **Progress Tracking**: Monitor your learning progress across different modules
 
 ## Getting Started
 
@@ -16,21 +36,53 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework**: Next.js 14 (App Router)
+- **UI Components**: shadcn/ui
+- **Styling**: Tailwind CSS
+- **AI Integration**: Vercel AI SDK
+- **Database**: Prisma with Supabase
+- **Search**: Perplexity API
+
+## Environment Variables
+
+Create a `.env.local` file with the following variables:
+
+```
+GOOGLE_API_KEY=your_google_api_key
+PERPLEXITY_API_KEY=your_perplexity_api_key
+DATABASE_URL=your_database_url
+```
+
+## Project Structure
+
+- `app/` - Next.js app router pages and API routes
+- `components/` - Reusable UI components
+- `lib/` - Utility functions and shared code
+- `prisma/` - Database schema and migrations
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+To learn more about the technologies used in this project:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Vercel AI SDK](https://sdk.vercel.ai/docs)
+- [shadcn/ui](https://ui.shadcn.com)
+- [Tailwind CSS](https://tailwindcss.com/docs)
+- [Prisma](https://www.prisma.io/docs)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Todo List
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [ ] Implement user authentication and profiles
+- [ ] Add file upload functionality for study materials
+- [ ] Create a dashboard for tracking study progress
+- [ ] Implement module creation and customization
+- [ ] Add support for more AI models
+- [ ] Improve search capabilities with better context handling
+- [ ] Create mobile-responsive design improvements
+- [ ] Add unit and integration tests
+- [ ] Implement data persistence for chat history
+- [ ] Add export functionality for chat conversations
+- [ ] Create admin panel for managing modules and resources
+- [ ] Implement collaborative study sessions
