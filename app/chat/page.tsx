@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, Suspense, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { BookOpen, Send, Loader2, Layers } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,13 +27,22 @@ import { ModulesDialog } from "@/components/modules-dialog";
 
 function ChatPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const moduleParam = searchParams.get("module");
 
   const [activeModule, setActiveModule] = useState(moduleParam || "cs101");
   const [showModulesDialog, setShowModulesDialog] = useState(false);
 
+  // Update active module when URL changes
+  useEffect(() => {
+    if (moduleParam) {
+      setActiveModule(moduleParam);
+    }
+  }, [moduleParam]);
+
   const { messages, input, handleInputChange, handleSubmit, status } = useChat({
     api: "/api/chat",
+    id: `module-${activeModule}`,
     body: {
       moduleId: activeModule,
     },
@@ -48,9 +57,19 @@ function ChatPageContent() {
     { id: "bio220", name: "Molecular Biology", icon: "🧬" },
   ];
 
+  const updateModuleInURL = (moduleId: string) => {
+    router.push(`/chat?module=${moduleId}`, { scroll: false });
+  };
+
   const handleModuleSelect = (moduleId: string) => {
     setActiveModule(moduleId);
+    updateModuleInURL(moduleId);
     setShowModulesDialog(false);
+  };
+
+  const handleModuleChange = (moduleId: string) => {
+    setActiveModule(moduleId);
+    updateModuleInURL(moduleId);
   };
 
   return (
@@ -73,7 +92,7 @@ function ChatPageContent() {
               <Layers className="h-4 w-4" />
               <span>Modules</span>
             </Button>
-            <Select value={activeModule} onValueChange={setActiveModule}>
+            <Select value={activeModule} onValueChange={handleModuleChange}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Select module" />
               </SelectTrigger>
@@ -106,7 +125,7 @@ function ChatPageContent() {
                     className={`cursor-pointer hover:bg-muted ${
                       activeModule === module.id ? "border-primary" : ""
                     }`}
-                    onClick={() => setActiveModule(module.id)}
+                    onClick={() => handleModuleChange(module.id)}
                   >
                     <CardHeader className="p-4">
                       <CardTitle className="text-lg flex items-center">
