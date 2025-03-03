@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Send, Loader2, Layers, MessageSquare } from "lucide-react";
 import axios from "axios";
@@ -30,7 +30,20 @@ interface Module {
   lastStudied: string | null;
 }
 
-export default function ChatPage() {
+// Loading component for Suspense fallback
+function ChatPageLoading() {
+  return (
+    <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+        <p className="text-muted-foreground">Loading chat...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main chat component that uses hooks
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const moduleParam = searchParams.get("module");
@@ -381,5 +394,14 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Export the page component with Suspense
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<ChatPageLoading />}>
+      <ChatPageContent />
+    </Suspense>
   );
 }
