@@ -2,8 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
-  "/sign-in(.*)", // This matches /sign-in and all routes under it
-  "/sign-up(.*)", // This matches /sign-up and all routes under it
+  "/", // Allow the homepage without authentication
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

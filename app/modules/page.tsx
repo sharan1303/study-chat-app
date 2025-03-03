@@ -35,7 +35,7 @@ interface Module {
 
 export default function ModulesPage() {
   const router = useRouter();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded } = useAuth();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -44,8 +44,6 @@ export default function ModulesPage() {
   const [activeTab, setActiveTab] = useState("all");
 
   const fetchModules = useCallback(async () => {
-    if (!isSignedIn) return;
-
     setLoading(true);
     try {
       const response = await axios.get("/api/modules");
@@ -56,17 +54,13 @@ export default function ModulesPage() {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn]);
+  }, []);
 
   useEffect(() => {
     if (isLoaded) {
-      if (isSignedIn) {
-        fetchModules();
-      } else {
-        setLoading(false);
-      }
+      fetchModules();
     }
-  }, [isLoaded, isSignedIn, fetchModules]);
+  }, [isLoaded, fetchModules]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -131,56 +125,26 @@ export default function ModulesPage() {
       <div className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Your Modules</h2>
-          {isSignedIn ? (
-            <Dialog
-              open={isCreating}
-              onOpenChange={(open) => {
-                console.log("Dialog open state changed:", open);
-                setIsCreating(open);
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log("Create Module button clicked");
-                    setIsCreating(true);
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Module
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <ModuleForm onSuccess={handleCreateSuccess} />
-              </DialogContent>
-            </Dialog>
-          ) : (
-            <SignInButton>
-              <Button>Sign In to Create Modules</Button>
-            </SignInButton>
-          )}
+          <Dialog
+            open={isCreating}
+            onOpenChange={(open) => {
+              console.log("Dialog open state changed:", open);
+              setIsCreating(open);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Module
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <ModuleForm onSuccess={handleCreateSuccess} />
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {!isLoaded ? (
-          <div className="flex h-40 w-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : !isSignedIn ? (
-          <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-            <h3 className="text-xl font-medium">
-              Sign in to view your modules
-            </h3>
-            <p className="text-muted-foreground">
-              Create and manage your study modules after signing in
-            </p>
-            <SignInButton>
-              <Button size="lg">Sign In</Button>
-            </SignInButton>
-          </div>
-        ) : loading ? (
+        {!isLoaded || loading ? (
           <div className="flex h-40 w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>

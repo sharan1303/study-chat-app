@@ -43,7 +43,7 @@ export default function RootLayout({
                   <SignUpButton mode="modal" />
                 </SignedOut>
                 <SignedIn>
-                  <UserButton afterSignOutUrl="/" />
+                  <UserButton />
                 </SignedIn>
               </div>
             </div>
