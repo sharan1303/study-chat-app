@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { BookOpen, Send, Loader2, Layers } from "lucide-react";
 
@@ -25,20 +25,21 @@ import {
 import { useChat } from "@ai-sdk/react";
 import { ModulesDialog } from "@/components/modules-dialog";
 
-export default function ChatPage() {
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const moduleParam = searchParams.get("module");
 
   const [activeModule, setActiveModule] = useState(moduleParam || "cs101");
   const [showModulesDialog, setShowModulesDialog] = useState(false);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
-    useChat({
-      api: "/api/chat",
-      body: {
-        moduleId: activeModule,
-      },
-    });
+  const { messages, input, handleInputChange, handleSubmit, status } = useChat({
+    api: "/api/chat",
+    body: {
+      moduleId: activeModule,
+    },
+  });
+
+  const isLoading = status === "streaming" || status === "submitted";
 
   const modules = [
     { id: "cs101", name: "Computer Science 101", icon: "💻" },
@@ -214,5 +215,19 @@ export default function ChatPage() {
         onModuleSelect={handleModuleSelect}
       />
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          Loading...
+        </div>
+      }
+    >
+      <ChatPageContent />
+    </Suspense>
   );
 }
