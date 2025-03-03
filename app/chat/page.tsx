@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { BookOpen, Send, Loader2, Layers } from "lucide-react";
+import { Send, Loader2, Layers, MessageSquare } from "lucide-react";
+import axios from "axios";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,34 +16,98 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@ai-sdk/react";
-import { ModulesDialog } from "@/components/modules-dialog";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-function ChatPageContent() {
+interface Module {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  progress: number;
+  lastStudied: string | null;
+}
+
+export default function ChatPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const moduleParam = searchParams.get("module");
 
-  const [activeModule, setActiveModule] = useState(moduleParam || "cs101");
-  const [showModulesDialog, setShowModulesDialog] = useState(false);
+  const [activeModule, setActiveModule] = useState<string | null>(moduleParam);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchModules = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get("/api/modules");
+      setModules(response.data);
+
+      // If no module is selected but we have modules, select the first one
+      if (!activeModule && response.data.length > 0) {
+        setActiveModule(response.data[0].id);
+        router.push(`/chat?module=${response.data[0].id}`, { scroll: false });
+      }
+    } catch (error) {
+      console.error("Error fetching modules:", error);
+      toast.error("Failed to load modules");
+    } finally {
+      setLoading(false);
+    }
+  }, [activeModule, router]);
+
+  useEffect(() => {
+    fetchModules();
+  }, [fetchModules]);
+
+  const updateModuleProgress = useCallback(
+    async (moduleId: string) => {
+      try {
+        const currentModule = modules.find((m) => m.id === moduleId);
+        if (!currentModule) return;
+
+        // Increment progress by a small amount (max 100)
+        const newProgress = Math.min(100, currentModule.progress + 2);
+
+        await axios.put(`/api/modules/${moduleId}/progress`, {
+          progress: newProgress,
+        });
+
+        // Update local state
+        setModules(
+          modules.map((m) =>
+            m.id === moduleId
+              ? {
+                  ...m,
+                  progress: newProgress,
+                  lastStudied: new Date().toISOString(),
+                }
+              : m
+          )
+        );
+      } catch (error) {
+        console.error("Error updating module progress:", error);
+      }
+    },
+    [modules]
+  );
 
   // Update active module when URL changes
   useEffect(() => {
     if (moduleParam) {
       setActiveModule(moduleParam);
+      // Update last studied time and increment progress when a module is selected
+      if (moduleParam) {
+        updateModuleProgress(moduleParam);
+      }
     }
-  }, [moduleParam]);
+  }, [moduleParam, updateModuleProgress]);
 
-  const { messages, input, handleInputChange, handleSubmit, status } = useChat({
+  const { messages, input, handleInputChange, status, append } = useChat({
     api: "/api/chat",
-    id: `module-${activeModule}`,
+    id: activeModule ? `module-${activeModule}` : undefined,
     body: {
       moduleId: activeModule,
     },
@@ -50,203 +115,271 @@ function ChatPageContent() {
 
   const isLoading = status === "streaming" || status === "submitted";
 
-  const modules = [
-    { id: "cs101", name: "Computer Science 101", icon: "💻" },
-    { id: "math201", name: "Advanced Mathematics", icon: "🧮" },
-    { id: "phys150", name: "Physics Fundamentals", icon: "⚛️" },
-    { id: "bio220", name: "Molecular Biology", icon: "🧬" },
-  ];
-
-  const updateModuleInURL = (moduleId: string) => {
+  const handleModuleChange = (moduleId: string) => {
+    setActiveModule(moduleId);
     router.push(`/chat?module=${moduleId}`, { scroll: false });
   };
 
-  const handleModuleSelect = (moduleId: string) => {
-    setActiveModule(moduleId);
-    updateModuleInURL(moduleId);
-    setShowModulesDialog(false);
+  // Function to manually send messages only when a module is selected
+  const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!activeModule || !input.trim()) return;
+
+    append({
+      role: "user",
+      content: input,
+    });
+
+    if (activeModule) {
+      updateModuleProgress(activeModule);
+    }
   };
 
-  const handleModuleChange = (moduleId: string) => {
-    setActiveModule(moduleId);
-    updateModuleInURL(moduleId);
-  };
+  const currentModule = modules.find((m) => m.id === activeModule);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center">
-          <div className="mr-4 flex">
-            <Button variant="ghost" className="flex items-center space-x-2">
-              <BookOpen className="h-5 w-5" />
-              <span className="font-bold">StudyAI</span>
-            </Button>
-          </div>
-          <div className="flex flex-1 items-center justify-end space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowModulesDialog(true)}
-              className="flex items-center gap-1"
-            >
-              <Layers className="h-4 w-4" />
-              <span>Modules</span>
-            </Button>
-            <Select value={activeModule} onValueChange={handleModuleChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select module" />
-              </SelectTrigger>
-              <SelectContent>
-                {modules.map((module) => (
-                  <SelectItem key={module.id} value={module.id}>
-                    <div className="flex items-center">
-                      <span className="mr-2">{module.icon}</span>
-                      <span>{module.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Sidebar */}
+      <div className="w-64 border-r bg-background flex flex-col">
+        <div className="p-4 border-b">
+          <h2 className="font-semibold text-lg flex items-center gap-2">
+            <Layers className="h-5 w-5" />
+            <span>Your Modules</span>
+          </h2>
         </div>
-      </header>
-      <main className="flex flex-1 flex-col md:flex-row">
-        <div className="hidden border-r md:block md:w-80 lg:w-96">
-          <div className="p-4">
-            <Tabs defaultValue="modules">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="modules">Modules</TabsTrigger>
-                <TabsTrigger value="resources">Resources</TabsTrigger>
-              </TabsList>
-              <TabsContent value="modules" className="mt-4 space-y-4">
-                {modules.map((module) => (
-                  <Card
-                    key={module.id}
-                    className={`cursor-pointer hover:bg-muted ${
-                      activeModule === module.id ? "border-primary" : ""
-                    }`}
-                    onClick={() => handleModuleChange(module.id)}
-                  >
-                    <CardHeader className="p-4">
-                      <CardTitle className="text-lg flex items-center">
-                        <span className="mr-2 text-2xl">{module.icon}</span>
-                        {module.name}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                ))}
+
+        <ScrollArea className="flex-1">
+          {loading ? (
+            <div className="flex justify-center items-center h-20">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            </div>
+          ) : modules.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">
+              <p>No modules found</p>
+              <Button
+                variant="link"
+                onClick={() => router.push("/modules")}
+                className="mt-2"
+              >
+                Create a module
+              </Button>
+            </div>
+          ) : (
+            <div className="p-2">
+              {modules.map((module) => (
+                <button
+                  key={module.id}
+                  onClick={() => handleModuleChange(module.id)}
+                  className={cn(
+                    "w-full text-left p-3 rounded-lg mb-1 flex items-center gap-2 transition-colors",
+                    module.id === activeModule
+                      ? "bg-primary/10 text-primary"
+                      : "hover:bg-muted"
+                  )}
+                >
+                  <span className="text-xl">{module.icon}</span>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="font-medium truncate">{module.name}</p>
+                    <div className="w-full bg-muted h-1.5 rounded-full mt-1">
+                      <div
+                        className="bg-primary h-1.5 rounded-full"
+                        style={{ width: `${module.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        <div className="p-3 border-t">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => router.push("/modules")}
+          >
+            Manage Modules
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Chat Header */}
+        {currentModule && (
+          <div className="border-b p-4 flex items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{currentModule.icon}</span>
+              <div>
+                <h1 className="font-bold text-lg">{currentModule.name}</h1>
+                {currentModule.description && (
+                  <p className="text-sm text-muted-foreground truncate max-w-md">
+                    {currentModule.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Chat Content */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {!activeModule ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center p-6 max-w-md">
+                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">
+                  Select a module to start chatting
+                </h3>
+                <p className="text-muted-foreground">
+                  Choose a module from the sidebar to begin your conversation
+                </p>
+              </div>
+            </div>
+          ) : (
+            <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+              <div className="px-4 border-b">
+                <TabsList>
+                  <TabsTrigger value="chat">Chat</TabsTrigger>
+                  <TabsTrigger value="resources">Resources</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent
+                value="chat"
+                className="flex-1 flex flex-col p-4 overflow-hidden"
+              >
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="space-y-4 pb-4">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-medium mb-2">
+                          Start a conversation
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Ask questions about your module content
+                        </p>
+                      </div>
+                    ) : (
+                      messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${
+                            message.role === "user"
+                              ? "justify-end"
+                              : "justify-start"
+                          }`}
+                        >
+                          <div
+                            className={`flex items-start gap-2 max-w-[80%] ${
+                              message.role === "user"
+                                ? "flex-row-reverse"
+                                : "flex-row"
+                            }`}
+                          >
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>
+                                {message.role === "user" ? "U" : "AI"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div
+                              className={`rounded-lg px-4 py-2 ${
+                                message.role === "user"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted"
+                              }`}
+                            >
+                              <div className="prose dark:prose-invert">
+                                {message.content}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {isLoading && (
+                      <div className="flex justify-start">
+                        <div className="flex items-start gap-2 max-w-[80%]">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback>AI</AvatarFallback>
+                          </Avatar>
+                          <div className="rounded-lg bg-muted px-4 py-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                <form
+                  onSubmit={handleSendMessage}
+                  className="pt-4 border-t mt-auto"
+                >
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder={
+                        activeModule
+                          ? "Type your message..."
+                          : "Select a module to start chatting"
+                      }
+                      value={input}
+                      onChange={handleInputChange}
+                      disabled={isLoading || !activeModule}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="submit"
+                      size="icon"
+                      disabled={isLoading || !activeModule || !input.trim()}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </form>
               </TabsContent>
-              <TabsContent value="resources" className="mt-4">
+
+              <TabsContent
+                value="resources"
+                className="flex-1 p-4 overflow-auto"
+              >
                 <Card>
                   <CardHeader>
-                    <CardTitle>Study Resources</CardTitle>
+                    <CardTitle>Module Resources</CardTitle>
                     <CardDescription>
-                      Upload or link to your study materials
+                      Study materials and resources for this module
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Button className="w-full">Upload Materials</Button>
+                    {!activeModule ? (
+                      <div className="text-center py-6">
+                        <p className="text-muted-foreground">
+                          Select a module to view resources
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <p className="text-muted-foreground">
+                          No resources available for this module yet
+                        </p>
+                        <Button variant="outline" className="mt-4">
+                          Add Resources
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
-          </div>
+          )}
         </div>
-        <div className="flex flex-1 flex-col">
-          <div className="flex-1 overflow-auto p-4">
-            <div className="space-y-4">
-              {messages.length === 0 ? (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold">Start a conversation</h2>
-                    <p className="text-muted-foreground">
-                      Ask questions about{" "}
-                      {modules.find((m) => m.id === activeModule)?.name ||
-                        "your module"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                        message.role === "user"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}
-                    >
-                      {message.role === "assistant" && (
-                        <div className="flex items-center mb-1">
-                          <Avatar className="h-6 w-6 mr-2">
-                            <AvatarFallback>
-                              {modules.find((m) => m.id === activeModule)
-                                ?.icon || "AI"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs font-medium">
-                            {modules.find((m) => m.id === activeModule)?.name ||
-                              "Study Assistant"}
-                          </span>
-                        </div>
-                      )}
-                      <p>{message.content}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          <div className="border-t p-4">
-            <form
-              onSubmit={handleSubmit}
-              className="flex items-center space-x-2"
-            >
-              <Input
-                placeholder={`Ask about ${
-                  modules.find((m) => m.id === activeModule)?.name ||
-                  "your module"
-                }...`}
-                value={input}
-                onChange={handleInputChange}
-                className="flex-1"
-              />
-              <Button type="submit" size="icon" disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </form>
-          </div>
-        </div>
-      </main>
-
-      <ModulesDialog
-        open={showModulesDialog}
-        onOpenChange={setShowModulesDialog}
-        onModuleSelect={handleModuleSelect}
-      />
+      </div>
     </div>
-  );
-}
-
-export default function ChatPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          Loading...
-        </div>
-      }
-    >
-      <ChatPageContent />
-    </Suspense>
   );
 }

@@ -1,23 +1,21 @@
-// prisma/schema.prisma
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  extensions = [pgcrypto]
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
-  modules   Module[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  modules   Module[]
 }
 
 model Module {
@@ -25,10 +23,13 @@ model Module {
   name        String
   description String?
   userId      String
-  user        User       @relation(fields: [userId], references: [id])
-  resources   Resource[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  icon        String     @default("📚")
+  lastStudied DateTime?
+  progress    Int        @default(0)
+  user        User       @relation(fields: [userId], references: [id])
+  resources   Resource[]
 }
 
 model Resource {
@@ -38,7 +39,7 @@ model Resource {
   content   String
   fileUrl   String?
   moduleId  String
-  module    Module   @relation(fields: [moduleId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  module    Module   @relation(fields: [moduleId], references: [id])
 }
