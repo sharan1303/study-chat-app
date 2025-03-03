@@ -1,46 +1,77 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { BookOpen, Send, Loader2 } from "lucide-react"
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { BookOpen, Send, Loader2, Layers } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useChat } from "ai/react"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useChat } from "@ai-sdk/react";
+import { ModulesDialog } from "@/components/modules-dialog";
 
 export default function ChatPage() {
-  const router = useRouter()
-  const [activeModule, setActiveModule] = useState("cs101")
+  const searchParams = useSearchParams();
+  const moduleParam = searchParams.get("module");
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: "/api/chat",
-    body: {
-      moduleId: activeModule,
-    },
-  })
+  const [activeModule, setActiveModule] = useState(moduleParam || "cs101");
+  const [showModulesDialog, setShowModulesDialog] = useState(false);
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+    useChat({
+      api: "/api/chat",
+      body: {
+        moduleId: activeModule,
+      },
+    });
 
   const modules = [
     { id: "cs101", name: "Computer Science 101", icon: "💻" },
     { id: "math201", name: "Advanced Mathematics", icon: "🧮" },
     { id: "phys150", name: "Physics Fundamentals", icon: "⚛️" },
     { id: "bio220", name: "Molecular Biology", icon: "🧬" },
-  ]
+  ];
+
+  const handleModuleSelect = (moduleId: string) => {
+    setActiveModule(moduleId);
+    setShowModulesDialog(false);
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
           <div className="mr-4 flex">
-            <Button variant="ghost" onClick={() => router.push("/")} className="flex items-center space-x-2">
+            <Button variant="ghost" className="flex items-center space-x-2">
               <BookOpen className="h-5 w-5" />
               <span className="font-bold">StudyAI</span>
             </Button>
           </div>
-          <div className="flex flex-1 items-center justify-end">
+          <div className="flex flex-1 items-center justify-end space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowModulesDialog(true)}
+              className="flex items-center gap-1"
+            >
+              <Layers className="h-4 w-4" />
+              <span>Modules</span>
+            </Button>
             <Select value={activeModule} onValueChange={setActiveModule}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Select module" />
@@ -71,7 +102,9 @@ export default function ChatPage() {
                 {modules.map((module) => (
                   <Card
                     key={module.id}
-                    className={`cursor-pointer hover:bg-muted ${activeModule === module.id ? "border-primary" : ""}`}
+                    className={`cursor-pointer hover:bg-muted ${
+                      activeModule === module.id ? "border-primary" : ""
+                    }`}
                     onClick={() => setActiveModule(module.id)}
                   >
                     <CardHeader className="p-4">
@@ -87,7 +120,9 @@ export default function ChatPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Study Resources</CardTitle>
-                    <CardDescription>Upload or link to your study materials</CardDescription>
+                    <CardDescription>
+                      Upload or link to your study materials
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Button className="w-full">Upload Materials</Button>
@@ -105,25 +140,38 @@ export default function ChatPage() {
                   <div className="text-center">
                     <h2 className="text-2xl font-bold">Start a conversation</h2>
                     <p className="text-muted-foreground">
-                      Ask questions about {modules.find((m) => m.id === activeModule)?.name || "your module"}
+                      Ask questions about{" "}
+                      {modules.find((m) => m.id === activeModule)?.name ||
+                        "your module"}
                     </p>
                   </div>
                 </div>
               ) : (
                 messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      message.role === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
                     <div
                       className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                        message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
                       }`}
                     >
                       {message.role === "assistant" && (
                         <div className="flex items-center mb-1">
                           <Avatar className="h-6 w-6 mr-2">
-                            <AvatarFallback>{modules.find((m) => m.id === activeModule)?.icon || "AI"}</AvatarFallback>
+                            <AvatarFallback>
+                              {modules.find((m) => m.id === activeModule)
+                                ?.icon || "AI"}
+                            </AvatarFallback>
                           </Avatar>
                           <span className="text-xs font-medium">
-                            {modules.find((m) => m.id === activeModule)?.name || "Study Assistant"}
+                            {modules.find((m) => m.id === activeModule)?.name ||
+                              "Study Assistant"}
                           </span>
                         </div>
                       )}
@@ -135,21 +183,36 @@ export default function ChatPage() {
             </div>
           </div>
           <div className="border-t p-4">
-            <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center space-x-2"
+            >
               <Input
-                placeholder={`Ask about ${modules.find((m) => m.id === activeModule)?.name || "your module"}...`}
+                placeholder={`Ask about ${
+                  modules.find((m) => m.id === activeModule)?.name ||
+                  "your module"
+                }...`}
                 value={input}
                 onChange={handleInputChange}
                 className="flex-1"
               />
               <Button type="submit" size="icon" disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </form>
           </div>
         </div>
       </main>
-    </div>
-  )
-}
 
+      <ModulesDialog
+        open={showModulesDialog}
+        onOpenChange={setShowModulesDialog}
+        onModuleSelect={handleModuleSelect}
+      />
+    </div>
+  );
+}
