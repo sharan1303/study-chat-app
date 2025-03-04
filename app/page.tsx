@@ -2,30 +2,17 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Send, Loader2, Layers, MessageSquare, BookOpen, Cog, Plus, File } from "lucide-react";
-import { Home as HomeIcon } from "lucide-react";  // Renamed to avoid conflicts
+import { Send, Loader2, MessageSquare } from "lucide-react";
 import axios from "axios";
-import { useAuth, UserButton } from "@clerk/nextjs";
-
-import {
-  SignInButton
-} from "@clerk/nextjs";
-
+import { useAuth } from "@clerk/nextjs";
+import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+
+import Sidebar from "@/app/components/Sidebar";
 
 interface Module {
   id: string;
@@ -160,7 +147,6 @@ function ChatPageContent({ isSignedIn }: { isSignedIn: boolean }) {
 
   const handleModuleChange = (moduleId: string) => {
     if (!isSignedIn) {
-      // No need to show custom modal
       return;
     }
     router.push(`/?module=${moduleId}`);
@@ -193,118 +179,13 @@ function ChatPageContent({ isSignedIn }: { isSignedIn: boolean }) {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar with navigation and modules - Perplexity style */}
-      <div className="w-64 bg-background border-r flex flex-col">
-        {/* App logo and title */}
-        <div className="p-4 border-b">
-          <h1 className="font-bold text-xl flex items-center gap-2">
-            <Layers className="h-5 w-5" />
-            <span>StudyAI</span>
-          </h1>
-        </div>
-        
-        {/* Navigation links */}
-        <div className="p-3">
-          <nav className="space-y-1">
-            <Button variant="ghost" className="w-full justify-start" onClick={() => router.push("/")}>
-              <HomeIcon className="h-4 w-4 mr-2" />
-              Home
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" onClick={() => router.push("/modules")}>
-              <BookOpen className="h-4 w-4 mr-2" />
-              Modules
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" onClick={() => router.push("/resources")}>
-              <File className="h-4 w-4 mr-2" />
-              Resources
-            </Button>
-          </nav>
-        </div>
-        
-        {/* Divider */}
-        <div className="px-3 py-2">
-          <div className="h-px bg-border"></div>
-        </div>
-        
-        {/* Modules section */}
-        <div className="px-3 pb-2 flex justify-between items-center">
-          <h2 className="font-medium text-sm">Your Modules</h2>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Modules list */}
-        <ScrollArea className="flex-1">
-          {!isSignedIn ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <p className="mb-2">Sign in to access your modules</p>
-              <SignInButton mode="modal">
-                <Button size="sm" variant="outline">Sign in</Button>
-              </SignInButton>
-            </div>
-          ) : loading ? (
-            <div className="flex justify-center items-center h-20">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            </div>
-          ) : modules.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <p>No modules found</p>
-              <Button
-                variant="link"
-                onClick={() => router.push("/modules")}
-                className="mt-2"
-              >
-                Create a module
-              </Button>
-            </div>
-          ) : (
-            <div className="p-2">
-              {modules.map((module) => (
-                <button
-                  key={module.id}
-                  onClick={() => handleModuleChange(module.id)}
-                  className={cn(
-                    "w-full text-left p-3 rounded-lg mb-1 flex items-center gap-2 transition-colors",
-                    module.id === activeModule
-                      ? "bg-primary/10 text-primary"
-                      : "hover:bg-muted"
-                  )}
-                >
-                  <span className="text-xl">{module.icon}</span>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="font-medium truncate">{module.name}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-
-        {/* User account section */}
-        <div className="p-3 border-t">
-          {isSignedIn ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-center py-2">
-                <UserButton />
-              </div>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => router.push("/modules")}
-              >
-                Manage Modules
-              </Button>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <SignInButton mode="modal">
-                <Button className="w-full">Sign in</Button>
-              </SignInButton>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Use the shared sidebar component */}
+      <Sidebar 
+        modules={modules}
+        loading={loading}
+        activeModule={activeModule}
+        onModuleChange={handleModuleChange}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
@@ -326,188 +207,132 @@ function ChatPageContent({ isSignedIn }: { isSignedIn: boolean }) {
         )}
 
         {/* Chat Content */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Allow everyone to see the chat UI */}
-          <Tabs defaultValue="chat" className="flex-1 flex flex-col">
-            <div className="px-4 border-b">
-              <TabsList>
-                <TabsTrigger value="chat">Chat</TabsTrigger>
-                <TabsTrigger value="resources">Resources</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent
-              value="chat"
-              className="flex-1 flex flex-col p-4 overflow-hidden"
-            >
-              {/* Messages area */}
-              <div className="flex-1 overflow-y-auto mb-4 pr-4">
-                <div className="space-y-4 pb-4">
-                  {messages.length === 0 ? (
-                    <div className="text-center py-12">
-                      <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium mb-2">
-                        Start a conversation
-                      </h3>
-                      <p className="text-muted-foreground">
-                        {isSignedIn 
-                          ? "Ask questions about your module content" 
-                          : "Try the chat or sign in to access your modules"}
-                      </p>
-                      
-                      {!isSignedIn && (
-                        <div className="mt-4">
-                          <SignInButton mode="modal">
-                            <Button>Sign in</Button>
-                          </SignInButton>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          message.role === "user"
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`flex items-start gap-2 max-w-[80%] ${
-                            message.role === "user"
-                              ? "flex-row-reverse"
-                              : "flex-row"
-                          }`}
-                        >
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {message.role === "user" ? "U" : "AI"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div
-                            className={`rounded-lg px-4 py-2 ${
-                              message.role === "user"
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted"
-                            }`}
-                          >
-                            <div className="prose dark:prose-invert">
-                              {message.content}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                  {isLoading && (
-                    <div className="flex justify-start">
-                      <div className="flex items-start gap-2 max-w-[80%]">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>AI</AvatarFallback>
-                        </Avatar>
-                        <div className="rounded-lg bg-muted px-4 py-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        </div>
-                      </div>
+        <div className="flex-1 overflow-hidden flex flex-col p-4">
+          {/* Messages area */}
+          <div className="flex-1 overflow-y-auto mb-4 pr-4">
+            <div className="space-y-4 pb-4">
+              {messages.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    Start a conversation
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {isSignedIn 
+                      ? "Ask questions about your module content" 
+                      : "Try the chat or sign in to access your modules"}
+                  </p>
+                  
+                  {!isSignedIn && (
+                    <div className="mt-4">
+                      <SignInButton mode="modal">
+                        <Button>Sign in</Button>
+                      </SignInButton>
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Input form */}
-              <div className="border-t pt-4">
-                <form onSubmit={handleSendMessage}>
-                  <div className="flex items-start gap-2">
-                    <Textarea
-                      placeholder={!isSignedIn 
-                        ? "Sign in to chat with your module assistant..." 
-                        : "Type your message..."}
-                      value={input}
-                      onChange={handleInputChange}
-                      disabled={isLoading || !isSignedIn}
-                      className="flex-1 min-h-[60px] max-h-[120px] resize-none border-2"
-                      rows={2}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          if (input.trim() && !isLoading && isSignedIn) {
-                            const form = e.currentTarget.form;
-                            if (form) form.requestSubmit();
-                          }
-                        }
-                      }}
-                    />
-                    {isSignedIn ? (
-                      <Button
-                        type="submit"
-                        size="lg"
-                        className="self-end h-[60px] px-6"
-                        disabled={isLoading || !input.trim()}
+              ) : (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      message.role === "user"
+                        ? "justify-end"
+                        : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`flex items-start gap-2 max-w-[80%] ${
+                        message.role === "user"
+                          ? "flex-row-reverse"
+                          : "flex-row"
+                      }`}
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {message.role === "user" ? "U" : "AI"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div
+                        className={`rounded-lg px-4 py-2 ${
+                          message.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
                       >
-                        {isLoading ? (
-                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                        ) : (
-                          <Send className="h-5 w-5 mr-2" />
-                        )}
-                        Send
-                      </Button>
-                    ) : (
-                      <SignInButton mode="modal">
-                        <Button
-                          size="lg"
-                          className="self-end h-[60px] px-6"
-                        >
-                          Sign in
-                        </Button>
-                      </SignInButton>
-                    )}
+                        <div className="prose dark:prose-invert">
+                          {message.content}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </form>
-              </div>
-            </TabsContent>
+                ))
+              )}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="flex items-start gap-2 max-w-[80%]">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>AI</AvatarFallback>
+                    </Avatar>
+                    <div className="rounded-lg bg-muted px-4 py-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
-            <TabsContent
-              value="resources"
-              className="flex-1 p-4 overflow-auto"
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>Module Resources</CardTitle>
-                  <CardDescription>
-                    Study materials and resources for this module
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {!isSignedIn ? (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground mb-4">
-                        Sign in to access module resources
-                      </p>
-                      <SignInButton mode="modal">
-                        <Button variant="outline">Sign in</Button>
-                      </SignInButton>
-                    </div>
-                  ) : !activeModule ? (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground">
-                        Select a module to view resources
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-muted-foreground">
-                        No resources available for this module yet
-                      </p>
-                      <Button variant="outline" className="mt-4">
-                        Add Resources
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          {/* Input form */}
+          <div className="border-t pt-4">
+            <form onSubmit={handleSendMessage}>
+              <div className="flex items-start gap-2">
+                <Textarea
+                  placeholder={!isSignedIn 
+                    ? "Sign in to chat with your module assistant..." 
+                    : "Type your message..."}
+                  value={input}
+                  onChange={handleInputChange}
+                  disabled={isLoading || !isSignedIn}
+                  className="flex-1 min-h-[60px] max-h-[120px] resize-none border-2"
+                  rows={2}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (input.trim() && !isLoading && isSignedIn) {
+                        const form = e.currentTarget.form;
+                        if (form) form.requestSubmit();
+                      }
+                    }
+                  }}
+                />
+                {isSignedIn ? (
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="self-end h-[60px] px-6"
+                    disabled={isLoading || !input.trim()}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    ) : (
+                      <Send className="h-5 w-5 mr-2" />
+                    )}
+                    Send
+                  </Button>
+                ) : (
+                  <SignInButton mode="modal">
+                    <Button
+                      size="lg"
+                      className="self-end h-[60px] px-6"
+                    >
+                      Sign in
+                    </Button>
+                  </SignInButton>
+                )}
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
