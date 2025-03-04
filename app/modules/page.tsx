@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -26,7 +25,6 @@ interface Module {
   name: string;
   description: string | null;
   icon: string;
-  progress: number;
   lastStudied: string | null;
   createdAt: string;
   updatedAt: string;
@@ -237,17 +235,16 @@ export default function ModulesPage() {
                     <CardContent className="pb-2">
                       <div className="mt-2">
                         <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                          <span>Progress</span>
-                          <span>{module.progress}%</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {module.lastStudied
+                              ? formatDate(module.lastStudied)
+                              : "Never studied"}
+                          </span>
                         </div>
-                        <Progress value={module.progress} className="h-2" />
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-between pt-2">
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Clock className="mr-1 h-3 w-3" />
-                        Last studied: {formatDate(module.lastStudied)}
-                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -295,17 +292,16 @@ export default function ModulesPage() {
                       <CardContent className="pb-2">
                         <div className="mt-2">
                           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                            <span>Progress</span>
-                            <span>{module.progress}%</span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {module.lastStudied
+                                ? formatDate(module.lastStudied)
+                                : "Never studied"}
+                            </span>
                           </div>
-                          <Progress value={module.progress} className="h-2" />
                         </div>
                       </CardContent>
                       <CardFooter className="flex justify-between pt-2">
-                        <div className="flex items-center text-xs text-muted-foreground">
-                          <Clock className="mr-1 h-3 w-3" />
-                          Last studied: {formatDate(module.lastStudied)}
-                        </div>
                         <Button
                           variant="ghost"
                           size="sm"

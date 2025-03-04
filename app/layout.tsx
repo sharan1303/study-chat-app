@@ -11,7 +11,6 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
-import { NavLinks } from "@/components/nav-links";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,9 +32,8 @@ export default function RootLayout({
             <div className="container mx-auto flex justify-between items-center">
               <div className="flex items-center gap-6">
                 <Link href="/" className="font-bold text-xl">
-                  StudyChat
+                  StudyAI
                 </Link>
-                <NavLinks />
               </div>
               <div className="flex items-center gap-4">
                 <SignedOut>

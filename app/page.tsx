@@ -26,7 +26,6 @@ interface Module {
   name: string;
   description: string | null;
   icon: string;
-  progress: number;
   lastStudied: string | null;
 }
 
@@ -75,18 +74,13 @@ function ChatPageContent() {
     fetchModules();
   }, [fetchModules]);
 
-  const updateModuleProgress = useCallback(
+  const updateModuleLastStudied = useCallback(
     async (moduleId: string) => {
       try {
         const currentModule = modules.find((m) => m.id === moduleId);
         if (!currentModule) return;
 
-        // Increment progress by a small amount (max 100)
-        const newProgress = Math.min(100, currentModule.progress + 2);
-
-        await axios.put(`/api/modules/${moduleId}/progress`, {
-          progress: newProgress,
-        });
+        await axios.put(`/api/modules/${moduleId}/last-studied`, {});
 
         // Update local state
         setModules(
@@ -94,14 +88,13 @@ function ChatPageContent() {
             m.id === moduleId
               ? {
                   ...m,
-                  progress: newProgress,
                   lastStudied: new Date().toISOString(),
                 }
               : m
           )
         );
       } catch (error) {
-        console.error("Error updating module progress:", error);
+        console.error("Error updating module last studied time:", error);
       }
     },
     [modules]
@@ -111,12 +104,12 @@ function ChatPageContent() {
   useEffect(() => {
     if (moduleParam) {
       setActiveModule(moduleParam);
-      // Update last studied time and increment progress when a module is selected
+      // Update last studied time when a module is selected
       if (moduleParam) {
-        updateModuleProgress(moduleParam);
+        updateModuleLastStudied(moduleParam);
       }
     }
-  }, [moduleParam, updateModuleProgress]);
+  }, [moduleParam, updateModuleLastStudied]);
 
   const { messages, input, handleInputChange, status, append } = useChat({
     api: "/api/chat",
@@ -129,8 +122,9 @@ function ChatPageContent() {
   const isLoading = status === "streaming" || status === "submitted";
 
   const handleModuleChange = (moduleId: string) => {
+    router.push(`/?module=${moduleId}`);
     setActiveModule(moduleId);
-    router.push(`/?module=${moduleId}`, { scroll: false });
+    updateModuleLastStudied(moduleId);
   };
 
   // Function to manually send messages only when a module is selected
@@ -142,10 +136,6 @@ function ChatPageContent() {
       role: "user",
       content: input,
     });
-
-    if (activeModule) {
-      updateModuleProgress(activeModule);
-    }
   };
 
   const currentModule = modules.find((m) => m.id === activeModule);

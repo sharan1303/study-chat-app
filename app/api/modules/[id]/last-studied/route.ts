@@ -15,20 +15,6 @@ export async function PUT(
     }
 
     const moduleId = params.id;
-    const body = await req.json();
-    const { progress } = body;
-
-    if (
-      progress === undefined ||
-      typeof progress !== "number" ||
-      progress < 0 ||
-      progress > 100
-    ) {
-      return NextResponse.json(
-        { error: "Valid progress value (0-100) is required" },
-        { status: 400 }
-      );
-    }
 
     // Check if module exists and belongs to user
     const existingModule = await prisma.module.findUnique({
@@ -47,16 +33,15 @@ export async function PUT(
         id: moduleId,
       },
       data: {
-        progress,
         lastStudied: new Date(),
       } as Prisma.ModuleUncheckedUpdateInput,
     });
 
     return NextResponse.json(updatedModule);
   } catch (error) {
-    console.error("Error updating module progress:", error);
+    console.error("Error updating module last studied time:", error);
     return NextResponse.json(
-      { error: "Failed to update module progress" },
+      { error: "Failed to update module last studied time" },
       { status: 500 }
     );
   }

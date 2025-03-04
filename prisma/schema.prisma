@@ -27,7 +27,6 @@ model Module {
   updatedAt   DateTime   @updatedAt
   icon        String     @default("📚")
   lastStudied DateTime?
-  progress    Int        @default(0)
   user        User       @relation(fields: [userId], references: [id])
   resources   Resource[]
 }

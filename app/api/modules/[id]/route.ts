@@ -52,7 +52,7 @@ export async function PUT(
 
     const moduleId = params.id;
     const body = await req.json();
-    const { name, description, icon, progress } = body;
+    const { name, description, icon } = body;
 
     if (!name) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -78,7 +78,6 @@ export async function PUT(
         name,
         description,
         icon,
-        progress: progress !== undefined ? progress : undefined,
       } as Prisma.ModuleUncheckedUpdateInput,
     });
 

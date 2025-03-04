@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -38,7 +37,6 @@ export function ModulesDialog({
       name: "Computer Science 101",
       description: "Introduction to programming concepts and algorithms",
       icon: "💻",
-      progress: 65,
       resources: 12,
       lastStudied: "2 days ago",
     },
@@ -47,7 +45,6 @@ export function ModulesDialog({
       name: "Advanced Mathematics",
       description: "Calculus, linear algebra, and differential equations",
       icon: "🧮",
-      progress: 40,
       resources: 8,
       lastStudied: "1 week ago",
     },
@@ -56,7 +53,6 @@ export function ModulesDialog({
       name: "Physics Fundamentals",
       description: "Mechanics, thermodynamics, and electromagnetism",
       icon: "⚛️",
-      progress: 25,
       resources: 10,
       lastStudied: "3 days ago",
     },
@@ -65,7 +61,6 @@ export function ModulesDialog({
       name: "Molecular Biology",
       description: "Cell structure, genetics, and biochemistry",
       icon: "🧬",
-      progress: 10,
       resources: 6,
       lastStudied: "Just started",
     },
@@ -101,21 +96,18 @@ export function ModulesDialog({
                       <CardDescription>{module.description}</CardDescription>
                     </CardHeader>
                     <CardContent className="pb-2">
-                      <div className="flex justify-between items-center mb-1 text-sm">
-                        <span>Progress</span>
-                        <span className="font-medium">{module.progress}%</span>
+                      <div className="flex justify-between items-center mb-1 text-sm text-muted-foreground">
+                        <div className="flex items-center">
+                          <Clock className="mr-1 h-3 w-3" />
+                          Last studied: {module.lastStudied}
+                        </div>
                       </div>
-                      <Progress value={module.progress} className="h-2" />
                     </CardContent>
                     <CardFooter className="flex justify-between pt-2">
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Clock className="mr-1 h-3 w-3" />
-                        {module.lastStudied}
-                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="gap-1"
+                        className="gap-1 ml-auto"
                         onClick={() => onModuleSelect(module.id)}
                       >
                         Study <ChevronRight className="h-4 w-4" />
@@ -149,23 +141,18 @@ export function ModulesDialog({
                         <CardDescription>{module.description}</CardDescription>
                       </CardHeader>
                       <CardContent className="pb-2">
-                        <div className="flex justify-between items-center mb-1 text-sm">
-                          <span>Progress</span>
-                          <span className="font-medium">
-                            {module.progress}%
-                          </span>
+                        <div className="flex justify-between items-center mb-1 text-sm text-muted-foreground">
+                          <div className="flex items-center">
+                            <Clock className="mr-1 h-3 w-3" />
+                            Last studied: {module.lastStudied}
+                          </div>
                         </div>
-                        <Progress value={module.progress} className="h-2" />
                       </CardContent>
                       <CardFooter className="flex justify-between pt-2">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {module.lastStudied}
-                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="gap-1"
+                          className="gap-1 ml-auto"
                           onClick={() => onModuleSelect(module.id)}
                         >
                           Study <ChevronRight className="h-4 w-4" />

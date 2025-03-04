@@ -77,6 +77,12 @@ To learn more about the technologies used in this project:
 - [x] Implement user authentication and profiles
 - [x] Implement module creation and customization
 - [x] Create admin panel for managing modules and resources
+- [x] Remove progress from modules schema and update module pages
+- [ ] Remove fetch on render
+- [ ] Update app layout for auth to be on bottom left in side bar
+- [x] Remove top nav links
+
+
 - [ ] Add file upload functionality for study materials
 - [ ] Create a dashboard for tracking study progress
 - [ ] Improve search capabilities with better context handling
