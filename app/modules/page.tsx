@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { ChevronRight, Plus, Edit, Trash, Loader2, Clock } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
-import { SignInButton } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 import {
