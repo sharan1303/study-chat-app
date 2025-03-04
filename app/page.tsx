@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Send, Loader2, Layers, MessageSquare, BookOpen, Cog, Plus } from "lucide-react";
+import { Send, Loader2, Layers, MessageSquare, BookOpen, Cog, Plus, File } from "lucide-react";
 import { Home as HomeIcon } from "lucide-react";  // Renamed to avoid conflicts
 import axios from "axios";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, UserButton } from "@clerk/nextjs";
 
 import {
   SignInButton
@@ -38,7 +38,7 @@ interface Module {
 // Loading component for Suspense fallback
 function ChatPageLoading() {
   return (
-    <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+    <div className="flex h-screen items-center justify-center">
       <div className="text-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
         <p className="text-muted-foreground">Loading chat...</p>
@@ -192,7 +192,7 @@ function ChatPageContent({ isSignedIn }: { isSignedIn: boolean }) {
   const currentModule = modules.find((m) => m.id === activeModule);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex h-screen">
       {/* Sidebar with navigation and modules - Perplexity style */}
       <div className="w-64 bg-background border-r flex flex-col">
         {/* App logo and title */}
@@ -214,9 +214,9 @@ function ChatPageContent({ isSignedIn }: { isSignedIn: boolean }) {
               <BookOpen className="h-4 w-4 mr-2" />
               Modules
             </Button>
-            <Button variant="ghost" className="w-full justify-start" onClick={() => router.push("/settings")}>
-              <Cog className="h-4 w-4 mr-2" />
-              Settings
+            <Button variant="ghost" className="w-full justify-start" onClick={() => router.push("/resources")}>
+              <File className="h-4 w-4 mr-2" />
+              Resources
             </Button>
           </nav>
         </div>
@@ -282,17 +282,28 @@ function ChatPageContent({ isSignedIn }: { isSignedIn: boolean }) {
         </ScrollArea>
 
         {/* User account section */}
-        {isSignedIn ? (
-          <div className="p-3 border-t">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => router.push("/modules")}
-            >
-              Manage Modules
-            </Button>
-          </div>
-        ) : null}
+        <div className="p-3 border-t">
+          {isSignedIn ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-center py-2">
+                <UserButton />
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push("/modules")}
+              >
+                Manage Modules
+              </Button>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <SignInButton mode="modal">
+                <Button className="w-full">Sign in</Button>
+              </SignInButton>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Content Area */}
