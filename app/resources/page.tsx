@@ -1,8 +1,20 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
-import { File, Search, PlusCircle, Loader2 } from "lucide-react";
+// TODO: put resources under Modules as a tab inside of cards
+
+import React, { useState, useEffect, Suspense } from "react";
+import {
+  File,
+  Search,
+  PlusCircle,
+  Loader2,
+  FileText,
+  Video,
+  Link as LinkIcon,
+  Edit,
+} from "lucide-react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,53 +26,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import Link from "next/link";
 
-import Sidebar from "@/components/Sidebar";
-
-// Mock resource interface
+// Resource interface to match database schema
 interface Resource {
   id: string;
   title: string;
   description: string;
-  type: "pdf" | "video" | "link" | "note";
-  url?: string;
-  moduleId?: string;
-  moduleName?: string;
+  type: string;
+  url?: string | null;
+  moduleId: string;
+  moduleName?: string | null;
   createdAt: string;
 }
-
-// Sample resources data
-const sampleResources: Resource[] = [
-  {
-    id: "1",
-    title: "Introduction to Machine Learning",
-    description: "Comprehensive guide on ML concepts",
-    type: "pdf",
-    moduleId: "ml101",
-    moduleName: "Machine Learning",
-    createdAt: "2023-06-01T12:00:00Z",
-  },
-  {
-    id: "2",
-    title: "Python Data Structures",
-    description: "Tutorial on Python data structures and their applications",
-    type: "video",
-    url: "https://example.com/video",
-    moduleId: "py101",
-    moduleName: "Python Programming",
-    createdAt: "2023-06-15T14:30:00Z",
-  },
-  {
-    id: "3",
-    title: "Calculus Formulas",
-    description: "Key formulas for calculus problems",
-    type: "note",
-    moduleId: "math201",
-    moduleName: "Calculus II",
-    createdAt: "2023-07-02T09:15:00Z",
-  },
-];
 
 // Loading component
 function ResourcesPageLoading() {
@@ -75,16 +53,16 @@ function ResourcesPageLoading() {
 }
 
 // Resource type icon component
-function ResourceTypeIcon({ type }: { type: Resource["type"] }) {
-  switch (type) {
+function ResourceTypeIcon({ type }: { type: string }) {
+  switch (type.toLowerCase()) {
     case "pdf":
-      return <File className="h-5 w-5 text-red-500" />;
+      return <FileText className="h-5 w-5 text-red-500" />;
     case "video":
-      return <File className="h-5 w-5 text-blue-500" />;
+      return <Video className="h-5 w-5 text-blue-500" />;
     case "link":
-      return <File className="h-5 w-5 text-green-500" />;
+      return <LinkIcon className="h-5 w-5 text-green-500" />;
     case "note":
-      return <File className="h-5 w-5 text-yellow-500" />;
+      return <Edit className="h-5 w-5 text-yellow-500" />;
     default:
       return <File className="h-5 w-5" />;
   }
@@ -92,58 +70,86 @@ function ResourceTypeIcon({ type }: { type: Resource["type"] }) {
 
 // Resources content component
 function ResourcesContent() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, userId } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const router = useRouter();
+
+  // Fetch resources from the API
+  useEffect(() => {
+    async function fetchResources() {
+      if (!isSignedIn || !userId) return;
+
+      try {
+        setLoading(true);
+        const response = await fetch("/api/resources");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch resources");
+        }
+
+        const data = await response.json();
+        setResources(data);
+      } catch (error) {
+        console.error("Error fetching resources:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (isSignedIn && userId) {
+      fetchResources();
+    } else {
+      setLoading(false);
+    }
+  }, [isSignedIn, userId]);
 
   // Handle resource filtering based on search
   const filteredResources = searchQuery
-    ? sampleResources.filter(
+    ? resources.filter(
         (resource) =>
           resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           resource.description
-            .toLowerCase()
+            ?.toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
           resource.moduleName?.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : sampleResources;
+    : resources;
 
   if (!isLoaded) {
     return <ResourcesPageLoading />;
   }
 
   return (
-    <div className="flex h-screen">
-      {/* Use the shared sidebar component */}
-      <Sidebar />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+    <div className="flex min-h-screen w-full flex-col">
+      <div className="flex-1 space-y-4 p-8 pt-6">
         {/* Resources Header */}
-        <div className="border-b p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="font-bold text-2xl">Study Resources</h1>
-            <Button disabled={!isSignedIn}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Resource
-            </Button>
-          </div>
+        <div className="flex h-14 items-center justify-between border-b px-4 mb-4">
+          <h1 className="text-3xl font-bold tracking-tight">Study Resources</h1>
+          <Button
+            disabled={!isSignedIn}
+            onClick={() => router.push("/modules")}
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Resource
+          </Button>
+        </div>
 
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search resources..."
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        {/* Search bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search resources..."
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         {/* Resources Content */}
         {!isSignedIn ? (
-          <div className="flex items-center justify-center flex-1">
+          <div className="flex items-center justify-center flex-1 my-12">
             <Card className="w-[400px]">
               <CardHeader>
                 <CardTitle>Sign in to access resources</CardTitle>
@@ -159,9 +165,11 @@ function ResourcesContent() {
             </Card>
           </div>
         ) : loading ? (
-          <ResourcesPageLoading />
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
         ) : filteredResources.length === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
+          <div className="flex flex-col items-center justify-center flex-1 p-4 text-center my-12">
             <File className="h-16 w-16 text-muted-foreground mb-4" />
             <h2 className="text-xl font-bold mb-2">No resources found</h2>
             <p className="text-muted-foreground max-w-md mb-4">
@@ -169,54 +177,63 @@ function ResourcesContent() {
                 ? `No resources match your search for "${searchQuery}"`
                 : "You haven't added any resources yet"}
             </p>
-            <Button>
+            <Button onClick={() => router.push("/modules")}>
               <PlusCircle className="h-4 w-4 mr-2" />
               Add your first resource
             </Button>
           </div>
         ) : (
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {filteredResources.map((resource) => (
-                <Card
-                  key={resource.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <ResourceTypeIcon type={resource.type} />
-                        <CardTitle className="text-lg">
-                          {resource.title}
-                        </CardTitle>
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <File className="h-4 w-4" />
-                      </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredResources.map((resource) => (
+              <Card
+                key={resource.id}
+                className="hover:shadow-md transition-shadow flex flex-col"
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <ResourceTypeIcon type={resource.type} />
+                      <CardTitle className="text-lg">
+                        {resource.title}
+                      </CardTitle>
                     </div>
-                    {resource.moduleName && (
-                      <CardDescription className="text-xs">
-                        Module: {resource.moduleName}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {resource.description}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="pt-0 flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">
-                      Added: {new Date(resource.createdAt).toLocaleDateString()}
-                    </span>
-                    <Button variant="outline" size="sm">
-                      View Resource
+                  </div>
+                  {resource.moduleName && (
+                    <CardDescription className="text-xs">
+                      Module: {resource.moduleName}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="pb-2 flex-1">
+                  <p className="text-sm text-muted-foreground">
+                    {resource.description}
+                  </p>
+                </CardContent>
+                <CardFooter className="pt-2 flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground">
+                    Added: {new Date(resource.createdAt).toLocaleDateString()}
+                  </span>
+                  {resource.url ? (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={resource.url} target="_blank">
+                        View Resource
+                      </Link>
                     </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        router.push(`/modules/${resource.moduleId}`)
+                      }
+                    >
+                      View in Module
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
     </div>

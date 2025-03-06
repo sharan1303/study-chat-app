@@ -167,3 +167,53 @@ export async function getModuleByName(
     return null;
   }
 }
+
+// Function to fetch resources from the database
+export async function getResources(userId: string) {
+  try {
+    // First get user's modules
+    const userModules = await prisma.module.findMany({
+      where: {
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    // Get moduleIds for the user
+    const moduleIds = userModules.map((module) => module.id);
+
+    // Then fetch resources for those modules
+    const resources = await prisma.resource.findMany({
+      where: {
+        moduleId: { in: moduleIds },
+      },
+      include: {
+        module: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return resources.map((resource) => ({
+      id: resource.id,
+      title: resource.title,
+      description: resource.content, // Map content to description
+      type: resource.type,
+      url: resource.fileUrl, // Map fileUrl to url
+      moduleId: resource.moduleId,
+      moduleName: resource.module?.name || null,
+      createdAt: resource.createdAt.toISOString(),
+      updatedAt: resource.updatedAt.toISOString(),
+    }));
+  } catch (error) {
+    console.error("Failed to fetch resources:", error);
+    return [];
+  }
+}
