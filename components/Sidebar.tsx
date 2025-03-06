@@ -179,7 +179,16 @@ function SidebarContent({
       <div className="p-4 border-t">
         <div className="flex items-center justify-between">
           <SignedIn>
-            <UserButton afterSignOutUrl="/" />
+          <UserButton
+            appearance={{
+              elements: {
+                userButtonBox: {
+                  flexDirection: "row-reverse",
+                },
+              },
+            }}
+            showName
+          />
             <Button variant="ghost" size="icon" asChild>
               <Link href="/settings">
                 <Settings className="h-4 w-4" />
