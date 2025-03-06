@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Plus, Settings } from "lucide-react";
@@ -23,7 +23,24 @@ interface SidebarProps {
   onModuleChange?: (moduleId: string) => void;
 }
 
-export default function Sidebar({
+// Sidebar loading fallback
+function SidebarSkeleton() {
+  return (
+    <div className="w-64 flex flex-col h-screen border-r bg-background animate-pulse">
+      <div className="p-4 border-b">
+        <div className="h-6 w-24 bg-muted rounded"></div>
+      </div>
+      <div className="p-4 space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-10 bg-muted rounded"></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Wrap the component that uses useSearchParams in a dedicated function
+function SidebarContent({
   modules = [],
   loading = false,
   activeModule = null,
@@ -81,95 +98,110 @@ export default function Sidebar({
           >
             <Link href="/modules">Modules</Link>
           </Button>
+          <Button
+            variant={isActive("/resources") ? "secondary" : "ghost"}
+            className="justify-start"
+            asChild
+          >
+            <Link href="/resources">Resources</Link>
+          </Button>
+          <Button
+            variant={isActive("/settings") ? "secondary" : "ghost"}
+            className="justify-start"
+            asChild
+          >
+            <Link href="/settings">Settings</Link>
+          </Button>
         </nav>
       </div>
 
-      {/* Modules section */}
-      <div className="flex-1 overflow-hidden px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-md font-semibold">Your Modules</h2>
+      {/* Modules list */}
+      <div className="flex-1 overflow-hidden">
+        <div className="p-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Your Modules</h2>
           <SignedIn>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/modules")}
-              className="h-7 w-7 p-0"
-            >
-              <Plus className="h-4 w-4" />
+            <Button size="icon" variant="ghost" asChild>
+              <Link href="/modules">
+                <Plus className="h-4 w-4" />
+              </Link>
             </Button>
           </SignedIn>
         </div>
-        <ScrollArea className="h-[calc(100vh-280px)]">
-          <div className="grid gap-1 pr-4">
-            <SignedIn>
-              {loading ? (
-                <div className="text-sm text-muted-foreground py-2">
+
+        <ScrollArea className="h-[calc(100vh-13rem)]">
+          <div className="p-4 pt-0">
+            {loading ? (
+              <div className="text-center py-6">
+                <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-r-transparent mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">
                   Loading modules...
-                </div>
-              ) : modules.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-2">
-                  No modules found. Create one to get started.
-                </div>
-              ) : (
-                modules.map((module) => (
+                </p>
+              </div>
+            ) : modules.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-muted-foreground">
+                  No modules found
+                </p>
+                <SignedIn>
+                  <Button className="mt-2" size="sm" asChild>
+                    <Link href="/modules">Create your first module</Link>
+                  </Button>
+                </SignedIn>
+                <SignedOut>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Sign in to create modules
+                  </p>
+                </SignedOut>
+              </div>
+            ) : (
+              <nav className="grid gap-1">
+                {modules.map((module) => (
                   <button
                     key={module.id}
                     onClick={() => handleModuleClick(module.id, module.name)}
                     className={cn(
-                      "w-full text-left p-3 rounded-lg mb-1 flex items-center gap-2 transition-colors",
-                      module.id === currentModule
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-muted"
+                      "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground w-full text-left",
+                      currentModule === module.id &&
+                        "bg-accent text-accent-foreground"
                     )}
                   >
-                    <span className="text-lg">{module.icon}</span>
-                    <span className="text-sm font-medium truncate">
-                      {module.name}
-                    </span>
+                    <span>{module.icon}</span>
+                    <span className="truncate">{module.name}</span>
                   </button>
-                ))
-              )}
-            </SignedIn>
-            <SignedOut>
-              <div className="text-sm text-muted-foreground py-2">
-                Sign in to see your modules
-              </div>
-            </SignedOut>
+                ))}
+              </nav>
+            )}
           </div>
         </ScrollArea>
       </div>
 
-      {/* User account section */}
-      <div className="mt-auto border-t pt-4 px-3">
-        <SignedIn>
-          <div className="flex items-center justify-between">
-            <UserButton
-              appearance={{
-                elements: {
-                  userButtonBox: {
-                    flexDirection: "row-reverse",
-                  },
-                },
-              }}
-              showName
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/settings")}
-            >
-              <Settings className="h-4 w-4" />
+      {/* User section */}
+      <div className="p-4 border-t">
+        <div className="flex items-center justify-between">
+          <SignedIn>
+            <UserButton afterSignOutUrl="/" />
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/settings">
+                <Settings className="h-4 w-4" />
+              </Link>
             </Button>
-          </div>
-        </SignedIn>
-        <SignedOut>
-          <SignInButton mode="modal">
-            <Button variant="outline" className="w-full">
-              Sign in
-            </Button>
-          </SignInButton>
-        </SignedOut>
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button>Sign in</Button>
+            </SignInButton>
+          </SignedOut>
+        </div>
       </div>
     </div>
+  );
+}
+
+// Export main component with Suspense
+export default function Sidebar(props: SidebarProps) {
+  return (
+    <Suspense fallback={<SidebarSkeleton />}>
+      <SidebarContent {...props} />
+    </Suspense>
   );
 }

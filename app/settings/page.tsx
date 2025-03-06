@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
 import { Loader2, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";  
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Loading component
 function SettingsPageLoading() {
@@ -31,7 +26,8 @@ function SettingsPageLoading() {
   );
 }
 
-export default function SettingsPage() {
+// Settings content component
+function SettingsContent() {
   const { isLoaded, isSignedIn } = useAuth();
 
   if (!isLoaded) {
@@ -40,8 +36,6 @@ export default function SettingsPage() {
 
   return (
     <div className="flex h-screen">
-      {/* Use the shared sidebar component */}
-
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         {/* Settings Header */}
@@ -77,7 +71,7 @@ export default function SettingsPage() {
                 <TabsTrigger value="appearance">Appearance</TabsTrigger>
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="account">
                 <Card>
                   <CardHeader>
@@ -88,12 +82,13 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground">
-                      Your account is managed through Clerk. Click the user icon in the sidebar to manage your account settings.
+                      Your account is managed through Clerk. Click the user icon
+                      in the sidebar to manage your account settings.
                     </p>
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="appearance">
                 <Card>
                   <CardHeader>
@@ -109,7 +104,7 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="notifications">
                 <Card>
                   <CardHeader>
@@ -131,4 +126,13 @@ export default function SettingsPage() {
       </div>
     </div>
   );
-} 
+}
+
+// Main component with Suspense
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<SettingsPageLoading />}>
+      <SettingsContent />
+    </Suspense>
+  );
+}

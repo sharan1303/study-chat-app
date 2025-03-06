@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { File, Search, PlusCircle, Loader2 } from "lucide-react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
 
@@ -90,8 +90,8 @@ function ResourceTypeIcon({ type }: { type: Resource["type"] }) {
   }
 }
 
-// Main ResourcesPage component
-export default function ResourcesPage() {
+// Resources content component
+function ResourcesContent() {
   const { isLoaded, isSignedIn } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [loading] = useState(false);
@@ -220,5 +220,14 @@ export default function ResourcesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense
+export default function ResourcesPage() {
+  return (
+    <Suspense fallback={<ResourcesPageLoading />}>
+      <ResourcesContent />
+    </Suspense>
   );
 }
