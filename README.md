@@ -43,13 +43,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Styling**: Tailwind CSS
 - **AI Integration**: Vercel AI SDK
 - **Database**: Prisma with Supabase
-- **Search**: Perplexity API
+- **AI Model Selection**: Gemini 2.0 Flash
+- **Tools**
+  - Search: Perplexity API
 
 ## Environment Variables
 
-Create a `.env.local` file with the following variables:
+Create a `.env` file with the following variables:
 
-```
+```bash
 GOOGLE_API_KEY=your_google_api_key
 PERPLEXITY_API_KEY=your_perplexity_api_key
 DATABASE_URL=your_database_url
@@ -74,8 +76,10 @@ To learn more about the technologies used in this project:
 
 ## Todo List
 
+- [x] Side bar data needs to be consistent across pages
+- [ ] Module name in url routing, not module id
 - [ ] Remove fetch on render
-- [ ] Make module creation page use side bar
+- [x] Make module creation page use side bar
 - [ ] Transfer side bar component into layout.tsx
 - [ ] Add file upload functionality for resources
 - [ ] Implement a dark mode theme

@@ -38,17 +38,17 @@ export async function POST(req: Request) {
   // Choose the appropriate system message based on authentication state
   const systemMessage = isAuthenticated
     ? `You are an AI study assistant specialized in ${moduleId}.
-Use the following context about this module to help the student:
+    Use the following context about this module to help the student:
 
-${moduleContext}
+    ${moduleContext}
 
-Always provide accurate, helpful information. If you don't know something, say "I need to search for that information."
-Explain concepts clearly and provide examples when appropriate.`
-    : `You are StudyAI, an AI assistant for learning.
-You can answer questions about a variety of topics to help users learn.
-For the full experience with personalized modules, encourage the user to sign up or sign in.
-Always provide accurate, helpful information. If you don't know something, say so.
-Explain concepts clearly and provide examples when appropriate.`;
+    Always provide accurate, helpful information. If you don't know something, say "I need to search for that information."
+    Explain concepts clearly and provide examples when appropriate.`
+        : `You are StudyAI, an AI assistant for learning.
+    You can answer questions about a variety of topics to help users learn.
+    For the full experience with personalized modules, encourage the user to sign up or sign in.
+    Always provide accurate, helpful information. If you don't know something, say so.
+    Explain concepts clearly and provide examples when appropriate.`;
 
   // Create a prompt template for direct answers
   const directPrompt = ChatPromptTemplate.fromMessages([

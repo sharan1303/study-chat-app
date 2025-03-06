@@ -11,15 +11,13 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/card";  
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-
-import Sidebar from "@/app/components/Sidebar";
 
 // Loading component
 function SettingsPageLoading() {
@@ -43,7 +41,6 @@ export default function SettingsPage() {
   return (
     <div className="flex h-screen">
       {/* Use the shared sidebar component */}
-      <Sidebar />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">

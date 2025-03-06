@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { File, Search, PlusCircle, Loader2 } from "lucide-react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
 
@@ -17,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import Sidebar from "@/app/components/Sidebar";
+import Sidebar from "@/components/Sidebar";
 
 // Mock resource interface
 interface Resource {
@@ -94,16 +93,17 @@ function ResourceTypeIcon({ type }: { type: Resource["type"] }) {
 // Main ResourcesPage component
 export default function ResourcesPage() {
   const { isLoaded, isSignedIn } = useAuth();
-  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   // Handle resource filtering based on search
   const filteredResources = searchQuery
     ? sampleResources.filter(
         (resource) =>
           resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          resource.description
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
           resource.moduleName?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : sampleResources;
@@ -128,7 +128,7 @@ export default function ResourcesPage() {
               Add Resource
             </Button>
           </div>
-          
+
           {/* Search bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -178,12 +178,17 @@ export default function ResourcesPage() {
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
               {filteredResources.map((resource) => (
-                <Card key={resource.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={resource.id}
+                  className="hover:shadow-md transition-shadow"
+                >
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <ResourceTypeIcon type={resource.type} />
-                        <CardTitle className="text-lg">{resource.title}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {resource.title}
+                        </CardTitle>
                       </div>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <File className="h-4 w-4" />
@@ -196,7 +201,9 @@ export default function ResourcesPage() {
                     )}
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">{resource.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {resource.description}
+                    </p>
                   </CardContent>
                   <CardFooter className="pt-0 flex justify-between items-center">
                     <span className="text-xs text-muted-foreground">
@@ -214,4 +221,4 @@ export default function ResourcesPage() {
       </div>
     </div>
   );
-} 
+}

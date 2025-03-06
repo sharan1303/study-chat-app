@@ -1,44 +1,38 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { getModuleDetails } from "../actions";
+import ClientChatPage from "../ClientChatPage";
+import { Suspense } from "react";
+import { ChatPageLoading } from "../ClientChatPage";
+import { redirect } from "next/navigation";
 
-// Loading component for Suspense fallback
-function ChatRedirectLoading() {
-  return (
-    <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Redirecting to chat...</p>
-      </div>
-    </div>
-  );
-}
+// Legacy chat page that redirects to proper module URLs
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams: { module?: string };
+}) {
+  // Check for legacy module param
+  const moduleId = searchParams.module;
 
-// Redirect component that uses hooks
-function ChatRedirect() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const moduleParam = searchParams.get("module");
+  if (moduleId) {
+    // Fetch the module to get its name
+    const moduleDetails = await getModuleDetails(moduleId);
 
-  useEffect(() => {
-    // Redirect to home page with the module parameter if it exists
-    if (moduleParam) {
-      router.replace(`/?module=${moduleParam}`);
-    } else {
-      router.replace("/");
+    if (moduleDetails) {
+      // Generate the proper URL path for this module
+      const encodedName = encodeURIComponent(
+        moduleDetails.name.toLowerCase().replace(/\s+/g, "-")
+      );
+      // Redirect to the new URL format (just the module name)
+      redirect(`/${encodedName}`);
     }
-  }, [router, moduleParam]);
+  }
 
-  return null;
-}
-
-// Export the page component with Suspense
-export default function ChatPage() {
+  // If no module or module not found, just show the default chat page
   return (
-    <Suspense fallback={<ChatRedirectLoading />}>
-      <ChatRedirect />
+    <Suspense fallback={<ChatPageLoading />}>
+      <ClientChatPage initialModuleDetails={null} />
     </Suspense>
   );
 }
