@@ -18,9 +18,10 @@ type MessageHistory = Array<[string, string]>;
 
 export async function POST(req: Request) {
   const { messages, moduleId } = await req.json();
+  const isAuthenticated = moduleId != null;
 
-  // Get the module-specific context from the database
-  const moduleContext = await getModuleContext(moduleId);
+  // Get the module-specific context only if authenticated with a moduleId
+  const moduleContext = isAuthenticated ? await getModuleContext(moduleId) : "";
 
   // Create the LLM
   const llm = new ChatGoogleGenerativeAI({
@@ -34,18 +35,24 @@ export async function POST(req: Request) {
   const perplexity = new PerplexityAPI();
   const searchTool = perplexity.searchTool;
 
+  // Choose the appropriate system message based on authentication state
+  const systemMessage = isAuthenticated
+    ? `You are an AI study assistant specialized in ${moduleId}.
+    Use the following context about this module to help the student:
+
+    ${moduleContext}
+
+    Always provide accurate, helpful information. If you don't know something, say "I need to search for that information."
+    Explain concepts clearly and provide examples when appropriate.`
+        : `You are StudyAI, an AI assistant for learning.
+    You can answer questions about a variety of topics to help users learn.
+    For the full experience with personalized modules, encourage the user to sign up or sign in.
+    Always provide accurate, helpful information. If you don't know something, say so.
+    Explain concepts clearly and provide examples when appropriate.`;
+
   // Create a prompt template for direct answers
   const directPrompt = ChatPromptTemplate.fromMessages([
-    [
-      "system",
-      `You are an AI study assistant specialized in ${moduleId}.
-Use the following context about this module to help the student:
-
-${moduleContext}
-
-Always provide accurate, helpful information. If you don't know something, say "I need to search for that information."
-Explain concepts clearly and provide examples when appropriate.`,
-    ],
+    ["system", systemMessage],
     new MessagesPlaceholder("history"),
     ["human", "{input}"],
   ]);
@@ -62,11 +69,12 @@ Only respond with one of these two options.`,
     ["human", "{input}"],
   ]);
 
-  // Create a prompt for search-based answers
+  // Create a prompt for search-based answers with the appropriate system message
   const searchPrompt = ChatPromptTemplate.fromMessages([
     [
       "system",
-      `You are an AI study assistant specialized in ${moduleId}.
+      isAuthenticated
+        ? `You are an AI study assistant specialized in ${moduleId}.
 Use the following context about this module to help the student:
 
 ${moduleContext}
@@ -75,6 +83,13 @@ Also use the following search results to provide a comprehensive answer:
 
 {search_results}
 
+Explain concepts clearly and provide examples when appropriate.`
+        : `You are StudyAI, an AI assistant for learning.
+Use the following search results to provide a comprehensive answer:
+
+{search_results}
+
+For the full experience with personalized modules, encourage the user to sign up or sign in.
 Explain concepts clearly and provide examples when appropriate.`,
     ],
     new MessagesPlaceholder("history"),

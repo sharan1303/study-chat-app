@@ -1,0 +1,9 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_FORCE_DYNAMIC": "true",
+    "NEXT_PRIVATE_STANDALONE": "1"
+  }
+} 

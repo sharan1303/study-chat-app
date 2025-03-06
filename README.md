@@ -43,13 +43,15 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Styling**: Tailwind CSS
 - **AI Integration**: Vercel AI SDK
 - **Database**: Prisma with Supabase
-- **Search**: Perplexity API
+- **AI Model Selection**: Gemini 2.0 Flash
+- **Tools**
+  - Search: Perplexity API
 
 ## Environment Variables
 
-Create a `.env.local` file with the following variables:
+Create a `.env` file with the following variables:
 
-```
+```bash
 GOOGLE_API_KEY=your_google_api_key
 PERPLEXITY_API_KEY=your_perplexity_api_key
 DATABASE_URL=your_database_url
@@ -74,23 +76,21 @@ To learn more about the technologies used in this project:
 
 ## Todo List
 
-- [x] Implement user authentication and profiles
-- [x] Implement module creation and customization
-- [x] Create admin panel for managing modules and resources
-- [x] Remove progress from modules schema and update module pages
+- [x] Side bar data needs to be consistent across pages
+- [ ] Module name in url routing, not module id
 - [ ] Remove fetch on render
-- [ ] Update app layout for auth to be on bottom left in side bar
-- [x] Remove top nav links
-
-
-- [ ] Add file upload functionality for study materials
-- [ ] Create a dashboard for tracking study progress
-- [ ] Improve search capabilities with better context handling
-- [ ] Remodel the UI for better user experience, similar to Perplexity
+- [x] Make module creation page use side bar
+- [ ] Transfer side bar component into layout.tsx
+- [ ] Add file upload functionality for resources
 - [ ] Implement a dark mode theme
+
+- [ ] Implement module-specific AI assistants
+- [ ] Improve search capabilities with better context handling
 - [ ] Add support for more AI models
+
 - [ ] Create mobile-responsive design improvements
 - [ ] Add unit and integration tests
+
 - [ ] Implement data persistence for chat history
 - [ ] Add export functionality for chat conversations
 - [ ] Implement collaborative study sessions

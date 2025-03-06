@@ -3,12 +3,19 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   "/", // Allow the homepage without authentication
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/chat(.*)", // Allow chat API for unauthenticated users
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+  // Check if the route is public
+  if (isPublicRoute(request)) {
+    return; // Allow access to public routes without authentication
   }
+
+  // Protect all other routes
+  await auth.protect();
 });
 
 export const config = {
