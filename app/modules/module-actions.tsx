@@ -56,10 +56,13 @@ export default function ModuleActions({
 
   // Handle module deletion
   const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to delete "${moduleName}"?`)) {
+      return;
+    }
     try {
       setIsDeleting(true);
       await axios.delete(`/api/modules/${moduleId}`);
-      toast.success("Module deleted");
+      toast.success(`Module "${moduleName}" deleted successfully`);
       router.refresh();
     } catch (error) {
       console.error("Error deleting module:", error);

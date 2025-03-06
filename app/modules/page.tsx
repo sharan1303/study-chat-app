@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ChevronRight, Clock, Edit, Plus, Trash } from "lucide-react";
+import { ChevronRight, Clock } from "lucide-react";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
@@ -14,8 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/module-form";
 import ModuleActions from "./module-actions";
 import { formatDate } from "@/lib/utils";
 

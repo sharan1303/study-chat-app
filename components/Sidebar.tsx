@@ -34,7 +34,7 @@ export default function Sidebar({
   const searchParams = useSearchParams();
 
   // Get active module from URL if not provided in props
-  const currentModule = activeModule || searchParams.get("module");
+  const currentModule = activeModule || searchParams?.get("module");
 
   // Determine if a navigation item is active
   const isActive = (path: string) => {
@@ -143,7 +143,16 @@ export default function Sidebar({
       <div className="mt-auto border-t pt-4 px-3">
         <SignedIn>
           <div className="flex items-center justify-between">
-            <UserButton showName />
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonBox: {
+                    flexDirection: "row-reverse",
+                  },
+                },
+              }}
+              showName
+            />
             <Button
               variant="ghost"
               size="icon"
