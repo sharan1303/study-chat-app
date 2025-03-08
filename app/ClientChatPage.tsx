@@ -6,9 +6,10 @@ import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useChat } from "@ai-sdk/react";
+import { useChat } from "ai";
 import { toast } from "sonner";
 import { ModuleWithResources } from "@/app/actions";
+import ReactMarkdown from "react-markdown";
 
 // Loading component for Suspense fallback
 export function ChatPageLoading() {
@@ -133,9 +134,15 @@ export default function ClientChatPage({
                             : "bg-muted"
                         }`}
                       >
-                        <div className="prose dark:prose-invert">
-                          {message.content}
-                        </div>
+                        {message.role === "user" ? (
+                          <div className="whitespace-pre-wrap">
+                            {message.content}
+                          </div>
+                        ) : (
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

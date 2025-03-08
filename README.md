@@ -15,12 +15,17 @@ The application uses the Vercel AI SDK to power conversations with AI models and
 
 ## Features
 
+- **Module Management**: Create, edit, and organize study modules with custom icons
 - **AI Chat Interface**: Engage in natural conversations with AI about your study materials
-- **Module-Specific Assistants**: Each module has its own specialized AI assistant
-- **Resource Management**: Upload and organize study materials
-- **Progress Tracking**: Monitor your learning progress across different modules
+- **Resource Library**: Browse and access study resources organized by module
+- **User Authentication**: Secure sign-in with Clerk authentication
+- **Dynamic Rendering**: Fast, responsive interface with server-side rendering support
 
 ## Getting Started
+
+Production deployment can be found at [StudyAI](https://study-chat-app.vercel.app/)
+
+currently in progress. To run the application locally, follow these steps:
 
 First, run the development server:
 
@@ -41,6 +46,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Framework**: Next.js 14 (App Router)
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS
+- **Authentication**: Clerk
 - **AI Integration**: Vercel AI SDK
 - **Database**: Prisma with Supabase
 - **AI Model Selection**: Gemini 2.0 Flash
@@ -52,9 +58,20 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 Create a `.env` file with the following variables:
 
 ```bash
+# Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+
+# Database
+DATABASE_URL=your_database_url
+
+# AI Models
 GOOGLE_API_KEY=your_google_api_key
 PERPLEXITY_API_KEY=your_perplexity_api_key
-DATABASE_URL=your_database_url
+
+# Dynamic Rendering
+NEXT_PUBLIC_FORCE_DYNAMIC=true
+NEXT_PRIVATE_STANDALONE=1
 ```
 
 ## Project Structure
@@ -63,6 +80,7 @@ DATABASE_URL=your_database_url
 - `components/` - Reusable UI components
 - `lib/` - Utility functions and shared code
 - `prisma/` - Database schema and migrations
+- `public/` - Static assets
 
 ## Learn More
 
@@ -73,24 +91,42 @@ To learn more about the technologies used in this project:
 - [shadcn/ui](https://ui.shadcn.com)
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [Prisma](https://www.prisma.io/docs)
+- [Clerk Authentication](https://clerk.com/docs)
 
 ## Todo List
 
-- [x] Side bar data needs to be consistent across pages
-- [ ] Module name in url routing, not module id
-- [ ] Remove fetch on render
-- [x] Make module creation page use side bar
-- [ ] Transfer side bar component into layout.tsx
+- [ ] Make side bar collapsible
 - [ ] Add file upload functionality for resources
+- [ ] Implement module-specific resources page
+- [ ] Transform current Resources page into All Resources page
+- [ ] Rework UI for Chat thread page to for starting textbox
 - [ ] Implement a dark mode theme
 
-- [ ] Implement module-specific AI assistants
+- [ ] Rework chat interface to use langgraph, maybe python usage?
 - [ ] Improve search capabilities with better context handling
 - [ ] Add support for more AI models
 
 - [ ] Create mobile-responsive design improvements
-- [ ] Add unit and integration tests
 
 - [ ] Implement data persistence for chat history
 - [ ] Add export functionality for chat conversations
 - [ ] Implement collaborative study sessions
+
+## Deployment Notes
+
+The application is configured for dynamic rendering, which is essential for features that use authentication, headers, and search parameters. When deploying to Vercel or similar platforms:
+
+1. Ensure the environment variables for dynamic rendering are set
+2. The build process uses the `next.config.mjs` configuration for standalone output
+3. All pages using `useSearchParams()` are wrapped in Suspense boundaries
+4. For local development, use `bun dev` which doesn't require static generation
+
+## Database Schema
+
+The application uses three primary models:
+
+- **User**: Authenticated users with modules
+- **Module**: Study modules with names, descriptions, and resources
+- **Resource**: Study materials linked to specific modules
+
+Each resource is associated with a module, and each module is associated with a user, creating a clean hierarchical structure.

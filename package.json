@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npx prisma generate && bun run build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.1.20",
+    "@ai-sdk/react": "^1.1.21",
     "@clerk/nextjs": "^6.12.2",
+    "@google/generative-ai": "^0.24.0",
     "@hookform/resolvers": "^4.1.3",
     "@langchain/core": "^0.3.42",
     "@langchain/google-genai": "^0.1.10",
@@ -25,7 +28,7 @@
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.3",
-    "ai": "^4.1.47",
+    "ai": "^4.1.54",
     "axios": "^1.8.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -36,6 +39,7 @@
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.54.2",
+    "react-markdown": "^10.1.0",
     "sonner": "^2.0.1",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",

@@ -1,159 +1,117 @@
-import { LangChainAdapter } from "ai";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import {
-  ChatPromptTemplate,
-  MessagesPlaceholder,
-} from "@langchain/core/prompts";
-import { PerplexityAPI } from "@/lib/perplexity";
+import { google } from "@ai-sdk/google";
+import { Message as VercelChatMessage, streamText } from "ai";
+import { searchWithPerplexity } from "@/lib/search";
 import { getModuleContext } from "@/lib/modules";
-import { RunnableSequence, RunnableBranch } from "@langchain/core/runnables";
-import { StringOutputParser } from "@langchain/core/output_parsers";
 
-// Define types for messages
-type Message = { role: string; content: string };
-type MessageHistory = Array<[string, string]>;
-
-// Remove edge runtime directive to use Node.js runtime instead
-// export const runtime = "edge";
+export const runtime = "edge";
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { messages, moduleId } = await req.json();
-  const isAuthenticated = moduleId != null;
+  try {
+    const { messages, moduleId } = await req.json();
 
-  // Get the module-specific context only if authenticated with a moduleId
-  const moduleContext = isAuthenticated ? await getModuleContext(moduleId) : "";
+    // Check if we have a module ID (indicating module-specific mode)
+    const isModuleMode = moduleId != null;
 
-  // Create the LLM
-  const llm = new ChatGoogleGenerativeAI({
-    modelName: "gemini-2.0-flash",
-    apiKey: process.env.GOOGLE_API_KEY,
-    temperature: 0.2,
-    streaming: true,
-  });
+    // Get the last message from the user for potential search needs
+    const lastUserMessage = messages[messages.length - 1].content;
 
-  // Create the Perplexity API client for search capabilities
-  const perplexity = new PerplexityAPI();
-  const searchTool = perplexity.searchTool;
+    // Simple check if the message suggests a need for search
+    const shouldSearch = needsSearch(lastUserMessage);
 
-  // Choose the appropriate system message based on authentication state
-  const systemMessage = isAuthenticated
-    ? `You are an AI study assistant specialized in ${moduleId}.
-    Use the following context about this module to help the student:
+    let systemMessage = "";
 
-    ${moduleContext}
-
-    Always provide accurate, helpful information. If you don't know something, say "I need to search for that information."
-    Explain concepts clearly and provide examples when appropriate.`
-        : `You are StudyAI, an AI assistant for learning.
-    You can answer questions about a variety of topics to help users learn.
-    For the full experience with personalized modules, encourage the user to sign up or sign in.
-    Always provide accurate, helpful information. If you don't know something, say so.
-    Explain concepts clearly and provide examples when appropriate.`;
-
-  // Create a prompt template for direct answers
-  const directPrompt = ChatPromptTemplate.fromMessages([
-    ["system", systemMessage],
-    new MessagesPlaceholder("history"),
-    ["human", "{input}"],
-  ]);
-
-  // Create a prompt to determine if search is needed
-  const shouldSearchPrompt = ChatPromptTemplate.fromMessages([
-    [
-      "system",
-      `You are an AI assistant that determines if a search is needed to answer a question.
-Respond with "SEARCH" if you need to search for information to answer accurately.
-Respond with "NO_SEARCH" if you can answer the question with your existing knowledge.
-Only respond with one of these two options.`,
-    ],
-    ["human", "{input}"],
-  ]);
-
-  // Create a prompt for search-based answers with the appropriate system message
-  const searchPrompt = ChatPromptTemplate.fromMessages([
-    [
-      "system",
-      isAuthenticated
-        ? `You are an AI study assistant specialized in ${moduleId}.
+    if (isModuleMode) {
+      // Module-specific mode: Get module context and build specialized prompt
+      const moduleContext = await getModuleContext(moduleId);
+      
+      systemMessage = `You are an AI study assistant specialized in helping with this specific module.
+      
 Use the following context about this module to help the student:
 
 ${moduleContext}
 
-Also use the following search results to provide a comprehensive answer:
+${
+  shouldSearch
+    ? "Also use the following search results to provide a comprehensive answer:"
+    : ""
+}
+${shouldSearch ? await searchWithPerplexity(lastUserMessage) : ""}
 
-{search_results}
-
-Explain concepts clearly and provide examples when appropriate.`
-        : `You are StudyAI, an AI assistant for learning.
-Use the following search results to provide a comprehensive answer:
-
-{search_results}
-
+Always provide accurate, helpful information relative to the module context.
+Explain concepts clearly and provide examples when appropriate.
+Break down complex topics into understandable parts.
+If you're not sure about something, acknowledge that and suggest what might be reasonable.`;
+    } else {
+      // Basic mode: General study assistant
+      systemMessage = `You are StudyAI, an AI assistant for learning.
+You can answer questions about a variety of topics to help users learn.
 For the full experience with personalized modules, encourage the user to sign up or sign in.
-Explain concepts clearly and provide examples when appropriate.`,
-    ],
-    new MessagesPlaceholder("history"),
-    ["human", "{input}"],
-  ]);
 
-  // Create a chain to determine if search is needed
-  const shouldSearchChain = RunnableSequence.from([
-    shouldSearchPrompt,
-    llm,
-    new StringOutputParser(),
-  ]);
+${
+  shouldSearch
+    ? "Use the following search results to provide a comprehensive answer:"
+    : ""
+}
+${shouldSearch ? await searchWithPerplexity(lastUserMessage) : ""}
 
-  // Create a chain for direct answers
-  const directAnswerChain = RunnableSequence.from([
-    directPrompt,
-    llm,
-    new StringOutputParser(),
-  ]);
+Always provide accurate, helpful information.
+Explain concepts clearly and provide examples when appropriate.
+Break down complex topics into understandable parts.`;
+    }
 
-  // Create a chain for search-based answers
-  const searchAnswerChain = RunnableSequence.from([
-    async (input: { input: string; history: MessageHistory }) => {
-      // Perform the search
-      const searchResults = await searchTool.invoke(input.input);
+    // Format messages for the model including the system message
+    const formattedMessages: VercelChatMessage[] = [
+      { id: "system", role: "system", content: systemMessage },
+      ...messages,
+    ];
 
-      // Return the input with search results
-      return {
-        input: input.input,
-        history: input.history,
-        search_results: searchResults,
-      };
-    },
-    searchPrompt,
-    llm,
-    new StringOutputParser(),
-  ]);
+    // Use the streamText function from the AI SDK
+    const result = await streamText({
+      model: google("models/gemini-2.0-flash"),
+      messages: formattedMessages,
+      temperature: 0.7,
+      topP: 0.95,
+      maxTokens: 2048,
+    });
 
-  // Create a branch to decide whether to search or answer directly
-  const chain = RunnableBranch.from([
-    [
-      async (input: { input: string; history: MessageHistory }) => {
-        const result = await shouldSearchChain.invoke({ input: input.input });
-        return result.trim() === "SEARCH";
-      },
-      searchAnswerChain,
-    ],
-    directAnswerChain,
-  ]);
+    // Convert the response to a streaming response
+    return result.toDataStreamResponse();
+  } catch (error) {
+    console.error("Error in chat API:", error);
+    return new Response(
+      JSON.stringify({ error: "Failed to generate response" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
 
-  // Get the last message from the user
-  const lastMessage = messages[messages.length - 1].content;
+// Simple function to determine if a message likely needs external search
+function needsSearch(message: string): boolean {
+  const searchIndicators = [
+    "search for",
+    "look up",
+    "find information",
+    "what is the latest",
+    "current",
+    "recent",
+    "news about",
+    "how to",
+    "explain",
+    "definition of",
+    "what does",
+    "mean",
+    "?",
+  ];
 
-  // Format previous messages for chat history
-  const history = messages.slice(0, -1).map((msg: Message) => {
-    return msg.role === "user" ? ["human", msg.content] : ["ai", msg.content];
-  });
+  message = message.toLowerCase();
 
-  // Stream the response
-  const stream = await chain.stream({
-    input: lastMessage,
-    history,
-  });
-
-  // Use LangChainAdapter to convert the stream to a Response
-  return LangChainAdapter.toDataStreamResponse(stream);
+  // If the message contains any search indicators and is of sufficient length
+  return (
+    message.length > 15 &&
+    searchIndicators.some((term) => message.includes(term.toLowerCase()))
+  );
 }
