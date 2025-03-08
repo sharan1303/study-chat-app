@@ -1,20 +1,53 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getResources } from "@/app/actions";
+import prisma from "@/lib/prisma";
 
 // GET /api/resources - Get all resources for the current user
 export async function GET() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const { userId } = await auth();
+    // Fetch resources from the database
+    const resources = await prisma.resource.findMany({
+      where: {
+        module: {
+          userId,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        module: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
 
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    // Format the resources to include the module name
+    const formattedResources = resources.map((resource) => ({
+      id: resource.id,
+      title: resource.title,
+      type: resource.type,
+      url: resource.fileUrl,
+      moduleId: resource.moduleId,
+      moduleName: resource.module?.name || null,
+      createdAt: resource.createdAt.toISOString(),
+      updatedAt: resource.updatedAt.toISOString(),
+    }));
 
-    const resources = await getResources(userId);
-    return NextResponse.json(resources);
+    return NextResponse.json(formattedResources);
   } catch (error) {
-    console.error("[RESOURCES_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error("Error fetching resources:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch resources" },
+      { status: 500 }
+    );
   }
 }

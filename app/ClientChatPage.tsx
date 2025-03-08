@@ -5,8 +5,7 @@ import { Send, Loader2, MessageSquare } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useChat } from "@ai-sdk/react";
+import { Message, useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
 import { ModuleWithResources } from "@/app/actions";
 import ReactMarkdown from "react-markdown";
@@ -49,7 +48,7 @@ export default function ClientChatPage({
     body: {
       moduleId: activeModule,
     },
-    onResponse: (response) => {
+    onResponse: () => {
       // For module tracking - you could add analytics here
     },
     onError: (error: Error) => {
@@ -58,16 +57,16 @@ export default function ClientChatPage({
   });
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen flex-col">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Chat Header */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Chat Header - Remove border-b */}
         {moduleDetails && (
-          <div className="border-b p-4 flex items-center">
+          <div className="p-4 flex items-center">
             <div className="flex items-center gap-2">
               <span className="text-2xl">{moduleDetails.icon}</span>
               <div>
-                <h1 className="font-bold text-lg">{moduleDetails.name}</h1>
+                <h1 className="font-bold text-xl">{moduleDetails.name}</h1>
                 {moduleDetails.description && (
                   <p className="text-sm text-muted-foreground truncate max-w-md">
                     {moduleDetails.description}
@@ -78,11 +77,11 @@ export default function ClientChatPage({
           </div>
         )}
 
-        {/* Chat Content */}
-        <div className="flex-1 overflow-hidden flex flex-col p-4">
-          {/* Messages area */}
-          <div className="flex-1 overflow-y-auto mb-4 pr-4">
-            <div className="space-y-4 pb-4">
+        {/* Chat content with scrollbar at the edge */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Centered content container */}
+          <div className="max-w-3xl mx-auto w-full">
+            <div className="p-4 space-y-8">
               {messages.length === 0 ? (
                 <div className="text-center py-12">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -108,63 +107,79 @@ export default function ClientChatPage({
                   </SignedOut>
                 </div>
               ) : (
-                messages.map((message: any) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`flex items-start gap-2 max-w-[80%] ${
-                        message.role === "user"
-                          ? "flex-row-reverse"
-                          : "flex-row"
-                      }`}
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {message.role === "user" ? "U" : "AI"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={`rounded-lg px-4 py-2 ${
-                          message.role === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
-                        }`}
-                      >
-                        {message.role === "user" ? (
-                          <div className="whitespace-pre-wrap">
-                            {message.content}
+                <div className="flex flex-col space-y-8">
+                  {messages.reduce(
+                    (
+                      result: React.ReactNode[],
+                      message: Message,
+                      index: number
+                    ) => {
+                      if (message.role === "user") {
+                        // For user messages, we check if the next message is from AI
+                        const nextMessage = messages[index + 1];
+                        const hasAIResponse =
+                          nextMessage && nextMessage.role === "assistant";
+
+                        // Add the user message with its styling
+                        result.push(
+                          <div key={message.id} className="flex justify-end">
+                            <div className="flex items-center gap-2 max-w-[80%] flex-row-reverse">
+                              <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground">
+                                <div className="whitespace-pre-wrap">
+                                  {message.content}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown>{message.content}</ReactMarkdown>
+                        );
+
+                        // If there's an AI response to this message, add it directly below
+                        if (hasAIResponse) {
+                          result.push(
+                            <div
+                              key={nextMessage.id}
+                              className="mt-4 mx-4 text-gray-800 dark:text-gray-200"
+                            >
+                              <div className="prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown>
+                                  {nextMessage.content}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          );
+                        }
+                      } else if (index === 0 && message.role === "assistant") {
+                        // Handle case where the first message is from the assistant
+                        result.push(
+                          <div
+                            key={message.id}
+                            className="mx-4 text-gray-800 dark:text-gray-200"
+                          >
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
+                        );
+                      }
+                      // We skip AI messages as they're handled alongside their corresponding user messages
+                      return result;
+                    },
+                    []
+                  )}
+                </div>
               )}
               {chatLoading && (
-                <div className="flex justify-start">
-                  <div className="flex items-start gap-2 max-w-[80%]">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>AI</AvatarFallback>
-                    </Avatar>
-                    <div className="rounded-lg bg-muted px-4 py-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    </div>
-                  </div>
+                <div className="mx-4 mt-4">
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 </div>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Input form */}
-          <div className="border-t pt-4">
+        {/* Input form - remove border-t and add padding */}
+        <div className="pb-4">
+          <div className="max-w-3xl mx-auto px-4">
             <SignedIn>
               <form onSubmit={handleSubmit}>
                 <div className="flex items-start gap-2">

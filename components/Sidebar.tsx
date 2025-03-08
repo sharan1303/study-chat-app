@@ -81,44 +81,16 @@ function SidebarContent({
         </Link>
       </div>
 
-      {/* Main navigation */}
-      <div className="p-4 border-b">
-        <nav className="grid gap-2">
-          <Button
-            variant={isActive("/") ? "secondary" : "ghost"}
-            className="justify-start"
-            asChild
-          >
-            <Link href="/">Home</Link>
-          </Button>
+      {/* Modules list */}
+      <div className="flex-1 overflow-hidden">
+        <div className="p-4 flex items-center justify-between">
           <Button
             variant={isActive("/modules") ? "secondary" : "ghost"}
             className="justify-start"
             asChild
           >
-            <Link href="/modules">Modules</Link>
+            <Link href="/modules">Your Modules</Link>
           </Button>
-          <Button
-            variant={isActive("/resources") ? "secondary" : "ghost"}
-            className="justify-start"
-            asChild
-          >
-            <Link href="/resources">Resources</Link>
-          </Button>
-          <Button
-            variant={isActive("/settings") ? "secondary" : "ghost"}
-            className="justify-start"
-            asChild
-          >
-            <Link href="/settings">Settings</Link>
-          </Button>
-        </nav>
-      </div>
-
-      {/* Modules list */}
-      <div className="flex-1 overflow-hidden">
-        <div className="p-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Your Modules</h2>
           <SignedIn>
             <Button size="icon" variant="ghost" asChild>
               <Link href="/modules">

@@ -4,23 +4,50 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    // Fetch modules from the database
     const modules = await prisma.module.findMany({
       where: {
-        userId: userId,
+        userId,
       },
       orderBy: {
         updatedAt: "desc",
       },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        icon: true,
+        lastStudied: true,
+        createdAt: true,
+        updatedAt: true,
+        resources: {
+          select: {
+            id: true,
+          },
+        },
+      },
     });
 
-    return NextResponse.json(modules);
+    // Add resource count and format dates
+    const formattedModules = modules.map((module) => ({
+      id: module.id,
+      name: module.name,
+      description: module.description,
+      icon: module.icon,
+      lastStudied: module.lastStudied ? module.lastStudied.toISOString() : null,
+      createdAt: module.createdAt.toISOString(),
+      updatedAt: module.updatedAt.toISOString(),
+      resourceCount: module.resources.length,
+    }));
+
+    return NextResponse.json(formattedModules);
   } catch (error) {
     console.error("Error fetching modules:", error);
     return NextResponse.json(

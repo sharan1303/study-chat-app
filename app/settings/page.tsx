@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
-import { Loader2, Settings as SettingsIcon } from "lucide-react";
+import { Loader2} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,11 +39,8 @@ function SettingsContent() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         {/* Settings Header */}
-        <div className="border-b p-4">
-          <div className="flex items-center gap-2">
-            <SettingsIcon className="h-5 w-5" />
-            <h1 className="font-bold text-2xl">Settings</h1>
-          </div>
+        <div className="p-4">
+          <h1 className="font-bold text-xl">Settings</h1>
         </div>
 
         {/* Settings Content */}
