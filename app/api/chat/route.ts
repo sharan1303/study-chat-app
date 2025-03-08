@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (isModuleMode) {
       // Module-specific mode: Get module context and build specialized prompt
       const moduleContext = await getModuleContext(moduleId);
-      
+
       systemMessage = `You are an AI study assistant specialized in helping with this specific module.
       
 Use the following context about this module to help the student:
@@ -41,7 +41,15 @@ ${shouldSearch ? await searchWithPerplexity(lastUserMessage) : ""}
 Always provide accurate, helpful information relative to the module context.
 Explain concepts clearly and provide examples when appropriate.
 Break down complex topics into understandable parts.
-If you're not sure about something, acknowledge that and suggest what might be reasonable.`;
+If you're not sure about something, acknowledge that and suggest what might be reasonable.
+
+Format your responses using Markdown:
+- Use **bold** for emphasis
+- Use bullet points for lists
+- Use numbered lists for steps
+- Use headings (## and ###) for sections
+- Use code blocks for code examples
+- Use > for quotes`;
     } else {
       // Basic mode: General study assistant
       systemMessage = `You are StudyAI, an AI assistant for learning.
@@ -57,7 +65,15 @@ ${shouldSearch ? await searchWithPerplexity(lastUserMessage) : ""}
 
 Always provide accurate, helpful information.
 Explain concepts clearly and provide examples when appropriate.
-Break down complex topics into understandable parts.`;
+Break down complex topics into understandable parts.
+
+Format your responses using Markdown:
+- Use **bold** for emphasis
+- Use bullet points for lists
+- Use numbered lists for steps
+- Use headings (## and ###) for sections
+- Use code blocks for code examples
+- Use > for quotes`;
     }
 
     // Format messages for the model including the system message

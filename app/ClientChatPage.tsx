@@ -6,7 +6,7 @@ import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useChat } from "ai";
+import { useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
 import { ModuleWithResources } from "@/app/actions";
 import ReactMarkdown from "react-markdown";
@@ -49,10 +49,10 @@ export default function ClientChatPage({
     body: {
       moduleId: activeModule,
     },
-    onResponse: () => {
+    onResponse: (response) => {
       // For module tracking - you could add analytics here
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast.error("Error: " + (error.message || "Failed to send message"));
     },
   });
@@ -108,7 +108,7 @@ export default function ClientChatPage({
                   </SignedOut>
                 </div>
               ) : (
-                messages.map((message) => (
+                messages.map((message: any) => (
                   <div
                     key={message.id}
                     className={`flex ${
