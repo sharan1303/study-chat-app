@@ -95,22 +95,24 @@ To learn more about the technologies used in this project:
 
 ## Todo List
 
-- [ ] Make side bar collapsible
-- [ ] Add file upload functionality for resources
-- [ ] Implement module-specific resources page
-- [ ] Transform current Resources page into All Resources page
-- [ ] Rework UI for Chat thread page to for starting textbox
-- [ ] Implement a dark mode theme
+### UI/UX
 
+- [ ] Make side bar collapsible
+- [ ] Implement data persistence for chat history
+- [ ] Add file upload functionality for resources
+- [ ] Centre starting textbox for chat start up message
+- [ ] Implement a dark mode theme
+- [ ] Create mobile-responsive design improvements
+- [ ] Implement user profile settings and preferences
+- [ ] Add export functionality for chat conversations
+- [ ] Implement collaborative study sessions
+
+### AI
+
+- [ ] Add text under chat response to indicate which model was used
 - [ ] Rework chat interface to use langgraph, maybe python usage?
 - [ ] Improve search capabilities with better context handling
 - [ ] Add support for more AI models
-
-- [ ] Create mobile-responsive design improvements
-
-- [ ] Implement data persistence for chat history
-- [ ] Add export functionality for chat conversations
-- [ ] Implement collaborative study sessions
 
 ## Deployment Notes
 

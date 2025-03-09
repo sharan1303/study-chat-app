@@ -4,7 +4,7 @@ import React, { Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Plus,
+  MessageSquare,
   Settings,
 } from "lucide-react";
 import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/nextjs";
@@ -93,11 +93,38 @@ function SidebarContent({
             <Link href="/modules">Your Modules</Link>
           </Button>
           <SignedIn>
-            <Button size="icon" variant="ghost" asChild>
-              <Link href="/modules">
-                <Plus className="h-4 w-4" />
-              </Link>
-            </Button>
+            <div className="flex gap-1">
+              {/* New Chat button - aware of module context */}
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  // If we're in a module path, get the module name from the URL
+                  const pathParts = pathname?.split("/") || [];
+                  if (
+                    pathname &&
+                    pathParts.length > 1 &&
+                    pathParts[1] !== "modules"
+                  ) {
+                    // We're in a module chat (like /module-name)
+                    router.push(`/${pathParts[1]}`);
+                  } else if (
+                    pathname &&
+                    pathname.startsWith("/modules/") &&
+                    pathParts.length > 2
+                  ) {
+                    // We're in a module details page (like /modules/module-name)
+                    router.push(`/${pathParts[2]}`);
+                  } else {
+                    // Not in a module context, go to the main chat
+                    router.push("/");
+                  }
+                }}
+                title="Start new chat"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+            </div>
           </SignedIn>
         </div>
 
