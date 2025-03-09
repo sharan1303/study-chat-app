@@ -77,30 +77,30 @@ export default function ClientChatPage({
           {/* Centered content container */}
           {/* todo: make start up message stay in place */}
           <div className="max-w-3xl mx-auto w-full">
-            <div className="flex inset-0 items-center justify-center h-screen z-20">
+            <div className="p-3">
               {messages.length === 0 ? (
-                <div className="text-center absolute">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    Start a conversation
-                  </h3>
-
-                  <SignedIn>
-                    <p className="text-muted-foreground">
-                      Ask questions about your module content
-                    </p>
-                  </SignedIn>
-
-                  <SignedOut>
-                    <p className="text-muted-foreground">
-                      Try the chat or sign in to access your modules
-                    </p>
-                    <div className="mt-4">
-                      <SignInButton mode="modal">
-                        <Button>Sign in</Button>
-                      </SignInButton>
+                <div className="text-center flex items-center justify-center h-screen z-20">
+                  <div className="flex flex-col items-center space-y-4">
+                    <div>
+                      <MessageSquare className="h-12 w-12 text-muted-foreground" />
                     </div>
-                  </SignedOut>
+                    <h3 className="text-lg font-medium">Start a conversation</h3>
+                    <SignedIn>
+                      <p className="text-muted-foreground">
+                        Ask questions about your module content
+                      </p>
+                    </SignedIn>
+                    <SignedOut>
+                      <p className="text-muted-foreground">
+                        Try the chat or sign in to access your modules
+                      </p>
+                      <div className="mt-4">
+                        <SignInButton mode="modal">
+                          <Button>Sign in</Button>
+                        </SignInButton>
+                      </div>
+                    </SignedOut>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col space-y-8">

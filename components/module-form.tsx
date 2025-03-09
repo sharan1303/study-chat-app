@@ -20,8 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { encodeModuleSlug } from "@/lib/utils";
-import { init } from "next/dist/compiled/webpack/webpack";
+import { encodeModuleSlug } from "@/lib/utils";;
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
