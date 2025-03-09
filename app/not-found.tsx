@@ -1,17 +1,7 @@
-import { Suspense } from "react";
 import Link from "next/link";
 
-// Fallback component while loading
-function NotFoundFallback() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-      <h1 className="text-4xl font-bold mb-4">Loading...</h1>
-    </div>
-  );
-}
-
-// Actual NotFound content
-function NotFoundContent() {
+// Main NotFound component with Suspense
+export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
       <h1 className="text-4xl font-bold mb-4">404 - Page Not Found</h1>
@@ -25,14 +15,5 @@ function NotFoundContent() {
         Return to Home
       </Link>
     </div>
-  );
-}
-
-// Main NotFound component with Suspense
-export default function NotFound() {
-  return (
-    <Suspense fallback={<NotFoundFallback />}>
-      <NotFoundContent />
-    </Suspense>
   );
 }

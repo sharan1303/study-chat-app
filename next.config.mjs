@@ -8,7 +8,12 @@ const nextConfig = {
 
   // Configure image domains for profile pictures
   images: {
-    domains: ["avatars.githubusercontent.com"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com",
+      },
+    ],
   },
 
   // Disable ESLint during builds to speed up build time
@@ -21,16 +26,9 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Force dynamic rendering
-  experimental: {
-    // Server actions are available by default in Next.js 14+
-    appDocumentPreloading: false,
-  },
-
   // Override static export setup for Vercel
   env: {
     NEXT_PUBLIC_FORCE_DYNAMIC: "true",
-    NEXT_PRIVATE_STANDALONE: "1",
   },
 };
 

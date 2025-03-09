@@ -76,7 +76,8 @@ function ModulesLoading() {
   );
 }
 
-export default function ModulesPage() {
+// Create a component that uses useSearchParams inside Suspense
+function ModulesPageContent() {
   const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -417,5 +418,14 @@ export default function ModulesPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense boundary to prevent static rendering issues
+export default function ModulesPage() {
+  return (
+    <Suspense fallback={<ModulesLoading />}>
+      <ModulesPageContent />
+    </Suspense>
   );
 }
