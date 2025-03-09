@@ -3,27 +3,52 @@
 import { useEffect, useState } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
-import { ArrowLeft, Check, MessageSquare, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Edit,
+  MessageSquare,
+  Pencil,
+  Tag,
+  Trash,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import ModuleActions from "../module-actions";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { toast } from "sonner";
-import ModuleActions from "../module-actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Module {
   id: string;
@@ -44,6 +69,7 @@ interface Resource {
   moduleName?: string | null;
   createdAt: string;
   updatedAt?: string;
+  _deleted?: boolean; // For UI tracking of deleted resources
 }
 
 // List of available icons
@@ -73,6 +99,9 @@ export default function ModuleDetailsPage({
   const router = useRouter();
   const [module, setModule] = useState<Module | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [allModules, setAllModules] = useState<
+    { id: string; name: string; icon: string }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Editing state
@@ -89,43 +118,42 @@ export default function ModuleDetailsPage({
         // Decode the module name from URL parameters
         const decodedModuleName = decodeURIComponent(params.moduleName);
 
-        // Fetch module details
-        const moduleResponse = await axios.get(
-          `/api/modules?name=${decodedModuleName}`
+        // Fetch all modules for the module selector
+        const allModulesResponse = await axios.get("/api/modules");
+        const modulesData = allModulesResponse.data;
+        setAllModules(
+          modulesData.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            icon: m.icon,
+          }))
         );
 
-        // If no exact match is found, fetch all modules and find the closest match
-        if (moduleResponse.data.length === 0) {
-          const allModulesResponse = await axios.get("/api/modules");
-          const allModules = allModulesResponse.data;
+        // Find the current module by name
+        let moduleData = modulesData.find(
+          (m: any) => m.name.toLowerCase() === decodedModuleName.toLowerCase()
+        );
 
-          // Try to find the module by name (case-insensitive)
-          const matchedModule = allModules.find(
-            (m: Module) =>
-              m.name.toLowerCase() === decodedModuleName.toLowerCase()
+        if (!moduleData) {
+          // If not found by case-insensitive match, try direct API query
+          const moduleResponse = await axios.get(
+            `/api/modules?name=${decodedModuleName}`
           );
 
-          if (matchedModule) {
-            setModule(matchedModule);
-
-            // Fetch resources for this module
-            const resourcesResponse = await axios.get(
-              `/api/resources?moduleId=${matchedModule.id}`
-            );
-            setResources(resourcesResponse.data);
+          if (moduleResponse.data.length > 0) {
+            moduleData = moduleResponse.data[0];
           } else {
             return notFound();
           }
-        } else {
-          const moduleData = moduleResponse.data[0];
-          setModule(moduleData);
-
-          // Fetch resources for this module
-          const resourcesResponse = await axios.get(
-            `/api/resources?moduleId=${moduleData.id}`
-          );
-          setResources(resourcesResponse.data);
         }
+
+        setModule(moduleData);
+
+        // Fetch resources for this module
+        const resourcesResponse = await axios.get(
+          `/api/resources?moduleId=${moduleData.id}`
+        );
+        setResources(resourcesResponse.data);
       } catch (error) {
         console.error("Error fetching module details:", error);
       } finally {
@@ -322,7 +350,7 @@ export default function ModuleDetailsPage({
               <Textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="min-h-[100px]"
+                className="min-h-[20px]"
                 placeholder="Add a description..."
                 autoFocus
               />
@@ -395,45 +423,323 @@ export default function ModuleDetailsPage({
               </Button>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {resources.map((resource) => (
-                <Card key={resource.id} className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">
-                      {resource.title}
-                    </CardTitle>
-                    <CardDescription className="mt-2 line-clamp-2">
-                      {resource.description || "No description provided"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <p className="text-sm text-muted-foreground">
-                      Type: {resource.type || "Unknown"}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(resource.createdAt).toLocaleDateString()}
-                    </div>
-                    {resource.url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (resource.url) window.open(resource.url, "_blank");
+            <div className="overflow-x-auto border rounded-md">
+              <table className="w-full min-w-full table-fixed">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-3 font-medium w-1/4">Title</th>
+                    <th className="text-left p-3 font-medium w-1/3">Description</th>
+                    <th className="text-left p-3 font-medium w-1/8">Type</th>
+                    <th className="text-left p-3 font-medium w-1/8">Added</th>
+                    <th className="text-right p-3 font-medium w-1/8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resources
+                    .filter((resource) => !resource._deleted) // Filter out deleted resources
+                    .map((resource) => (
+                      <ResourceRow
+                        key={resource.id}
+                        resource={resource}
+                        modules={allModules}
+                        currentModuleId={module?.id}
+                        onUpdate={(updatedResource) => {
+                          if (updatedResource._deleted) {
+                            // If resource was deleted, keep it in state but mark as deleted
+                            setResources(
+                              resources.map((r) =>
+                                r.id === updatedResource.id
+                                  ? { ...r, _deleted: true }
+                                  : r
+                              )
+                            );
+                          } else if (updatedResource.moduleId !== module?.id) {
+                            // If module changed, remove from this list
+                            setResources(
+                              resources.map((r) =>
+                                r.id === updatedResource.id
+                                  ? { ...r, _deleted: true }
+                                  : r
+                              )
+                            );
+                          } else {
+                            // Regular update
+                            setResources(
+                              resources.map((r) =>
+                                r.id === updatedResource.id
+                                  ? updatedResource
+                                  : r
+                              )
+                            );
+                          }
                         }}
-                      >
-                        View
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
+                      />
+                    ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+// Resource row component with context menu
+function ResourceRow({
+  resource,
+  onUpdate,
+  modules = [],
+  currentModuleId,
+}: {
+  resource: Resource;
+  onUpdate: (updatedResource: Resource) => void;
+  modules?: { id: string; name: string; icon: string }[];
+  currentModuleId?: string;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(resource.title);
+  const [editDescription, setEditDescription] = useState(
+    resource.description || ""
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showModuleChangeAlert, setShowModuleChangeAlert] = useState(false);
+  const [selectedModuleId, setSelectedModuleId] = useState(resource.moduleId);
+
+  // Save resource update
+  const saveResourceUpdate = async (updates: {
+    title?: string;
+    description?: string;
+    moduleId?: string;
+  }) => {
+    try {
+      setIsSaving(true);
+      const response = await axios.put(
+        `/api/resources/${resource.id}`,
+        updates
+      );
+
+      // Update local state
+      const updatedResource = {
+        ...resource,
+        ...updates,
+        // If moduleId was updated, update the moduleName too
+        ...(updates.moduleId && {
+          moduleName:
+            modules.find((m) => m.id === updates.moduleId)?.name ||
+            resource.moduleName,
+        }),
+      };
+
+      onUpdate(updatedResource);
+      toast.success("Resource updated");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating resource:", error);
+      toast.error("Failed to update resource");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle save
+  const handleSave = () => {
+    if (editTitle.trim().length < 2) {
+      toast.error("Title must be at least 2 characters");
+      return;
+    }
+
+    const updates: { title?: string; description?: string; moduleId?: string } =
+      {};
+
+    if (editTitle !== resource.title) {
+      updates.title = editTitle;
+    }
+
+    if (editDescription !== resource.description) {
+      updates.description = editDescription;
+    }
+
+    if (selectedModuleId !== resource.moduleId) {
+      if (selectedModuleId !== currentModuleId) {
+        // Show confirmation if changing to a different module
+        setShowModuleChangeAlert(true);
+        return;
+      }
+      updates.moduleId = selectedModuleId;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      saveResourceUpdate(updates);
+    } else {
+      setIsEditing(false);
+    }
+  };
+
+  // Handle module change confirmation
+  const handleModuleChangeConfirm = () => {
+    saveResourceUpdate({ moduleId: selectedModuleId });
+    setShowModuleChangeAlert(false);
+  };
+
+  // Handle delete resource
+  const handleDelete = async () => {
+    try {
+      setIsSaving(true);
+      await axios.delete(`/api/resources/${resource.id}`);
+      toast.success("Resource deleted");
+      // Remove resource from the list
+      onUpdate({ ...resource, _deleted: true } as any);
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      toast.error("Failed to delete resource");
+    } finally {
+      setIsSaving(false);
+      setShowDeleteAlert(false);
+    }
+  };
+
+  // Start editing
+  const handleEdit = () => {
+    setEditTitle(resource.title);
+    setEditDescription(resource.description || "");
+    setSelectedModuleId(resource.moduleId);
+    setIsEditing(true);
+  };
+
+  // Cancel editing
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  return (
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <tr className="border-b hover:bg-muted/50 cursor-context-menu">
+            <td className="p-3">
+              {isEditing ? (
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="h-9"
+                  autoFocus
+                />
+              ) : (
+                <div className="font-medium">{resource.title}</div>
+              )}
+            </td>
+            <td className="p-3">
+              {isEditing ? (
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="text-sm min-h-[20px] resize-none"
+                  placeholder="Add a description..."
+                />
+              ) : (
+                <div className="line-clamp-2 text-sm text-muted-foreground">
+                  {resource.description || "No description."}
+                </div>
+              )}
+            </td>
+            <td className="p-3 text-sm">{resource.type}</td>
+            <td className="p-3 text-sm text-muted-foreground">
+                <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
+            </td>
+            <td className="p-3 text-right">
+              {isEditing ? (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                resource.url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (resource.url) window.open(resource.url, "_blank");
+                    }}
+                  >
+                    View
+                  </Button>
+                )
+              )}
+            </td>
+          </tr>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={handleEdit}
+            disabled={isEditing}
+            className="cursor-pointer"
+          >
+            <Edit className="mr-2 h-4 w-4" /> Edit
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={() => setShowDeleteAlert(true)}
+            disabled={isEditing}
+            className="cursor-pointer text-destructive focus:text-destructive"
+          >
+            <Trash className="mr-2 h-4 w-4" /> Delete
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{resource.title}" and cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Module Change Confirmation Dialog */}
+      <AlertDialog
+        open={showModuleChangeAlert}
+        onOpenChange={setShowModuleChangeAlert}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change module?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This resource will be moved to another module and will no longer
+              appear in the current module.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleModuleChangeConfirm}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

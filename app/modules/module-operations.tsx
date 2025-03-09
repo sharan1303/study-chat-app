@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -28,12 +28,12 @@ export default function ModuleOperations({
       <DialogTrigger asChild>
         {showLarge ? (
           <Button size="lg">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Module
-          </Button>
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Create Module
+        </Button>
         ) : (
           <Button>
-            <Plus className="mr-2 h-4 w-4" />
+            <PlusCircle className="h-4 w-4 mr-2" />
             Create Module
           </Button>
         )}
