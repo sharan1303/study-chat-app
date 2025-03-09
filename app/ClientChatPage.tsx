@@ -81,9 +81,9 @@ export default function ClientChatPage({
         <div className="flex-1 overflow-y-auto">
           {/* Centered content container */}
           <div className="max-w-3xl mx-auto w-full">
-            <div className="p-4 space-y-8">
+            <div className="p-4 flex items-center justify-center h-screen space-y-8 ">
               {messages.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="text-center">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">
                     Start a conversation
