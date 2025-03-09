@@ -3,8 +3,10 @@ import { Prisma } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { userId } = await auth();
+  const searchParams = request.nextUrl.searchParams;
+  const name = searchParams.get("name");
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,6 +17,7 @@ export async function GET() {
     const modules = await prisma.module.findMany({
       where: {
         userId,
+        ...(name ? { name } : {}),
       },
       orderBy: {
         updatedAt: "desc",

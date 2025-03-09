@@ -1,38 +1,20 @@
 "use client";
 
-import React, { Suspense } from "react";
-import { useAuth, SignInButton } from "@clerk/nextjs";
-import { Loader2} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from "react";
+// import { useAuth, SignInButton } from "@clerk/nextjs";
+// import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
+  // CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Loading component
-function SettingsPageLoading() {
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Loading settings...</p>
-      </div>
-    </div>
-  );
-}
-
 // Settings content component
 function SettingsContent() {
-  const { isLoaded, isSignedIn } = useAuth();
-
-  if (!isLoaded) {
-    return <SettingsPageLoading />;
-  }
 
   return (
     <div className="flex h-screen">
@@ -43,24 +25,7 @@ function SettingsContent() {
           <h1 className="font-bold text-xl">Settings</h1>
         </div>
 
-        {/* Settings Content */}
-        {!isSignedIn ? (
-          <div className="flex items-center justify-center flex-1">
-            <Card className="w-[400px]">
-              <CardHeader>
-                <CardTitle>Sign in to access settings</CardTitle>
-                <CardDescription>
-                  You need to be signed in to view and change your settings
-                </CardDescription>
-              </CardHeader>
-              <CardFooter>
-                <SignInButton mode="modal">
-                  <Button className="w-full">Sign in</Button>
-                </SignInButton>
-              </CardFooter>
-            </Card>
-          </div>
-        ) : (
+        
           <div className="p-4 max-w-4xl mx-auto w-full">
             <Tabs defaultValue="account">
               <TabsList className="mb-4">
@@ -119,7 +84,7 @@ function SettingsContent() {
               </TabsContent>
             </Tabs>
           </div>
-        )}
+
       </div>
     </div>
   );
@@ -128,8 +93,6 @@ function SettingsContent() {
 // Main component with Suspense
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<SettingsPageLoading />}>
-      <SettingsContent />
-    </Suspense>
+    <SettingsContent />
   );
 }

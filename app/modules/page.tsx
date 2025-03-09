@@ -384,7 +384,7 @@ function ModulesPageContent() {
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredModules.map((module) => (
-                  <Link href={`/${module.name}`} key={module.name}>
+                  <Link href={`/modules/${module.name}`} key={module.name}>
                     <Card className="hover:bg-muted/50 transition-colors">
                       <CardHeader>
                         <CardTitle>
