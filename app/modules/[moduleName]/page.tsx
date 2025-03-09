@@ -428,7 +428,9 @@ export default function ModuleDetailsPage({
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium w-1/4">Title</th>
-                    <th className="text-left p-3 font-medium w-1/3">Description</th>
+                    <th className="text-left p-3 font-medium w-1/3">
+                      Description
+                    </th>
                     <th className="text-left p-3 font-medium w-1/8">Type</th>
                     <th className="text-left p-3 font-medium w-1/8">Added</th>
                     <th className="text-right p-3 font-medium w-1/8"></th>
@@ -646,7 +648,7 @@ function ResourceRow({
             </td>
             <td className="p-3 text-sm">{resource.type}</td>
             <td className="p-3 text-sm text-muted-foreground">
-                <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
+              <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
             </td>
             <td className="p-3 text-right">
               {isEditing ? (
@@ -743,3 +745,6 @@ function ResourceRow({
     </>
   );
 }
+
+// Add this export to allow dynamic rendering
+export const dynamic = "force-dynamic";

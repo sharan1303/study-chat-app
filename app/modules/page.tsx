@@ -771,3 +771,6 @@ export default function ModulesPage() {
     </Suspense>
   );
 }
+
+// Add this export to allow dynamic rendering
+export const dynamic = "force-dynamic";

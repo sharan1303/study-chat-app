@@ -11,3 +11,6 @@ export default async function Home() {
     </Suspense>
   );
 }
+
+// Add this export to allow dynamic rendering
+export const dynamic = "force-dynamic";

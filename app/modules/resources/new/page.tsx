@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { z } from "zod";
@@ -57,7 +57,52 @@ interface Module {
   icon: string;
 }
 
-export default function NewResourcePage() {
+// Main component export that wraps the actual page with Suspense
+export default function NewResourcePageWrapper() {
+  return (
+    <Suspense fallback={<NewResourcePageLoading />}>
+      <NewResourcePage />
+    </Suspense>
+  );
+}
+
+// Loading state component
+function NewResourcePageLoading() {
+  return (
+    <div className="flex flex-col min-h-screen p-8">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="h-10 w-10 bg-gray-200 animate-pulse rounded-full"></div>
+        <div className="h-7 w-36 bg-gray-200 animate-pulse rounded"></div>
+      </div>
+      <div className="max-w-2xl mx-auto w-full">
+        <div className="border rounded-md p-6 space-y-4">
+          <div className="h-6 w-1/4 bg-gray-200 animate-pulse rounded mb-6"></div>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="h-5 w-1/5 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-10 w-full bg-gray-200 animate-pulse rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-5 w-1/4 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-24 w-full bg-gray-200 animate-pulse rounded"></div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-5 w-1/6 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-10 w-full bg-gray-200 animate-pulse rounded"></div>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <div className="h-10 w-20 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-10 w-32 bg-gray-200 animate-pulse rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The actual page component that uses useSearchParams
+function NewResourcePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedModuleId = searchParams?.get("moduleId");

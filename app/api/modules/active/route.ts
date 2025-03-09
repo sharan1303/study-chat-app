@@ -70,3 +70,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// Add this export to tell Next.js that this route should be treated as dynamic
+export const dynamic = "force-dynamic";

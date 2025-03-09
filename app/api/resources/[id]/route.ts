@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
+// Add this export to tell Next.js that this route should be treated as dynamic
+export const dynamic = "force-dynamic";
+
 // PUT /api/resources/[id] - Update a resource
 export async function PUT(
   request: Request,
