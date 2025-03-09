@@ -126,7 +126,7 @@ export default function NewResourcePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen p-8">
+    <div className="flex flex-col min-h-screen p-3">
       <div className="flex items-center gap-2 mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />

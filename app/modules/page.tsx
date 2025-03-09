@@ -372,9 +372,6 @@ function ModulesPageContent() {
       <div className="flex-1 space-y-4 px-8">
         <div className="flex items-center justify-between p-3">
           <h1 className="font-bold text-2xl">Study Content</h1>
-          <Suspense fallback={<Button disabled>Loading...</Button>}>
-            <ModuleOperations />
-          </Suspense>
         </div>
 
         {/* Tabs for Module and Resources - now at the top */}
@@ -532,10 +529,7 @@ function ResourceRowWithContext({
   }) => {
     try {
       setIsSaving(true);
-      const response = await axios.put(
-        `/api/resources/${resource.id}`,
-        updates
-      );
+      await axios.put(`/api/resources/${resource.id}`, updates);
 
       // Update local state
       const updatedResource = {
@@ -549,9 +543,9 @@ function ResourceRowWithContext({
         }),
       };
 
+      onUpdate(updatedResource);
       toast.success("Resource updated");
       setIsEditing(false);
-      onUpdate(updatedResource);
     } catch (error) {
       console.error("Error updating resource:", error);
       toast.error("Failed to update resource");
@@ -592,7 +586,9 @@ function ResourceRowWithContext({
 
   // Handle module change confirmation
   const handleModuleChangeConfirm = () => {
-    saveResourceUpdate({ moduleId: selectedModuleId });
+    // Create an update with just the moduleId
+    const updates = { moduleId: selectedModuleId };
+    saveResourceUpdate(updates);
     setShowModuleChangeAlert(false);
   };
 

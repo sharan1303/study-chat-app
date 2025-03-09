@@ -15,10 +15,10 @@ export async function PUT(
 
   try {
     const json = await request.json();
-    const { title, description } = json;
+    const { title, description, moduleId } = json;
 
     // Validate the request
-    if (!title || title.length < 2) {
+    if (title !== undefined && title.length < 2) {
       return NextResponse.json(
         { error: "Title must be at least 2 characters" },
         { status: 400 }
@@ -42,14 +42,39 @@ export async function PUT(
       );
     }
 
+    // If moduleId is provided, check if the module exists and belongs to the user
+    if (moduleId) {
+      const moduleExists = await prisma.module.findUnique({
+        where: {
+          id: moduleId,
+          userId,
+        },
+      });
+
+      if (!moduleExists) {
+        return NextResponse.json(
+          { error: "Module not found or access denied" },
+          { status: 404 }
+        );
+      }
+    }
+
     // Update the resource
     const updatedResource = await prisma.resource.update({
       where: {
         id: params.id,
       },
       data: {
-        title,
-        content: description || "",
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { content: description }),
+        ...(moduleId !== undefined && { moduleId }),
+      },
+      include: {
+        module: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -60,6 +85,7 @@ export async function PUT(
       type: updatedResource.type,
       url: updatedResource.fileUrl,
       moduleId: updatedResource.moduleId,
+      moduleName: updatedResource.module?.name || null,
       createdAt: updatedResource.createdAt.toISOString(),
       updatedAt: updatedResource.updatedAt.toISOString(),
     });
