@@ -60,18 +60,13 @@ export default function ClientChatPage({
     <div className="flex h-screen flex-col">
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Chat Header - Remove border-b */}
+        {/* Chat Header */}
         {moduleDetails && (
           <div className="p-4 flex items-center">
             <div className="flex items-center gap-2">
               <span className="text-2xl">{moduleDetails.icon}</span>
               <div>
                 <h1 className="font-bold text-xl">{moduleDetails.name}</h1>
-                {moduleDetails.description && (
-                  <p className="text-sm text-muted-foreground truncate max-w-md">
-                    {moduleDetails.description}
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -80,10 +75,11 @@ export default function ClientChatPage({
         {/* Chat content with scrollbar at the edge */}
         <div className="flex-1 overflow-y-auto">
           {/* Centered content container */}
+          {/* todo: make start up message stay in place */}
           <div className="max-w-3xl mx-auto w-full">
-            <div className="p-4 flex items-center justify-center h-screen space-y-8 ">
+            <div className="flex inset-0 items-center justify-center h-screen z-20">
               {messages.length === 0 ? (
-                <div className="text-center">
+                <div className="text-center absolute">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">
                     Start a conversation

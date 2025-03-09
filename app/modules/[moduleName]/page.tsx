@@ -332,13 +332,23 @@ export default function ModuleDetailsPage({
           ) : (
             <h1
               className="text-2xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
-              onDoubleClick={() => setIsEditingTitle(true)}
+              onClick={() => setIsEditingTitle(true)}
             >
               {module.name}
             </h1>
           )}
         </div>
-        <ModuleActions moduleId={module.id} moduleName={module.name} />
+        <div className="flex items-center gap-2">
+          <Button
+            className="flex items-center gap-2"
+            variant="outline"
+            onClick={() => router.push(`/${module.name}`)}
+          >
+            <MessageSquare className="h-5 w-5" />
+            Go to Chat
+          </Button>
+          <ModuleActions moduleId={module.id} moduleName={module.name} />
+        </div>
       </div>
 
       <div className="space-y-6 px-8">
@@ -350,7 +360,7 @@ export default function ModuleDetailsPage({
               <Textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="min-h-[20px]"
+                className="min-h-[150px]"
                 placeholder="Add a description..."
                 autoFocus
               />
@@ -373,24 +383,13 @@ export default function ModuleDetailsPage({
             </div>
           ) : (
             <p
-              className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-2 rounded"
-              onDoubleClick={() => setIsEditingDescription(true)}
+              className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[80px]"
+              onClick={() => setIsEditingDescription(true)}
             >
               {module.description ||
-                "No description provided. Double-click to add one."}
+                "No description provided. Click to add one."}
             </p>
           )}
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
-          <Button
-            className="flex items-center gap-2"
-            size="lg"
-            onClick={() => router.push(`/${module.name}`)}
-          >
-            <MessageSquare className="h-5 w-5" />
-            Go to Chat
-          </Button>
         </div>
 
         <Separator className="my-6" />

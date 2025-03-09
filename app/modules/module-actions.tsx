@@ -9,6 +9,16 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/module-form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ModuleActionsProps {
   moduleId: string;
@@ -22,6 +32,7 @@ export default function ModuleActions({
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [moduleDetails, setModuleDetails] = useState<{
     id: string;
     name: string;
@@ -56,19 +67,17 @@ export default function ModuleActions({
 
   // Handle module deletion
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete "${moduleName}"?`)) {
-      return;
-    }
     try {
       setIsDeleting(true);
       await axios.delete(`/api/modules/${moduleId}`);
       toast.success(`Module "${moduleName}" deleted successfully`);
-      router.refresh();
+      router.push("/modules"); // Redirect to modules list after deletion
     } catch (error) {
       console.error("Error deleting module:", error);
       toast.error("Failed to delete module");
     } finally {
       setIsDeleting(false);
+      setShowDeleteAlert(false);
     }
   };
 
@@ -92,18 +101,40 @@ export default function ModuleActions({
           </DialogContent>
         )}
       </Dialog>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleDelete}
-        disabled={isDeleting}
-      >
-        {isDeleting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash className="h-4 w-4 text-destructive" />
-        )}
-      </Button>
+
+      {/* Delete Module Alert Dialog */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDeleteAlert(true)}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash className="h-4 w-4 text-destructive" />
+          )}
+        </Button>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete module "{moduleName}" and all its
+              resources. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

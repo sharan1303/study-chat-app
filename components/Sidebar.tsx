@@ -79,6 +79,8 @@ function SidebarContent({
         <Link href="/" className="flex items-center">
           <span className="text-xl font-bold">StudyAI</span>
         </Link>
+
+        
       </div>
 
       {/* Modules list */}
