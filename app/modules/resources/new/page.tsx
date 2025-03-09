@@ -171,12 +171,12 @@ function NewResourcePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen p-3">
+    <div className="flex flex-col min-h-screen p-4">
       <div className="flex items-center gap-2 mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold">Add Resource</h1>
+        <h1 className="text-xl font-bold">Add Resource</h1>
       </div>
 
       <Card className="max-w-2xl mx-auto">

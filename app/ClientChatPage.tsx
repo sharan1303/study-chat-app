@@ -13,10 +13,41 @@ import ReactMarkdown from "react-markdown";
 // Loading component for Suspense fallback
 export function ChatPageLoading() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
-        <p className="text-muted-foreground">Loading chat...</p>
+    <div className="flex h-screen flex-col">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col px-3 overflow-hidden">
+        {/* Chat Header - Skeleton */}
+        <div className="p-5 flex items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+            <div className="h-6 w-40 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </div>
+
+        {/* Chat content with scrollbar at the edge */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Centered content container */}
+          <div className="max-w-3xl mx-auto w-full">
+            <div className="p-3">
+              <div className="flex items-center justify-center h-screen z-20">
+                <div className="text-center">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-muted-foreground">Loading chat...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Input form skeleton */}
+        <div className="pb-4">
+          <div className="max-w-3xl mx-auto px-4">
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-h-[60px] max-h-[120px] border-2 bg-gray-100 animate-pulse rounded"></div>
+              <div className="self-end h-[60px] w-[100px] bg-gray-200 animate-pulse rounded"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -59,10 +90,10 @@ export default function ClientChatPage({
   return (
     <div className="flex h-screen flex-col">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col px-3 overflow-hidden">
         {/* Chat Header */}
         {moduleDetails && (
-          <div className="p-4 flex items-center">
+          <div className="p-5 flex items-center">
             <div className="flex items-center gap-2">
               <span className="text-2xl">{moduleDetails.icon}</span>
               <div>
@@ -84,7 +115,9 @@ export default function ClientChatPage({
                     <div>
                       <MessageSquare className="h-12 w-12 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-medium">Start a conversation</h3>
+                    <h3 className="text-lg font-medium">
+                      Start a conversation
+                    </h3>
                     <SignedIn>
                       <p className="text-muted-foreground">
                         Ask questions about your module content

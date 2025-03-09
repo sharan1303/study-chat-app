@@ -97,7 +97,6 @@ To learn more about the technologies used in this project:
 
 ### UI/UX
 
-- [ ] Make side bar collapsible
 - [ ] Implement data persistence for chat history
 - [ ] Add file upload functionality for resources
 - [ ] Centre starting textbox for chat start up message

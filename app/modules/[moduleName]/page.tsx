@@ -3,19 +3,7 @@
 import { useEffect, useState } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
-import {
-  ArrowLeft,
-  Check,
-  Edit,
-  MessageSquare,
-  Pencil,
-  Tag,
-  Trash,
-  X,
-  ThumbsDown,
-  ThumbsUp,
-  UploadCloud,
-} from "lucide-react";
+import { Check, Edit, MessageSquare, Trash, X } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -166,8 +154,8 @@ export default function ModuleDetailsPage({
           }
         }
 
-        setModule(moduleData)
-        
+        setModule(moduleData);
+
         // Fetch resources for this module
         const resourcesResponse = await axios.get(
           `/api/resources?moduleId=${moduleData.id}`
@@ -277,21 +265,35 @@ export default function ModuleDetailsPage({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col p-3">
-        <div className="flex items-center gap-2 mb-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/modules")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="h-7 w-36 bg-gray-200 animate-pulse rounded"></div>
+      <div className="flex flex-col min-h-screen p-5">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            {/* Icon skeleton */}
+            <div className="h-10 w-10 bg-gray-200 animate-pulse rounded"></div>
+            {/* Title skeleton */}
+            <div className="h-7 w-48 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+
+          {/* Action buttons skeleton */}
+          <div className="flex gap-2">
+            <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+          </div>
         </div>
-        <div className="space-y-6">
-          <div className="h-5 w-3/4 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-16 w-full bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-8 w-48 bg-gray-200 animate-pulse rounded"></div>
+
+        {/* Description section skeleton */}
+        <div className="space-y-4 mb-6">
+          <div className="h-5 w-32 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-20 w-full bg-gray-200 animate-pulse rounded p-4"></div>
+        </div>
+
+        {/* Resources section skeleton */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
@@ -316,29 +318,21 @@ export default function ModuleDetailsPage({
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-3">
+    <div className="flex flex-col min-h-screen p-5">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.push("/modules")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-
+        <div className="flex items-center gap-1">
           {/* Module icon with popover for changing */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
-                className="text-2xl cursor-pointer hover:bg-muted h-10 w-10 p-0"
+                className="text-xl px-10 cursor-pointer hover:bg-muted h-10 w-10"
               >
                 {module.icon}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64">
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 gap-1">
                 {icons.map((icon) => (
                   <Button
                     key={icon}
@@ -355,11 +349,11 @@ export default function ModuleDetailsPage({
 
           {/* Editable title */}
           {isEditingTitle ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <Input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="text-xl font-bold h-10"
+                className="text-xl font-bold"
                 autoFocus
               />
               <Button
@@ -376,7 +370,7 @@ export default function ModuleDetailsPage({
             </div>
           ) : (
             <h1
-              className="text-2xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
+              className="text-xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
               onClick={() => setIsEditingTitle(true)}
             >
               {module.name}
@@ -405,7 +399,7 @@ export default function ModuleDetailsPage({
               <Textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="min-h-[150px]"
+                className="min-h-[158px]"
                 placeholder="Add a description..."
                 autoFocus
               />
@@ -428,7 +422,7 @@ export default function ModuleDetailsPage({
             </div>
           ) : (
             <p
-              className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[80px]"
+              className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[150px]"
               onClick={() => setIsEditingDescription(true)}
             >
               {module.description ||

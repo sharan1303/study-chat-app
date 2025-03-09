@@ -87,27 +87,44 @@ interface Resource {
 function ModulesLoading() {
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex h-14 items-center justify-between px-4">
+      <div className="flex-1 space-y-4 px-8">
+        <div className="flex items-center justify-between p-5">
           <div className="h-7 w-36 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-              </CardContent>
-              <CardFooter>
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-              </CardFooter>
-            </Card>
-          ))}
+
+        {/* Tabs skeleton */}
+        <div className="px-3">
+          <div className="grid w-full max-w-md grid-cols-2 h-10 bg-gray-100 rounded-md">
+            <div className="m-1 h-8 w-auto bg-gray-200 animate-pulse rounded-sm"></div>
+            <div className="m-1 h-8 w-auto bg-gray-100 rounded-sm"></div>
+          </div>
+
+          {/* Search bar and button skeleton */}
+          <div className="relative flex items-center gap-2 mt-4 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <div className="h-10 w-full bg-gray-200 animate-pulse rounded"></div>
+            </div>
+            <div className="h-10 w-36 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+
+          {/* Module cards skeleton */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </CardContent>
+                <CardFooter>
+                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -186,7 +203,7 @@ function ModulesPageContent() {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <div className="flex-1 space-y-4">
-          <div className="flex p-3 items-center">
+          <div className="flex p-5 items-center">
             <h1 className="font-bold text-2xl">Modules</h1>
           </div>
           <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
@@ -367,8 +384,8 @@ function ModulesPageContent() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4 px-8">
-        <div className="flex items-center justify-between p-3">
-          <h1 className="font-bold text-2xl">Study Content</h1>
+        <div className="flex items-center justify-between p-5">
+          <h1 className="font-bold text-xl">Study Content</h1>
         </div>
 
         {/* Tabs for Module and Resources - now at the top */}
@@ -437,7 +454,7 @@ function ModulesPageContent() {
                     ? "Try a different search term"
                     : "Create your first module to get started"}
                 </p>
-                {!searchQuery }
+                {!searchQuery}
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
