@@ -166,12 +166,8 @@ export default function ModuleDetailsPage({
           }
         }
 
-        setModule(moduleData);
-
-        // Update the lastStudied timestamp when viewing a module
-        // This ensures it appears at the top of the sidebar
-        await axios.put(`/api/modules/${moduleData.id}/last-studied`);
-
+        setModule(moduleData)
+        
         // Fetch resources for this module
         const resourcesResponse = await axios.get(
           `/api/resources?moduleId=${moduleData.id}`
