@@ -4,10 +4,6 @@ import React, { Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Book,
-  BookOpen,
-  FolderOpen,
-  Layout,
   Plus,
   Settings,
 } from "lucide-react";
@@ -73,7 +69,7 @@ function SidebarContent({
       // If no callback provided, navigate to the module name as URL path
       // Use custom slug encoding for special characters
       const encodedName = encodeModuleSlug(moduleName);
-      router.push(`/modules/${encodedName}`);
+      router.push(`/${encodedName}`);
     }
   };
 

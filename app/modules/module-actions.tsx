@@ -62,6 +62,9 @@ export default function ModuleActions({
     setIsEditing(false);
     setModuleDetails(null);
     toast.success("Module updated");
+
+    // Use router.refresh() for less disruption
+    // If the edit involved a name change, the ModuleForm component will handle that separately
     router.refresh();
   };
 
@@ -71,7 +74,12 @@ export default function ModuleActions({
       setIsDeleting(true);
       await axios.delete(`/api/modules/${moduleId}`);
       toast.success(`Module "${moduleName}" deleted successfully`);
-      router.push("/modules"); // Redirect to modules list after deletion
+
+      // Use setTimeout to ensure toast is visible before redirect
+      setTimeout(() => {
+        // Force a full navigation to ensure all components refresh
+        window.location.href = "/modules";
+      }, 600);
     } catch (error) {
       console.error("Error deleting module:", error);
       toast.error("Failed to delete module");

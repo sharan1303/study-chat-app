@@ -168,6 +168,10 @@ export default function ModuleDetailsPage({
 
         setModule(moduleData);
 
+        // Update the lastStudied timestamp when viewing a module
+        // This ensures it appears at the top of the sidebar
+        await axios.put(`/api/modules/${moduleData.id}/last-studied`);
+
         // Fetch resources for this module
         const resourcesResponse = await axios.get(
           `/api/resources?moduleId=${moduleData.id}`
@@ -215,19 +219,25 @@ export default function ModuleDetailsPage({
         icon: updates.icon !== undefined ? updates.icon : module.icon,
       });
 
-      // Update local state
-      const updatedModule = {
+      // Update local state for immediate UI feedback
+      setModule({
         ...module,
         ...updates,
-      };
-      setModule(updatedModule);
+      });
 
       toast.success("Module updated");
 
-      // If the name was updated, redirect to the new URL and refresh the page
+      // Only use a full page refresh for name changes
       if (updates.name && updates.name !== module.name) {
-        const formattedName = formatModuleNameForUrl(updates.name);
-        router.push(`/modules/${formattedName}`);
+        // For name updates, use a full page refresh to update the sidebar
+        setTimeout(() => {
+          const formattedName = formatModuleNameForUrl(updates.name || "");
+          window.location.href = `/modules/${formattedName}`;
+        }, 600);
+      } else {
+        // For description and icon updates, just use router.refresh()
+        // This is less disruptive but still updates server components
+        router.refresh();
       }
     } catch (error) {
       console.error("Error updating module:", error);
@@ -273,7 +283,11 @@ export default function ModuleDetailsPage({
     return (
       <div className="flex flex-col p-3">
         <div className="flex items-center gap-2 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/modules")}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="h-7 w-36 bg-gray-200 animate-pulse rounded"></div>
@@ -309,7 +323,11 @@ export default function ModuleDetailsPage({
     <div className="flex flex-col min-h-screen p-3">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/modules")}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
 

@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { encodeModuleSlug } from "@/lib/utils";
+import { init } from "next/dist/compiled/webpack/webpack";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -94,6 +95,21 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
         );
         console.log("Module updated response:", response.data);
         toast.success("Module updated");
+
+        // Close the dialog first
+        onSuccess();
+
+        // If the name was changed, redirect to the new URL with a full page reload
+        if (values.name !== initialData.name) {
+          setTimeout(() => {
+            const formattedName = encodeModuleSlug(values.name);
+            window.location.href = `/modules/${formattedName}`;
+          }, 600);
+        } else {
+          // For non-name updates, just use router.refresh()
+          router.refresh();
+        }
+        return;
       } else {
         // Create new module
         console.log("Creating new module");
@@ -109,21 +125,15 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
         // Format the module name for URL - encode all punctuation
         const formattedName = encodeModuleSlug(newModule.name);
 
-        // Wait a moment before closing the dialog to ensure the toast is visible
+        // Close the dialog first
+        onSuccess();
+
+        // For new modules, always do a full redirect to refresh the sidebar
         setTimeout(() => {
-          onSuccess();
-          // Navigate to the modules page first to ensure a full refresh
-          router.push("/modules");
-        }, 500);
+          window.location.href = `/modules/${formattedName}`;
+        }, 600);
         return;
       }
-
-      // This block now only executes for updates
-      // Wait a moment before closing the dialog to ensure the toast is visible
-      setTimeout(() => {
-        onSuccess();
-        router.refresh();
-      }, 500);
     } catch (error) {
       console.error("Error submitting form:", error);
       if (axios.isAxiosError(error)) {
