@@ -26,3 +26,42 @@ export function formatDate(dateString: string | null): string {
     return date.toLocaleDateString();
   }
 }
+
+/**
+ * Format a module name for use in URLs
+ * Creates clean URIs by standardizing separators to hyphens
+ * Maintains compatibility with existing routing
+ */
+export function encodeModuleSlug(moduleName: string): string {
+  if (!moduleName) return "";
+
+  // Step 1: Convert to lowercase for consistency
+  const lowerCaseName = moduleName.toLowerCase();
+
+  // Step 2: Replace whitespaces, underscores, commas, dots, slashes with hyphens
+  let cleanedName = lowerCaseName.replace(/[\s_,.\\/]+/g, "-");
+
+  // Step 3: Replace other common punctuation with empty string
+  cleanedName = cleanedName.replace(/[?*()+=:%&#;!~'"@]+/g, "");
+
+  // Step 4: Clean up the result - normalize hyphens and trim
+  cleanedName = cleanedName
+    .replace(/-+/g, "-") // Replace multiple consecutive hyphens with a single hyphen
+    .replace(/^-|-$/g, ""); // Remove leading and trailing hyphens
+
+  return cleanedName;
+}
+
+/**
+ * Decode a module slug from a URL back to a format that can be matched with database records
+ * Focuses on matching the database record format rather than exact restoration
+ */
+export function decodeModuleSlug(encodedSlug: string): string {
+  if (!encodedSlug) return "";
+
+  // Step 1: Decode any URI components
+  const decodedSlug = decodeURIComponent(encodedSlug);
+
+  // Step 2: Replace hyphens with spaces for matching with database records
+  return decodedSlug.replace(/-/g, " ");
+}

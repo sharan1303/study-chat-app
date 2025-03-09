@@ -12,7 +12,11 @@ import {
   Tag,
   Trash,
   X,
+  ThumbsDown,
+  ThumbsUp,
+  UploadCloud,
 } from "lucide-react";
+import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,7 +120,7 @@ export default function ModuleDetailsPage({
       try {
         setIsLoading(true);
         // Decode the module name from URL parameters
-        const decodedModuleName = decodeURIComponent(params.moduleName);
+        const decodedModuleName = decodeModuleSlug(params.moduleName);
 
         // Fetch all modules for the module selector
         const allModulesResponse = await axios.get("/api/modules");
@@ -129,21 +133,36 @@ export default function ModuleDetailsPage({
           }))
         );
 
-        // Find the current module by name
+        // First try exact match (case-insensitive)
         let moduleData = modulesData.find(
           (m: any) => m.name.toLowerCase() === decodedModuleName.toLowerCase()
         );
 
+        // If not found with exact match, try a more flexible search
         if (!moduleData) {
-          // If not found by case-insensitive match, try direct API query
-          const moduleResponse = await axios.get(
-            `/api/modules?name=${decodedModuleName}`
-          );
+          // Try matching with normalized strings (removing special chars)
+          moduleData = modulesData.find((m: any) => {
+            const normalizedDbName = m.name
+              .toLowerCase()
+              .replace(/[^\w\s]/g, "");
+            const normalizedSearchName = decodedModuleName
+              .toLowerCase()
+              .replace(/[^\w\s]/g, "");
+            return normalizedDbName === normalizedSearchName;
+          });
 
-          if (moduleResponse.data.length > 0) {
-            moduleData = moduleResponse.data[0];
-          } else {
-            return notFound();
+          // If still not found, try API query
+          if (!moduleData) {
+            // If not found by case-insensitive match, try direct API query
+            const moduleResponse = await axios.get(
+              `/api/modules?name=${decodedModuleName}`
+            );
+
+            if (moduleResponse.data.length > 0) {
+              moduleData = moduleResponse.data[0];
+            } else {
+              return notFound();
+            }
           }
         }
 
@@ -172,6 +191,11 @@ export default function ModuleDetailsPage({
     }
   }, [module]);
 
+  // Format module name for URLs: replace spaces with hyphens
+  const formatModuleNameForUrl = (name: string) => {
+    return encodeModuleSlug(name);
+  };
+
   // Save module updates
   const saveModuleUpdate = async (updates: {
     name?: string;
@@ -192,12 +216,19 @@ export default function ModuleDetailsPage({
       });
 
       // Update local state
-      setModule({
+      const updatedModule = {
         ...module,
         ...updates,
-      });
+      };
+      setModule(updatedModule);
 
       toast.success("Module updated");
+
+      // If the name was updated, redirect to the new URL and refresh the page
+      if (updates.name && updates.name !== module.name) {
+        const formattedName = formatModuleNameForUrl(updates.name);
+        router.push(`/modules/${formattedName}`);
+      }
     } catch (error) {
       console.error("Error updating module:", error);
       toast.error("Failed to update module");

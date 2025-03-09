@@ -13,11 +13,105 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch modules from the database
+    // If a name is provided and it's for a specific module lookup
+    if (name) {
+      // First try exact match (case-insensitive)
+      const moduleByExactName = await prisma.module.findFirst({
+        where: {
+          userId,
+          name: {
+            mode: "insensitive",
+            equals: name,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          icon: true,
+          lastStudied: true,
+          createdAt: true,
+          updatedAt: true,
+          resources: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      if (moduleByExactName) {
+        // Return the exact match as a single-item array
+        const formattedModule = {
+          id: moduleByExactName.id,
+          name: moduleByExactName.name,
+          description: moduleByExactName.description,
+          icon: moduleByExactName.icon,
+          lastStudied: moduleByExactName.lastStudied
+            ? moduleByExactName.lastStudied.toISOString()
+            : null,
+          createdAt: moduleByExactName.createdAt.toISOString(),
+          updatedAt: moduleByExactName.updatedAt.toISOString(),
+          resourceCount: moduleByExactName.resources.length,
+        };
+
+        return NextResponse.json([formattedModule]);
+      }
+
+      // If no exact match, get all modules and try fuzzy matching
+      const allModules = await prisma.module.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          icon: true,
+          lastStudied: true,
+          createdAt: true,
+          updatedAt: true,
+          resources: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      // Try to find a module that matches when normalized
+      const matchingModule = allModules.find((module) => {
+        const normalizedDbName = module.name
+          .toLowerCase()
+          .replace(/[^\w\s]/g, "");
+        const normalizedSearchName = name.toLowerCase().replace(/[^\w\s]/g, "");
+        return normalizedDbName === normalizedSearchName;
+      });
+
+      if (matchingModule) {
+        // Return the fuzzy match as a single-item array
+        const formattedModule = {
+          id: matchingModule.id,
+          name: matchingModule.name,
+          description: matchingModule.description,
+          icon: matchingModule.icon,
+          lastStudied: matchingModule.lastStudied
+            ? matchingModule.lastStudied.toISOString()
+            : null,
+          createdAt: matchingModule.createdAt.toISOString(),
+          updatedAt: matchingModule.updatedAt.toISOString(),
+          resourceCount: matchingModule.resources.length,
+        };
+
+        return NextResponse.json([formattedModule]);
+      }
+
+      // If no match found, return empty array
+      return NextResponse.json([]);
+    }
+
+    // Fetch all modules from the database (no name filter)
     const modules = await prisma.module.findMany({
       where: {
         userId,
-        ...(name ? { name } : {}),
       },
       orderBy: {
         updatedAt: "desc",

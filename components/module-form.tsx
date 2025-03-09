@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { encodeModuleSlug } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -103,8 +104,21 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
         });
         console.log("Module created response:", response.data);
         toast.success("Module created");
+
+        const newModule = response.data;
+        // Format the module name for URL - encode all punctuation
+        const formattedName = encodeModuleSlug(newModule.name);
+
+        // Wait a moment before closing the dialog to ensure the toast is visible
+        setTimeout(() => {
+          onSuccess();
+          // Navigate to the modules page first to ensure a full refresh
+          router.push("/modules");
+        }, 500);
+        return;
       }
 
+      // This block now only executes for updates
       // Wait a moment before closing the dialog to ensure the toast is visible
       setTimeout(() => {
         onSuccess();

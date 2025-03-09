@@ -18,57 +18,84 @@ export default async function ModulePage({
   }
 
   // Get the module name from the URL path
-  const decodedModuleName = decodeURIComponent(params.moduleName)
-    .replace(/-/g, " ") // Convert hyphens back to spaces
-    .split(" ") // Split into words
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Title case each word
-    .join(" "); // Join back into a string
+  const decodedModuleName = decodeURIComponent(params.moduleName).replace(
+    /-/g,
+    " "
+  ); // Convert hyphens back to spaces
 
-  // Find the module directly using Prisma
-  const moduleData = await prisma.module.findFirst({
-    where: {
-      userId,
-      name: {
-        mode: "insensitive",
-        equals: decodedModuleName,
+  try {
+    // First try to find the module by exact match (case insensitive)
+    let moduleData = await prisma.module.findFirst({
+      where: {
+        userId,
+        name: {
+          mode: "insensitive",
+          equals: decodedModuleName,
+        },
       },
-    },
-    include: {
-      resources: true,
-    },
-  });
+      include: {
+        resources: true,
+      },
+    });
 
-  // If module not found, return 404
-  if (!moduleData) {
-    notFound();
+    // If not found, try a more flexible search approach
+    if (!moduleData) {
+      // Get all modules for this user
+      const allModules = await prisma.module.findMany({
+        where: { userId },
+        include: { resources: true },
+      });
+
+      // Find modules with names that might match our URL when encoded
+      // This handles cases where punctuation differences exist
+      const matchingModule = allModules.find((module) => {
+        // Normalize both strings by lowercasing and removing special chars
+        const normalizedDbName = module.name
+          .toLowerCase()
+          .replace(/[^\w\s]/g, "");
+        const normalizedSearchName = decodedModuleName
+          .toLowerCase()
+          .replace(/[^\w\s]/g, "");
+        return normalizedDbName === normalizedSearchName;
+      });
+
+      if (matchingModule) {
+        moduleData = matchingModule;
+      } else {
+        return notFound();
+      }
+    }
+
+    // Update lastStudied timestamp
+    await prisma.module.update({
+      where: { id: moduleData.id },
+      data: { lastStudied: new Date() },
+    });
+
+    // Convert Date objects to ISO strings for client components
+    const moduleDetails = {
+      ...moduleData,
+      createdAt: moduleData.createdAt.toISOString(),
+      updatedAt: moduleData.updatedAt.toISOString(),
+      lastStudied: moduleData.lastStudied
+        ? moduleData.lastStudied.toISOString()
+        : null,
+      resources: moduleData.resources.map((resource) => ({
+        ...resource,
+        createdAt: resource.createdAt.toISOString(),
+        updatedAt: resource.updatedAt.toISOString(),
+      })),
+    };
+
+    return (
+      <Suspense fallback={<ChatPageLoading />}>
+        <ClientChatPage initialModuleDetails={moduleDetails} />
+      </Suspense>
+    );
+  } catch (error) {
+    console.error("Error loading module:", error);
+    return notFound();
   }
-
-  // Update lastStudied timestamp
-  await prisma.module.update({
-    where: { id: moduleData.id },
-    data: { lastStudied: new Date() },
-  });
-
-  // Convert Date objects to ISO strings for client components
-  const moduleDetails = {
-    ...moduleData,
-    createdAt: moduleData.createdAt.toISOString(),
-    updatedAt: moduleData.updatedAt.toISOString(),
-    lastStudied: moduleData.lastStudied
-      ? moduleData.lastStudied.toISOString()
-      : null,
-    resources: moduleData.resources.map((resource) => ({
-      ...resource,
-      createdAt: resource.createdAt.toISOString(),
-      updatedAt: resource.updatedAt.toISOString(),
-    })),
-  };
-
-  return (
-    <Suspense fallback={<ChatPageLoading />}>
-      <ClientChatPage initialModuleDetails={moduleDetails} />
-    </Suspense>
-  );
 }
 
 // Add this export to allow dynamic rendering

@@ -56,6 +56,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import axios from "axios";
+import { encodeModuleSlug } from "@/lib/utils";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -301,10 +302,6 @@ function ModulesPageContent() {
               ? "Try a different search term"
               : "Create your first resource to get started"}
           </p>
-          <Button onClick={() => router.push("/modules/resources/new")}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Upload Resource
-          </Button>
         </div>
       );
     }
@@ -440,17 +437,15 @@ function ModulesPageContent() {
                     ? "Try a different search term"
                     : "Create your first module to get started"}
                 </p>
-                {!searchQuery && (
-                  <Button onClick={() => router.push("/modules/new-module")}>
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Create Module
-                  </Button>
-                )}
+                {!searchQuery }
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredModules.map((module) => (
-                  <Link href={`/modules/${module.name}`} key={module.name}>
+                  <Link
+                    href={`/modules/${encodeModuleSlug(module.name)}`}
+                    key={module.name}
+                  >
                     <Card className="hover:bg-muted/50 transition-colors">
                       <CardHeader>
                         <CardTitle>

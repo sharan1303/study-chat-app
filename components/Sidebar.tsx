@@ -3,11 +3,18 @@
 import React, { Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Plus, Settings } from "lucide-react";
+import {
+  Book,
+  BookOpen,
+  FolderOpen,
+  Layout,
+  Plus,
+  Settings,
+} from "lucide-react";
 import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { cn, encodeModuleSlug } from "@/lib/utils";
 
 interface Module {
   id: string;
@@ -64,11 +71,9 @@ function SidebarContent({
       onModuleChange(moduleId);
     } else {
       // If no callback provided, navigate to the module name as URL path
-      // Use just the module name in URL for clean URLs
-      const encodedName = encodeURIComponent(
-        moduleName.toLowerCase().replace(/\s+/g, "-")
-      );
-      router.push(`/${encodedName}`);
+      // Use custom slug encoding for special characters
+      const encodedName = encodeModuleSlug(moduleName);
+      router.push(`/modules/${encodedName}`);
     }
   };
 
@@ -79,8 +84,6 @@ function SidebarContent({
         <Link href="/" className="flex items-center">
           <span className="text-xl font-bold">StudyAI</span>
         </Link>
-
-        
       </div>
 
       {/* Modules list */}

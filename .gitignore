@@ -40,6 +40,3 @@ next-env.d.ts
 .cursor
 # clerk configuration (can include secrets)
 /.clerk/
-
-# test
-test-db.js

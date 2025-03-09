@@ -20,7 +20,7 @@ export default function ModuleOperations({
 
   const handleCreateSuccess = () => {
     setIsCreating(false);
-    router.refresh();
+    // The actual navigation will be handled in the form component
   };
 
   return (
@@ -28,9 +28,9 @@ export default function ModuleOperations({
       <DialogTrigger asChild>
         {showLarge ? (
           <Button size="lg">
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Create Module
-        </Button>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Create Module
+          </Button>
         ) : (
           <Button>
             <PlusCircle className="h-4 w-4 mr-2" />
