@@ -3,9 +3,6 @@ import { Message as VercelChatMessage, streamText } from "ai";
 import { searchWithPerplexity } from "@/lib/search";
 import { getModuleContext } from "@/lib/modules";
 
-export const runtime = "edge";
-export const maxDuration = 30;
-
 export async function POST(req: Request) {
   try {
     const { messages, moduleId } = await req.json();
