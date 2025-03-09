@@ -4,13 +4,9 @@ import React, { Suspense, useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Book,
-  BookOpen,
+  Edit,
   ChevronLeft,
   ChevronRight,
-  FolderOpen,
-  Layout,
-  MessageSquare,
   Plus,
   Settings,
 } from "lucide-react";
@@ -185,11 +181,11 @@ function SidebarContent({
                   }}
                   title="Start new chat"
                 >
-                  <MessageSquare className="h-4 w-4" />
+                  <Edit className="h-4 w-4" />
                 </Button>
 
                 {/* Module creation button */}
-                <Button
+                {/* <Button
                   size="icon"
                   variant="ghost"
                   asChild
@@ -198,7 +194,7 @@ function SidebarContent({
                   <Link href="/modules">
                     <Plus className="h-4 w-4" />
                   </Link>
-                </Button>
+                </Button> */}
               </div>
             </SignedIn>
           </div>
