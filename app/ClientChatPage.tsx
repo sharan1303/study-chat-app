@@ -42,7 +42,7 @@ export function ChatPageLoading() {
 
         {/* Input form skeleton */}
         <div className="sticky bottom-0 bg-transparent">
-          <div className="max-w-3xl mx-auto pl-8 pr-6">
+          <div className="max-w-3xl mx-auto">
             <div className="relative">
               <div className="flex-1 min-h-[69px] max-h-[120px] border-2 bg-transparent animate-pulse rounded-t-lg resize-none pr-14 w-full"></div>
               <div className="absolute right-3 bottom-3 h-10 w-10 bg-gray-200 animate-pulse rounded-full"></div>
@@ -236,7 +236,7 @@ export default function ClientChatPage({
                   placeholder="Type your message..."
                   value={input}
                   onChange={handleInputChange}
-                  className="flex-1 min-h-[69px] max-h-[120px] border-2 rounded-t-lg resize-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:border-input w-full"
+                  className="flex-1 min-h-[69px] max-h-[120px] border-2 rounded-t-lg rounded-b-none resize-none pr-14 w-full border-b-0"
                   rows={2}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {

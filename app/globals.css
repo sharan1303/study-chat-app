@@ -77,13 +77,11 @@
 
 /* Scrollbar styling */
 .custom-scrollbar {
-  /* Firefox - will be ignored by unsupported browsers */
+  /* Firefox-specific properties - other browsers will use the webkit selectors below */
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
   /* Safari/iOS - smooth scrolling for touch devices */
   -webkit-overflow-scrolling: touch;
-  /* General scrollbar behavior */
-  overflow-y: auto;
 }
 
 /* WebKit browsers (Chrome, Safari, Edge) */

@@ -128,7 +128,7 @@ export default function ModuleActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete module "{moduleName}" and all its
+              This will permanently delete module &quot;{moduleName}&quot; and all its
               resources. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

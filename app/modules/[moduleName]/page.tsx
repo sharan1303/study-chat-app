@@ -9,7 +9,6 @@ import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import ModuleActions from "../module-actions";
@@ -34,13 +33,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface Module {
   id: string;
@@ -114,7 +106,7 @@ export default function ModuleDetailsPage({
         const allModulesResponse = await axios.get("/api/modules");
         const modulesData = allModulesResponse.data;
         setAllModules(
-          modulesData.map((m: any) => ({
+          modulesData.map((m: Module) => ({
             id: m.id,
             name: m.name,
             icon: m.icon,
@@ -123,13 +115,14 @@ export default function ModuleDetailsPage({
 
         // First try exact match (case-insensitive)
         let moduleData = modulesData.find(
-          (m: any) => m.name.toLowerCase() === decodedModuleName.toLowerCase()
+          (m: Module) =>
+            m.name.toLowerCase() === decodedModuleName.toLowerCase()
         );
 
         // If not found with exact match, try a more flexible search
         if (!moduleData) {
           // Try matching with normalized strings (removing special chars)
-          moduleData = modulesData.find((m: any) => {
+          moduleData = modulesData.find((m: Module) => {
             const normalizedDbName = m.name
               .toLowerCase()
               .replace(/[^\w\s]/g, "");
@@ -607,10 +600,7 @@ function ResourceRow({
   }) => {
     try {
       setIsSaving(true);
-      const response = await axios.put(
-        `/api/resources/${resource.id}`,
-        updates
-      );
+      await axios.put(`/api/resources/${resource.id}`, updates);
 
       // Update local state
       const updatedResource = {
@@ -682,7 +672,7 @@ function ResourceRow({
       await axios.delete(`/api/resources/${resource.id}`);
       toast.success("Resource deleted");
       // Remove resource from the list
-      onUpdate({ ...resource, _deleted: true } as any);
+      onUpdate({ ...resource, _deleted: true } as Resource);
     } catch (error) {
       console.error("Error deleting resource:", error);
       toast.error("Failed to delete resource");
@@ -808,8 +798,8 @@ function ResourceRow({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{resource.title}" and cannot be
-              undone.
+              This will permanently delete &quot;{resource.title}&quot; and
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

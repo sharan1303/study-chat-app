@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { PlusCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ interface ModuleOperationsProps {
 export default function ModuleOperations({
   showLarge = false,
 }: ModuleOperationsProps) {
-  const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateSuccess = () => {

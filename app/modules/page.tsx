@@ -7,12 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   PlusCircle,
   Search,
-  FileText,
-  File,
-  FileCode,
-  FileImage,
-  FileIcon,
-  Link2,
   Edit,
   Trash,
 } from "lucide-react";
@@ -241,7 +235,7 @@ function ModulesPageContent() {
           }
           const modulesData = await modulesResponse.json();
           setModules(
-            modulesData.map((m: any) => ({
+            modulesData.map((m: Module) => ({
               id: m.id,
               name: m.name,
               icon: m.icon,
@@ -735,7 +729,7 @@ function ResourceRowWithContext({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{resource.title}" and cannot be
+              This will permanently delete &quot;{resource.title}&quot; and cannot be
               undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
