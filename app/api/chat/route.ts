@@ -88,8 +88,15 @@ Format your responses using Markdown:
       maxTokens: 2048,
     });
 
-    // Convert the response to a streaming response
-    return result.toDataStreamResponse();
+    // Get a data stream response and add model information in the header
+    const response = result.toDataStreamResponse();
+    const headers = new Headers(response.headers);
+    headers.set("x-model-used", "Gemini 2.0 Flash");
+
+    // Return a new response with our custom headers
+    return new Response(response.body, {
+      headers: headers,
+    });
   } catch (error) {
     console.error("Error in chat API:", error);
     return new Response(

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Send, Loader2, MessageSquare } from "lucide-react";
+import { Send, Loader2, MessageSquare, Copy, Check } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,13 +84,31 @@ export default function ClientChatPage({
     body: {
       moduleId: activeModule,
     },
-    onResponse: () => {
+    onResponse: (response) => {
+      // Try to extract model information from headers if available
+      const modelHeader = response.headers.get("x-model-used");
+      if (modelHeader) {
+        setModelName(modelHeader);
+      }
       // For module tracking - you could add analytics here
     },
     onError: (error: Error) => {
       toast.error("Error: " + (error.message || "Failed to send message"));
     },
   });
+
+  const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(
+    null
+  );
+  // Default model name - we'll try to retrieve it dynamically if possible
+  const [modelName, setModelName] = React.useState<string>("Gemini 2.0 Flash");
+
+  const copyToClipboard = (text: string, messageId: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    });
+  };
 
   const navigateToModuleDetails = () => {
     if (moduleDetails) {
@@ -157,7 +175,7 @@ export default function ClientChatPage({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col space-y-8 pl-8 pr-6">
+                <div className="flex flex-col space-y-8 pt-4 pb-8 pl-8 pr-6">
                   {messages.reduce(
                     (
                       result: React.ReactNode[],
@@ -188,12 +206,39 @@ export default function ClientChatPage({
                           result.push(
                             <div
                               key={nextMessage.id}
-                              className="mt-4 text-gray-800 dark:text-gray-200"
+                              className="mt-4 text-gray-800 dark:text-gray-200 group relative"
                             >
                               <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                                 <ReactMarkdown>
                                   {nextMessage.content}
                                 </ReactMarkdown>
+                              </div>
+                              <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
+                                <button
+                                  onClick={() =>
+                                    copyToClipboard(
+                                      nextMessage.content,
+                                      nextMessage.id
+                                    )
+                                  }
+                                  className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                                  aria-label="Copy response"
+                                >
+                                  {copiedMessageId === nextMessage.id ? (
+                                    <span className="flex items-center gap-1">
+                                      <Check className="h-4 w-4 text-green-500" />
+                                      <span>Copied!</span>
+                                    </span>
+                                  ) : (
+                                    <span className="flex items-center gap-1">
+                                      <Copy className="h-4 w-4" />
+                                      <span>Copy Response</span>
+                                    </span>
+                                  )}
+                                </button>
+                                <div className="text-xs text-muted-foreground">
+                                  Generated with {modelName}
+                                </div>
                               </div>
                             </div>
                           );
@@ -203,10 +248,34 @@ export default function ClientChatPage({
                         result.push(
                           <div
                             key={message.id}
-                            className="text-gray-800 dark:text-gray-200"
+                            className="text-gray-800 dark:text-gray-200 group relative"
                           >
                             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                               <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
+                            <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
+                              <button
+                                onClick={() =>
+                                  copyToClipboard(message.content, message.id)
+                                }
+                                className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                                aria-label="Copy response"
+                              >
+                                {copiedMessageId === message.id ? (
+                                  <span className="flex items-center gap-1">
+                                    <Check className="h-4 w-4 text-green-500" />
+                                    <span>Copied!</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1">
+                                    <Copy className="h-4 w-4" />
+                                    <span>Copy Response</span>
+                                  </span>
+                                )}
+                              </button>
+                              <div className="text-xs text-muted-foreground">
+                                Generated with {modelName}
+                              </div>
                             </div>
                           </div>
                         );
