@@ -88,7 +88,7 @@ function ModulesLoading() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4 px-8">
-        <div className="flex items-center justify-between p-5">
+        <div className="flex items-center justify-between px-3 py-5">
           <div className="h-7 w-36 bg-gray-200 animate-pulse rounded"></div>
         </div>
 
@@ -384,8 +384,8 @@ function ModulesPageContent() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4 px-8">
-        <div className="flex items-center justify-between p-5">
-          <h1 className="font-bold text-xl">Study Content</h1>
+        <div className="flex items-center justify-between px-3 py-5">
+          <h1 className="font-bold text-xl">Content</h1>
         </div>
 
         {/* Tabs for Module and Resources - now at the top */}

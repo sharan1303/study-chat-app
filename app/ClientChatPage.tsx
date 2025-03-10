@@ -9,27 +9,28 @@ import { Message, useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
 import { ModuleWithResources } from "@/app/actions";
 import ReactMarkdown from "react-markdown";
+import { useRouter } from "next/navigation";
+import { encodeModuleSlug } from "@/lib/utils";
 
 // Loading component for Suspense fallback
 export function ChatPageLoading() {
   return (
-    <div className="flex h-screen flex-col">
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col px-3 overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden">
+      {/* Main Content Area with Full-height Scrollbar */}
+      <div className="flex-1 flex flex-col overflow-hidden pr-0 scroll-smooth scrollbar-smooth custom-scrollbar">
         {/* Chat Header - Skeleton */}
-        <div className="p-5 flex items-center">
-          <div className="flex items-center gap-2">
+        <div className="px-3 py-4 flex items-center justify-between sticky top-0 bg-background z-10">
+          <div className="flex items-center gap-2 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
             <div className="h-6 w-40 bg-gray-200 animate-pulse rounded"></div>
           </div>
         </div>
 
-        {/* Chat content with scrollbar at the edge */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Centered content container */}
-          <div className="max-w-3xl mx-auto w-full">
-            <div className="p-3">
-              <div className="flex items-center justify-center h-screen z-20">
+        {/* Chat content centered container */}
+        <div className="flex-1">
+          <div className="max-w-3xl mx-auto w-full transition-all duration-200">
+            <div className="px-0">
+              <div className="flex items-center justify-center h-screen z-20 pl-8">
                 <div className="text-center">
                   <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
                   <p className="text-muted-foreground">Loading chat...</p>
@@ -40,11 +41,11 @@ export function ChatPageLoading() {
         </div>
 
         {/* Input form skeleton */}
-        <div className="pb-4">
-          <div className="max-w-3xl mx-auto px-4">
-            <div className="flex items-start gap-2">
-              <div className="flex-1 min-h-[60px] max-h-[120px] border-2 bg-gray-100 animate-pulse rounded"></div>
-              <div className="self-end h-[60px] w-[100px] bg-gray-200 animate-pulse rounded"></div>
+        <div className="sticky bottom-0 bg-transparent">
+          <div className="max-w-3xl mx-auto pl-8 pr-6">
+            <div className="relative">
+              <div className="flex-1 min-h-[69px] max-h-[120px] border-2 bg-transparent animate-pulse rounded-t-lg resize-none pr-14 w-full"></div>
+              <div className="absolute right-3 bottom-3 h-10 w-10 bg-gray-200 animate-pulse rounded-full"></div>
             </div>
           </div>
         </div>
@@ -66,6 +67,10 @@ export default function ClientChatPage({
   const [moduleDetails] = React.useState<ModuleWithResources | null>(
     initialModuleDetails ?? null
   );
+  const router = useRouter();
+
+  // Reference to the scroll container, but don't auto-scroll
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const {
     messages,
@@ -87,30 +92,46 @@ export default function ClientChatPage({
     },
   });
 
+  const navigateToModuleDetails = () => {
+    if (moduleDetails) {
+      const encodedName = encodeModuleSlug(moduleDetails.name);
+      router.push(`/modules/${encodedName}`);
+    }
+  };
+
   return (
-    <div className="flex h-screen flex-col">
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col px-3 overflow-hidden">
-        {/* Chat Header */}
+    <div className="flex h-screen flex-col overflow-hidden">
+      {/* Main Content Area with Scrollbar - Make it span the full page */}
+      <div
+        ref={scrollContainerRef}
+        className={`flex-1 flex flex-col ${
+          messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
+        } pr-0 scroll-smooth scrollbar-smooth custom-scrollbar`}
+      >
+        {/* Chat Header - Now inside the scrollable area */}
         {moduleDetails && (
-          <div className="p-5 flex items-center">
-            <div className="flex items-center gap-2">
+          <div className="px-3 py-4 flex items-center justify-between sticky top-0 bg-background z-10">
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 -ml-3 px-8 hover:bg-muted/50 rounded"
+              onClick={navigateToModuleDetails}
+            >
               <span className="text-2xl">{moduleDetails.icon}</span>
               <div>
                 <h1 className="font-bold text-xl">{moduleDetails.name}</h1>
               </div>
-            </div>
+            </Button>
           </div>
         )}
 
-        {/* Chat content with scrollbar at the edge */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Centered content container */}
-          {/* todo: make start up message stay in place */}
-          <div className="max-w-3xl mx-auto w-full">
-            <div className="p-3">
+        {/* Chat content centered container */}
+        <div className="flex-1">
+          {/* Ensure chat thread has same width as input by using identical container classes */}
+          <div className="max-w-3xl mx-auto w-full transition-all duration-200">
+            {/* Use the same padding as the input container */}
+            <div className="px-0">
               {messages.length === 0 ? (
-                <div className="text-center flex items-center justify-center h-screen z-20">
+                <div className="text-center flex items-center justify-center h-screen z-20 pl-8">
                   <div className="flex flex-col items-center space-y-4">
                     <div>
                       <MessageSquare className="h-12 w-12 text-muted-foreground" />
@@ -136,7 +157,7 @@ export default function ClientChatPage({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col space-y-8">
+                <div className="flex flex-col space-y-8 pl-8 pr-6">
                   {messages.reduce(
                     (
                       result: React.ReactNode[],
@@ -152,8 +173,8 @@ export default function ClientChatPage({
                         // Add the user message with its styling
                         result.push(
                           <div key={message.id} className="flex justify-end">
-                            <div className="flex items-center gap-2 max-w-[80%] flex-row-reverse">
-                              <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground">
+                            <div className="flex items-center gap-2 max-w-full flex-row-reverse">
+                              <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground break-words">
                                 <div className="whitespace-pre-wrap">
                                   {message.content}
                                 </div>
@@ -167,9 +188,9 @@ export default function ClientChatPage({
                           result.push(
                             <div
                               key={nextMessage.id}
-                              className="mt-4 mx-4 text-gray-800 dark:text-gray-200"
+                              className="mt-4 text-gray-800 dark:text-gray-200"
                             >
-                              <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                                 <ReactMarkdown>
                                   {nextMessage.content}
                                 </ReactMarkdown>
@@ -182,9 +203,9 @@ export default function ClientChatPage({
                         result.push(
                           <div
                             key={message.id}
-                            className="mx-4 text-gray-800 dark:text-gray-200"
+                            className="text-gray-800 dark:text-gray-200"
                           >
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
                               <ReactMarkdown>{message.content}</ReactMarkdown>
                             </div>
                           </div>
@@ -198,7 +219,7 @@ export default function ClientChatPage({
                 </div>
               )}
               {chatLoading && (
-                <div className="mx-4 mt-4">
+                <div className="pl-8 pr-6 mt-4">
                   <Loader2 className="h-5 w-5 animate-spin" />
                 </div>
               )}
@@ -206,61 +227,41 @@ export default function ClientChatPage({
           </div>
         </div>
 
-        {/* Input form - remove border-t and add padding */}
-        <div className="pb-4">
-          <div className="max-w-3xl mx-auto px-4">
-            <SignedIn>
-              <form onSubmit={handleSubmit}>
-                <div className="flex items-start gap-2">
-                  <Textarea
-                    placeholder="Type your message..."
-                    value={input}
-                    onChange={handleInputChange}
-                    disabled={chatLoading}
-                    className="flex-1 min-h-[60px] max-h-[120px] resize-none border-2"
-                    rows={2}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        if (input.trim() && !chatLoading) {
-                          const form = e.currentTarget.form;
-                          if (form) form.requestSubmit();
-                        }
-                      }
-                    }}
-                  />
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="self-end h-[60px] px-6"
-                    disabled={chatLoading || !input.trim()}
-                  >
-                    {chatLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                    ) : (
-                      <Send className="h-5 w-5 mr-2" />
-                    )}
-                    Send
-                  </Button>
-                </div>
-              </form>
-            </SignedIn>
-
-            <SignedOut>
-              <div className="flex items-start gap-2">
+        {/* Input form - Now inside the scrollable area but fixed at bottom */}
+        <div className="sticky bottom-0 bg-transparent">
+          <div className="max-w-3xl mx-auto pl-8 pr-6">
+            <form onSubmit={handleSubmit}>
+              <div className="relative">
                 <Textarea
-                  placeholder="Sign in to chat with your module assistant..."
-                  disabled={true}
-                  className="flex-1 min-h-[60px] max-h-[120px] resize-none border-2"
+                  placeholder="Type your message..."
+                  value={input}
+                  onChange={handleInputChange}
+                  className="flex-1 min-h-[69px] max-h-[120px] border-2 rounded-t-lg resize-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus:border-input w-full"
                   rows={2}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (input.trim() && !chatLoading) {
+                        const form = e.currentTarget.form;
+                        if (form) form.requestSubmit();
+                      }
+                    }
+                  }}
                 />
-                <SignInButton mode="modal">
-                  <Button size="lg" className="self-end h-[60px] px-6">
-                    Sign in
-                  </Button>
-                </SignInButton>
+                <Button
+                  type="submit"
+                  size="icon"
+                  className="absolute right-3 bottom-3 h-10 w-10 rounded-full"
+                  disabled={chatLoading || !input.trim()}
+                >
+                  {chatLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </Button>
               </div>
-            </SignedOut>
+            </form>
           </div>
         </div>
       </div>

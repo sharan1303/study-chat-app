@@ -265,48 +265,83 @@ export default function ModuleDetailsPage({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen p-5">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            {/* Icon skeleton */}
-            <div className="h-10 w-10 bg-gray-200 animate-pulse rounded"></div>
-            {/* Title skeleton */}
-            <div className="h-7 w-48 bg-gray-200 animate-pulse rounded"></div>
+      <div className="flex flex-col min-h-screen w-full">
+        <div className="flex-1 space-y-4 px-8">
+          <div className="flex items-center justify-between p-5">
+            <div className="flex items-center gap-2">
+              {/* Icon skeleton */}
+              <div className="h-10 w-10 bg-gray-200 animate-pulse rounded"></div>
+              {/* Title skeleton */}
+              <div className="h-7 w-48 bg-gray-200 animate-pulse rounded"></div>
+            </div>
+
+            {/* Action buttons skeleton */}
+            <div className="flex gap-2">
+              <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+            </div>
           </div>
 
-          {/* Action buttons skeleton */}
-          <div className="flex gap-2">
-            <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
-            <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
-          </div>
-        </div>
+          <div className="space-y-6 px-3">
+            {/* Description section skeleton */}
+            <div className="space-y-4 mb-6">
+              <div className="h-5 w-32 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-20 w-full bg-gray-200 animate-pulse rounded p-4"></div>
+            </div>
 
-        {/* Description section skeleton */}
-        <div className="space-y-4 mb-6">
-          <div className="h-5 w-32 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-20 w-full bg-gray-200 animate-pulse rounded p-4"></div>
-        </div>
+            <div className="my-6 h-px bg-gray-200 animate-pulse"></div>
 
-        {/* Resources section skeleton */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
-            <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
-          </div>
+            {/* Resources section skeleton */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
+                <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
+              </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </CardContent>
-              </Card>
-            ))}
+              {/* Resource table skeleton - an alternate view that better represents the table layout */}
+              <div className="overflow-x-auto border rounded-md">
+                <table className="w-full min-w-full table-fixed">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 w-1/4">
+                        <div className="h-5 bg-gray-200 animate-pulse rounded w-20"></div>
+                      </th>
+                      <th className="text-left p-3 w-1/3">
+                        <div className="h-5 bg-gray-200 animate-pulse rounded w-24"></div>
+                      </th>
+                      <th className="text-left p-3 w-1/8">
+                        <div className="h-5 bg-gray-200 animate-pulse rounded w-12"></div>
+                      </th>
+                      <th className="text-left p-3 w-1/8">
+                        <div className="h-5 bg-gray-200 animate-pulse rounded w-14"></div>
+                      </th>
+                      <th className="text-right p-3 w-1/8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <tr key={i} className="border-b">
+                        <td className="p-3">
+                          <div className="h-5 bg-gray-200 animate-pulse rounded w-3/4"></div>
+                        </td>
+                        <td className="p-3">
+                          <div className="h-4 bg-gray-200 animate-pulse rounded w-full"></div>
+                        </td>
+                        <td className="p-3">
+                          <div className="h-4 bg-gray-200 animate-pulse rounded w-12"></div>
+                        </td>
+                        <td className="p-3">
+                          <div className="h-4 bg-gray-200 animate-pulse rounded w-20"></div>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="h-8 w-8 ml-auto bg-gray-200 animate-pulse rounded"></div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -318,141 +353,140 @@ export default function ModuleDetailsPage({
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-5">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-1">
-          {/* Module icon with popover for changing */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                className="text-xl px-10 cursor-pointer hover:bg-muted h-10 w-10"
-              >
-                {module.icon}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64">
-              <div className="grid grid-cols-5 gap-1">
-                {icons.map((icon) => (
-                  <Button
-                    key={icon}
-                    variant={module.icon === icon ? "default" : "outline"}
-                    className="h-10 w-10 p-0 text-xl"
-                    onClick={() => handleIconChange(icon)}
-                  >
-                    {icon}
-                  </Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Editable title */}
-          {isEditingTitle ? (
-            <div className="flex items-center">
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="text-xl font-bold"
-                autoFocus
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleTitleSave}
-                disabled={isSaving}
-              >
-                <Check className="h-5 w-5 text-green-500" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={cancelTitleEdit}>
-                <X className="h-5 w-5 text-red-500" />
-              </Button>
-            </div>
-          ) : (
-            <h1
-              className="text-xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
-              onClick={() => setIsEditingTitle(true)}
-            >
-              {module.name}
-            </h1>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            className="flex items-center gap-2"
-            variant="outline"
-            onClick={() => router.push(`/${module.name}`)}
-          >
-            <MessageSquare className="h-5 w-5" />
-            Go to Chat
-          </Button>
-          <ModuleActions moduleId={module.id} moduleName={module.name} />
-        </div>
-      </div>
-
-      <div className="space-y-6 px-8">
-        <div>
-          <h2 className="text-xl font-semibold mb-2">Description</h2>
-          {/* Editable description */}
-          {isEditingDescription ? (
-            <div className="flex flex-col gap-2">
-              <Textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="min-h-[158px]"
-                placeholder="Add a description..."
-                autoFocus
-              />
-              <div className="flex justify-end gap-2">
+    <div className="flex flex-col min-h-screen w-full">
+      <div className="flex-1 space-y-4 px-8">
+        <div className="flex items-center justify-between p-5">
+          <div className="flex items-center gap-2">
+            {/* Module icon with popover for changing */}
+            <Popover>
+              <PopoverTrigger asChild>
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={cancelDescriptionEdit}
+                  variant="ghost"
+                  className="text-xl p-2 cursor-pointer hover:bg-muted h-10 w-10"
                 >
-                  Cancel
+                  {module.icon}
                 </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64">
+                <div className="grid grid-cols-5 gap-1">
+                  {icons.map((icon) => (
+                    <Button
+                      key={icon}
+                      variant={module.icon === icon ? "default" : "outline"}
+                      className="h-10 w-10 p-0 text-xl"
+                      onClick={() => handleIconChange(icon)}
+                    >
+                      {icon}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Editable title */}
+            {isEditingTitle ? (
+              <div className="flex items-center">
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="text-xl font-bold"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleTitleSave();
+                    }
+                  }}
+                />
                 <Button
-                  size="sm"
-                  onClick={handleDescriptionSave}
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleTitleSave}
                   disabled={isSaving}
                 >
-                  Save
+                  <Check className="h-5 w-5 text-green-500" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={cancelTitleEdit}>
+                  <X className="h-5 w-5 text-red-500" />
                 </Button>
               </div>
-            </div>
-          ) : (
-            <p
-              className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[150px]"
-              onClick={() => setIsEditingDescription(true)}
+            ) : (
+              <h1
+                className="text-xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                {module.name}
+              </h1>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              className="flex items-center gap-2"
+              variant="outline"
+              onClick={() => router.push(`/${module.name}`)}
             >
-              {module.description ||
-                "No description provided. Click to add one."}
-            </p>
-          )}
+              <MessageSquare className="h-5 w-5" />
+              Go to Chat
+            </Button>
+            <ModuleActions moduleId={module.id} moduleName={module.name} />
+          </div>
         </div>
 
-        <Separator className="my-6" />
-
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Resources</h2>
-            <Button
-              variant="outline"
-              onClick={() =>
-                router.push(`/modules/resources/new?moduleId=${module.id}`)
-              }
-            >
-              Add Resource
-            </Button>
+        <div className="space-y-6 px-3">
+          <div>
+            <h2 className="text-xl font-semibold mb-2">Description</h2>
+            {/* Editable description */}
+            {isEditingDescription ? (
+              <div className="flex flex-col gap-2">
+                <Textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="min-h-[158px]"
+                  placeholder="Add a description..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    // Save on Ctrl+Enter or Command+Enter
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                      e.preventDefault();
+                      handleDescriptionSave();
+                    }
+                  }}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelDescriptionEdit}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleDescriptionSave}
+                    disabled={isSaving}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p
+                className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[80px]"
+                onClick={() => setIsEditingDescription(true)}
+              >
+                {module.description ||
+                  "No description provided. Click to add one."}
+              </p>
+            )}
           </div>
 
-          {resources.length === 0 ? (
-            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-              <h3 className="text-xl font-medium">No resources found</h3>
-              <p className="text-muted-foreground">
-                Add resources to this module to get started
-              </p>
+          <Separator className="my-6" />
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Resources</h2>
               <Button
+                variant="outline"
                 onClick={() =>
                   router.push(`/modules/resources/new?moduleId=${module.id}`)
                 }
@@ -460,65 +494,83 @@ export default function ModuleDetailsPage({
                 Add Resource
               </Button>
             </div>
-          ) : (
-            <div className="overflow-x-auto border rounded-md">
-              <table className="w-full min-w-full table-fixed">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-3 font-medium w-1/4">Title</th>
-                    <th className="text-left p-3 font-medium w-1/3">
-                      Description
-                    </th>
-                    <th className="text-left p-3 font-medium w-1/8">Type</th>
-                    <th className="text-left p-3 font-medium w-1/8">Added</th>
-                    <th className="text-right p-3 font-medium w-1/8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resources
-                    .filter((resource) => !resource._deleted) // Filter out deleted resources
-                    .map((resource) => (
-                      <ResourceRow
-                        key={resource.id}
-                        resource={resource}
-                        modules={allModules}
-                        currentModuleId={module?.id}
-                        onUpdate={(updatedResource) => {
-                          if (updatedResource._deleted) {
-                            // If resource was deleted, keep it in state but mark as deleted
-                            setResources(
-                              resources.map((r) =>
-                                r.id === updatedResource.id
-                                  ? { ...r, _deleted: true }
-                                  : r
-                              )
-                            );
-                          } else if (updatedResource.moduleId !== module?.id) {
-                            // If module changed, remove from this list
-                            setResources(
-                              resources.map((r) =>
-                                r.id === updatedResource.id
-                                  ? { ...r, _deleted: true }
-                                  : r
-                              )
-                            );
-                          } else {
-                            // Regular update
-                            setResources(
-                              resources.map((r) =>
-                                r.id === updatedResource.id
-                                  ? updatedResource
-                                  : r
-                              )
-                            );
-                          }
-                        }}
-                      />
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+
+            {resources.length === 0 ? (
+              <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+                <h3 className="text-xl font-medium">No resources found</h3>
+                <p className="text-muted-foreground">
+                  Add resources to this module to get started
+                </p>
+                <Button
+                  onClick={() =>
+                    router.push(`/modules/resources/new?moduleId=${module.id}`)
+                  }
+                >
+                  Add Resource
+                </Button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border rounded-md">
+                <table className="w-full min-w-full table-fixed">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 font-medium w-1/4">Title</th>
+                      <th className="text-left p-3 font-medium w-1/3">
+                        Description
+                      </th>
+                      <th className="text-left p-3 font-medium w-1/8">Type</th>
+                      <th className="text-left p-3 font-medium w-1/8">Added</th>
+                      <th className="text-right p-3 font-medium w-1/8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resources
+                      .filter((resource) => !resource._deleted) // Filter out deleted resources
+                      .map((resource) => (
+                        <ResourceRow
+                          key={resource.id}
+                          resource={resource}
+                          modules={allModules}
+                          currentModuleId={module?.id}
+                          onUpdate={(updatedResource) => {
+                            if (updatedResource._deleted) {
+                              // If resource was deleted, keep it in state but mark as deleted
+                              setResources(
+                                resources.map((r) =>
+                                  r.id === updatedResource.id
+                                    ? { ...r, _deleted: true }
+                                    : r
+                                )
+                              );
+                            } else if (
+                              updatedResource.moduleId !== module?.id
+                            ) {
+                              // If module changed, remove from this list
+                              setResources(
+                                resources.map((r) =>
+                                  r.id === updatedResource.id
+                                    ? { ...r, _deleted: true }
+                                    : r
+                                )
+                              );
+                            } else {
+                              // Regular update
+                              setResources(
+                                resources.map((r) =>
+                                  r.id === updatedResource.id
+                                    ? updatedResource
+                                    : r
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -665,6 +717,12 @@ function ResourceRow({
                   onChange={(e) => setEditTitle(e.target.value)}
                   className="h-9"
                   autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSave();
+                    }
+                  }}
                 />
               ) : (
                 <div className="font-medium">{resource.title}</div>
@@ -677,6 +735,13 @@ function ResourceRow({
                   onChange={(e) => setEditDescription(e.target.value)}
                   className="text-sm min-h-[20px] resize-none"
                   placeholder="Add a description..."
+                  onKeyDown={(e) => {
+                    // Save on Ctrl+Enter or Command+Enter
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                      e.preventDefault();
+                      handleSave();
+                    }
+                  }}
                 />
               ) : (
                 <div className="line-clamp-2 text-sm text-muted-foreground">

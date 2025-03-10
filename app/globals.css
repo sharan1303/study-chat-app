@@ -75,3 +75,26 @@
   }
 }
 
+/* Scrollbar styling */
+.custom-scrollbar {
+  /* Firefox - will be ignored by unsupported browsers */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  /* Safari/iOS - smooth scrolling for touch devices */
+  -webkit-overflow-scrolling: touch;
+  /* General scrollbar behavior */
+  overflow-y: auto;
+}
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  background-color: transparent;
+  transition: all 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}

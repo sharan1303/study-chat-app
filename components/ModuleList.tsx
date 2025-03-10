@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { Edit } from "lucide-react";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
@@ -21,7 +22,10 @@ interface ModuleListProps {
   isActive: (path: string) => boolean;
   handleModuleClick: (moduleId: string, moduleName: string) => void;
   pathname: string | null | undefined;
-  router: any;
+  router: {
+    push: (url: string) => void;
+    refresh: () => void;
+  };
 }
 
 export default function ModuleList({
