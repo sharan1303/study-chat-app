@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { z } from "zod";
@@ -74,6 +74,7 @@ export function ResourceUploadDialog({
   preselectedModuleId,
 }: ResourceUploadDialogProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [modules, setModules] = useState<Module[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -181,7 +182,15 @@ export function ResourceUploadDialog({
       });
 
       toast.success("Resource created successfully");
+
+      // Close the dialog
       onOpenChange(false);
+
+      // Reset form and selected file
+      form.reset();
+      setSelectedFile(null);
+
+      // Refresh the current page to show the newly added resource
       router.refresh();
     } catch (error) {
       console.error("Error creating resource:", error);
@@ -246,6 +255,11 @@ export function ResourceUploadDialog({
     }
   };
 
+  // Function to trigger file input click
+  const handleBrowseClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -276,17 +290,22 @@ export function ResourceUploadDialog({
               <p className="text-lg font-medium">Drag and Drop assets here</p>
               <p className="text-muted-foreground">Or</p>
             </div>
-            <label htmlFor="file-upload">
-              <Button variant="default" className="cursor-pointer">
-                Browse
-              </Button>
-              <input
-                id="file-upload"
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </label>
+            <Button
+              variant="default"
+              className="cursor-pointer"
+              onClick={handleBrowseClick}
+              type="button"
+            >
+              Browse
+            </Button>
+            <input
+              ref={fileInputRef}
+              id="file-upload"
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              aria-label="File upload"
+            />
           </div>
         </div>
 
@@ -342,6 +361,7 @@ export function ResourceUploadDialog({
                         placeholder="Enter resource description"
                         {...field}
                         value={field.value || ""}
+                        h-1
                       />
                     </FormControl>
                     <FormMessage />
@@ -419,11 +439,6 @@ export function ResourceUploadDialog({
                           )}
                         </SelectContent>
                       </Select>
-                      {preselectedModuleId && (
-                        <FormDescription>
-                          Module automatically selected based on current page
-                        </FormDescription>
-                      )}
                       <FormMessage />
                     </FormItem>
                   )}
