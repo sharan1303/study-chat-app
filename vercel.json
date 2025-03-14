@@ -4,7 +4,7 @@
   "framework": "nextjs",
   "outputDirectory": ".next",
   "regions": ["iad1"],
-  "crons": {},
+  "crons": [],
   "env": {
     "NEXT_PUBLIC_FORCE_DYNAMIC": "true",
     "NEXT_PRIVATE_STANDALONE": "1"
