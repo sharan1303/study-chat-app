@@ -4,7 +4,6 @@ const nextConfig = {
     domains: ["img.clerk.com", "images.clerk.dev"],
   },
   experimental: {
-    ppr: true,
     missingSuspenseWithCSRBailout: false,
   },
 };
