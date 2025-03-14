@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ResourceUploadButton } from "@/components/ResourceUploadButton";
 
 interface Module {
   id: string;
@@ -104,7 +105,9 @@ export default function ModuleDetailsPage({
 
         // Fetch all modules for the module selector
         const allModulesResponse = await axios.get("/api/modules");
-        const modulesData = allModulesResponse.data;
+        // Handle the new API response format where modules are in a nested 'modules' property
+        const modulesData = allModulesResponse.data.modules || [];
+
         setAllModules(
           modulesData.map((m: Module) => ({
             id: m.id,
@@ -139,8 +142,12 @@ export default function ModuleDetailsPage({
               `/api/modules?name=${decodedModuleName}`
             );
 
-            if (moduleResponse.data.length > 0) {
-              moduleData = moduleResponse.data[0];
+            // Handle the new API response format
+            const responseData =
+              moduleResponse.data.modules || moduleResponse.data;
+
+            if (Array.isArray(responseData) && responseData.length > 0) {
+              moduleData = responseData[0];
             } else {
               return notFound();
             }
@@ -478,14 +485,7 @@ export default function ModuleDetailsPage({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Resources</h2>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  router.push(`/modules/resources/new?moduleId=${module.id}`)
-                }
-              >
-                Add Resource
-              </Button>
+              <ResourceUploadButton variant="outline" moduleId={module.id} />
             </div>
 
             {resources.length === 0 ? (
@@ -494,13 +494,7 @@ export default function ModuleDetailsPage({
                 <p className="text-muted-foreground">
                   Add resources to this module to get started
                 </p>
-                <Button
-                  onClick={() =>
-                    router.push(`/modules/resources/new?moduleId=${module.id}`)
-                  }
-                >
-                  Add Resource
-                </Button>
+                <ResourceUploadButton moduleId={module.id} />
               </div>
             ) : (
               <div className="overflow-x-auto border rounded-md">

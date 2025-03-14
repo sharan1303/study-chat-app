@@ -1,21 +1,14 @@
 "use client";
 
-import React, { Suspense, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn, encodeModuleSlug } from "@/lib/utils";
+import { useModuleStore, Module } from "@/lib/store";
 
 // Import component files
 import SidebarHeader from "./SidebarHeader";
 import ModuleList from "./ModuleList";
 import UserSection from "./UserSection";
-import SidebarSkeleton from "./SidebarSkeleton";
-
-interface Module {
-  id: string;
-  name: string;
-  icon: string;
-  lastStudied?: string | null;
-}
 
 interface SidebarProps {
   modules?: Module[];
@@ -24,16 +17,28 @@ interface SidebarProps {
   onModuleChange?: (moduleId: string) => void;
 }
 
-// Main content component that uses hooks
-function SidebarContent({
-  modules = [],
-  loading = false,
+export default function Sidebar({
+  modules: propModules,
+  loading: propLoading = false,
   activeModule = null,
   onModuleChange,
 }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Get modules from the store for shared state across pages
+  const {
+    modules: storeModules,
+    loading: storeLoading,
+    setActiveModuleId,
+  } = useModuleStore();
+
+  // Use props if provided, otherwise use store
+  const modules =
+    propModules && propModules.length > 0 ? propModules : storeModules;
+  // Simplified loading state
+  const loading = propLoading || storeLoading;
 
   // Initialize with a default value to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState<boolean>(false);
@@ -66,6 +71,13 @@ function SidebarContent({
   // Get active module from URL if not provided in props
   const currentModule = activeModule || searchParams?.get("module") || null;
 
+  // Update the activeModuleId in store when it changes
+  useEffect(() => {
+    if (currentModule) {
+      setActiveModuleId(currentModule);
+    }
+  }, [currentModule, setActiveModuleId]);
+
   // Determine if a navigation item is active
   const isActive = (path: string) => {
     return pathname === path;
@@ -73,6 +85,9 @@ function SidebarContent({
 
   // Handle clicking on a module - either call the parent callback or navigate
   const handleModuleClick = (moduleId: string, moduleName: string) => {
+    // Update active module in store
+    setActiveModuleId(moduleId);
+
     if (onModuleChange) {
       onModuleChange(moduleId);
     } else {
@@ -109,14 +124,5 @@ function SidebarContent({
       {/* User section - only show when expanded */}
       {!collapsed && <UserSection />}
     </div>
-  );
-}
-
-// Export main component with Suspense
-export default function Sidebar(props: SidebarProps) {
-  return (
-    <Suspense fallback={<SidebarSkeleton />}>
-      <SidebarContent {...props} />
-    </Suspense>
   );
 }

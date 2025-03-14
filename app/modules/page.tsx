@@ -3,13 +3,8 @@
 import { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  PlusCircle,
-  Search,
-  Edit,
-  Trash,
-} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { PlusCircle, Search, Edit, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -51,6 +46,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import axios from "axios";
 import { encodeModuleSlug } from "@/lib/utils";
+import { ResourceUploadButton } from "@/components/ResourceUploadButton";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -128,7 +124,6 @@ function ModulesLoading() {
 // Create a component that uses useSearchParams inside Suspense
 function ModulesPageContent() {
   const { isLoaded, isSignedIn } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
@@ -138,6 +133,12 @@ function ModulesPageContent() {
     return searchParams?.get("tab") || "modules";
   });
   const [isLoading, setIsLoading] = useState(true);
+  const shouldOpenResourceUpload =
+    searchParams?.get("openResourceUpload") === "true";
+  const preselectedModuleId = searchParams?.get("moduleId");
+  const [openResourceUpload, setOpenResourceUpload] = useState(
+    shouldOpenResourceUpload
+  );
 
   // This effect fetches the modules data from the API
   useEffect(() => {
@@ -151,8 +152,10 @@ function ModulesPageContent() {
         }
 
         const data = await response.json();
-        setModules(data);
-        setFilteredModules(data);
+        // Extract modules from the response object
+        const modulesList = data.modules || [];
+        setModules(modulesList);
+        setFilteredModules(modulesList);
       } catch (error) {
         console.error("Error fetching modules:", error);
         // Set modules to empty array on error
@@ -188,6 +191,18 @@ function ModulesPageContent() {
       }
     }
   }, [searchQuery, modules, activeTab]);
+
+  // Add to existing useEffect that loads modules
+  useEffect(() => {
+    // Handle opening the resource upload dialog from URL params
+    if (shouldOpenResourceUpload) {
+      setOpenResourceUpload(true);
+      // Remove the query parameter from the URL without refreshing the page
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("openResourceUpload");
+      window.history.replaceState({}, "", newUrl.toString());
+    }
+  }, [shouldOpenResourceUpload]);
 
   if (!isLoaded) {
     return <ModulesLoading />;
@@ -234,8 +249,9 @@ function ModulesPageContent() {
             throw new Error("Failed to fetch modules");
           }
           const modulesData = await modulesResponse.json();
+          const modulesList = modulesData.modules || [];
           setModules(
-            modulesData.map((m: Module) => ({
+            modulesList.map((m: Module) => ({
               id: m.id,
               name: m.name,
               icon: m.icon,
@@ -414,10 +430,14 @@ function ModulesPageContent() {
                 <ModuleOperations />
               </Suspense>
             ) : (
-              <Button onClick={() => router.push("/modules/resources/new")}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Upload Resource
-              </Button>
+              <ResourceUploadButton
+                variant="outline"
+                moduleId={preselectedModuleId || undefined}
+                initialOpen={openResourceUpload}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Resource
+              </ResourceUploadButton>
             )}
           </div>
 
@@ -729,8 +749,8 @@ function ResourceRowWithContext({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &quot;{resource.title}&quot; and cannot be
-              undone.
+              This will permanently delete &quot;{resource.title}&quot; and
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

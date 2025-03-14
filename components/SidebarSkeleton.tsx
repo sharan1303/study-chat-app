@@ -24,8 +24,8 @@ export default function SidebarSkeleton() {
       {/* User section skeleton */}
       <div className="p-4 border-t">
         <div className="flex items-center justify-between">
-          <div className="h-8 w-28 bg-muted rounded"></div>
-          <div className="h-8 w-8 bg-muted rounded"></div>
+          <div className="min-h-[69px] w-28 bg-muted rounded"></div>
+          <div className="min-h-[69px] w-8 bg-muted rounded"></div>
         </div>
       </div>
     </div>
