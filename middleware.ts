@@ -3,6 +3,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   "/", // Allow the homepage without authentication
+  "/settings", // Allow the settings page without authentication
   "/api/chat(.*)", // Allow chat API for unauthenticated users
 ]);
 

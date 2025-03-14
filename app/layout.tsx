@@ -20,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <head />
         <body className={`${inter.className} overflow-hidden flex`}>
           <Providers>

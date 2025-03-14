@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, ReactNode, useEffect, useRef } from "react";
+import { ThemeProvider } from "next-themes";
 
 export function Providers({ children }: { children: ReactNode }) {
   // Use a ref for the client to avoid recreation on each render
@@ -31,7 +32,9 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClientRef.current}>
-      {children}
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        {children}
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

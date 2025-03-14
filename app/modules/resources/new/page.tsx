@@ -293,17 +293,23 @@ function NewResourcePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {modules.map((moduleItem) => (
-                            <SelectItem
-                              key={moduleItem.id}
-                              value={moduleItem.id}
-                            >
-                              <span className="flex items-center gap-2">
-                                <span>{moduleItem.icon}</span>
-                                <span>{moduleItem.name}</span>
-                              </span>
+                          {Array.isArray(modules) ? (
+                            modules.map((moduleItem) => (
+                              <SelectItem
+                                key={moduleItem.id}
+                                value={moduleItem.id}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <span>{moduleItem.icon}</span>
+                                  <span>{moduleItem.name}</span>
+                                </span>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-modules">
+                              No modules available
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       {preselectedModuleId && (
