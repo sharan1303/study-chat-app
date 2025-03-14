@@ -5,14 +5,36 @@ import { Module } from "./store";
  */
 export async function fetchModules(): Promise<Module[]> {
   try {
-    const response = await fetch("/api/modules");
+    const response = await fetch("/api/modules", {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
 
     if (!response.ok) {
       throw new Error("Failed to fetch modules");
     }
 
     const data = await response.json();
-    return data.modules;
+
+    // Handle different response formats
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data && Array.isArray(data.modules)) {
+      return data.modules;
+    } else if (data && typeof data === "object") {
+      // Try to find any array property as a fallback
+      const arrayProps = Object.entries(data).find(([, value]) =>
+        Array.isArray(value)
+      );
+
+      if (arrayProps) {
+        return arrayProps[1] as Module[];
+      }
+    }
+
+    console.error("Unexpected API response format:", data);
+    return [];
   } catch (error) {
     console.error("Error fetching modules:", error);
     return [];

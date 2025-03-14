@@ -18,6 +18,9 @@ interface ModuleStore {
   updateModuleLastStudied: (id: string) => void;
 }
 
+// Check if localStorage is available
+const isClient = typeof window !== "undefined";
+
 // Create store with simpler persistence to avoid hydration issues
 export const useModuleStore = create<ModuleStore>()(
   persist(
@@ -54,7 +57,13 @@ export const useModuleStore = create<ModuleStore>()(
     }),
     {
       name: "module-storage",
-      storage: createJSONStorage(() => localStorage),
+      storage: isClient
+        ? createJSONStorage(() => localStorage)
+        : createJSONStorage(() => ({
+            getItem: () => null,
+            setItem: () => undefined,
+            removeItem: () => undefined,
+          })),
       skipHydration: true, // Skip hydration and load from scratch
     }
   )
