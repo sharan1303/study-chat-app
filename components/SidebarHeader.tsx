@@ -23,7 +23,7 @@ export default function SidebarHeader({
     >
       {!collapsed ? (
         <Link href="/" className="flex items-center">
-          <span className="text-xl font-bold">StudyAI</span>
+          <span className="text-xl font-bold">Study Chat</span>
         </Link>
       ) : null}
       <Button

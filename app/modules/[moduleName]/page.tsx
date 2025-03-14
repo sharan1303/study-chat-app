@@ -104,7 +104,9 @@ export default function ModuleDetailsPage({
 
         // Fetch all modules for the module selector
         const allModulesResponse = await axios.get("/api/modules");
-        const modulesData = allModulesResponse.data;
+        // Handle the new API response format where modules are in a nested 'modules' property
+        const modulesData = allModulesResponse.data.modules || [];
+
         setAllModules(
           modulesData.map((m: Module) => ({
             id: m.id,
@@ -139,8 +141,12 @@ export default function ModuleDetailsPage({
               `/api/modules?name=${decodedModuleName}`
             );
 
-            if (moduleResponse.data.length > 0) {
-              moduleData = moduleResponse.data[0];
+            // Handle the new API response format
+            const responseData =
+              moduleResponse.data.modules || moduleResponse.data;
+
+            if (Array.isArray(responseData) && responseData.length > 0) {
+              moduleData = responseData[0];
             } else {
               return notFound();
             }

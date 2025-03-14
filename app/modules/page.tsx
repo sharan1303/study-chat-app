@@ -4,12 +4,7 @@ import { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  PlusCircle,
-  Search,
-  Edit,
-  Trash,
-} from "lucide-react";
+import { PlusCircle, Search, Edit, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -151,8 +146,10 @@ function ModulesPageContent() {
         }
 
         const data = await response.json();
-        setModules(data);
-        setFilteredModules(data);
+        // Extract modules from the response object
+        const modulesList = data.modules || [];
+        setModules(modulesList);
+        setFilteredModules(modulesList);
       } catch (error) {
         console.error("Error fetching modules:", error);
         // Set modules to empty array on error
@@ -234,8 +231,9 @@ function ModulesPageContent() {
             throw new Error("Failed to fetch modules");
           }
           const modulesData = await modulesResponse.json();
+          const modulesList = modulesData.modules || [];
           setModules(
-            modulesData.map((m: Module) => ({
+            modulesList.map((m: Module) => ({
               id: m.id,
               name: m.name,
               icon: m.icon,
@@ -729,8 +727,8 @@ function ResourceRowWithContext({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete &quot;{resource.title}&quot; and cannot be
-              undone.
+              This will permanently delete &quot;{resource.title}&quot; and
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -9,11 +9,13 @@ export async function GET(request: NextRequest) {
   const name = searchParams.get("name");
 
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
   }
 
   try {
-    // If a name is provided and it's for a specific module lookup
+    // If a name parameter is provided, filter modules by name
     if (name) {
       // First try exact match (case-insensitive)
       const moduleByExactName = await prisma.module.findFirst({
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (moduleByExactName) {
-        // Return the exact match as a single-item array
+        // Return the exact match with the new response format
         const formattedModule = {
           id: moduleByExactName.id,
           name: moduleByExactName.name,
@@ -55,10 +57,11 @@ export async function GET(request: NextRequest) {
           resourceCount: moduleByExactName.resources.length,
         };
 
-        return NextResponse.json([formattedModule]);
+        return NextResponse.json({ modules: [formattedModule] });
       }
 
-      // If no exact match, get all modules and try fuzzy matching
+      // If no exact match, try fuzzy matching
+      // Get all modules to try fuzzy matching on the server side
       const allModules = await prisma.module.findMany({
         where: { userId },
         select: {
@@ -77,79 +80,70 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Try to find a module that matches when normalized
-      const matchingModule = allModules.find((module) => {
+      // Find modules that match when normalized
+      const matchingModules = allModules.filter((module) => {
         const normalizedDbName = module.name
           .toLowerCase()
           .replace(/[^\w\s]/g, "");
         const normalizedSearchName = name.toLowerCase().replace(/[^\w\s]/g, "");
-        return normalizedDbName === normalizedSearchName;
+        return (
+          normalizedDbName.includes(normalizedSearchName) ||
+          normalizedSearchName.includes(normalizedDbName)
+        );
       });
 
-      if (matchingModule) {
-        // Return the fuzzy match as a single-item array
-        const formattedModule = {
-          id: matchingModule.id,
-          name: matchingModule.name,
-          description: matchingModule.description,
-          icon: matchingModule.icon,
-          lastStudied: matchingModule.lastStudied
-            ? matchingModule.lastStudied.toISOString()
+      if (matchingModules.length > 0) {
+        // Format modules and return them
+        const formattedModules = matchingModules.map((module) => ({
+          id: module.id,
+          name: module.name,
+          description: module.description,
+          icon: module.icon,
+          lastStudied: module.lastStudied
+            ? module.lastStudied.toISOString()
             : null,
-          createdAt: matchingModule.createdAt.toISOString(),
-          updatedAt: matchingModule.updatedAt.toISOString(),
-          resourceCount: matchingModule.resources.length,
-        };
+          createdAt: module.createdAt.toISOString(),
+          updatedAt: module.updatedAt.toISOString(),
+          resourceCount: module.resources.length,
+        }));
 
-        return NextResponse.json([formattedModule]);
+        return NextResponse.json({ modules: formattedModules });
       }
 
       // If no match found, return empty array
-      return NextResponse.json([]);
+      return NextResponse.json({ modules: [] });
     }
 
-    // Fetch all modules from the database (no name filter)
+    // Default behavior - fetch all modules
     const modules = await prisma.module.findMany({
       where: {
         userId,
       },
       orderBy: {
-        updatedAt: "desc",
+        lastStudied: "desc",
       },
       select: {
         id: true,
         name: true,
-        description: true,
         icon: true,
         lastStudied: true,
-        createdAt: true,
-        updatedAt: true,
-        resources: {
-          select: {
-            id: true,
-          },
-        },
       },
     });
 
-    // Add resource count and format dates
+    // Transform date objects to strings for client components
     const formattedModules = modules.map((module) => ({
-      id: module.id,
-      name: module.name,
-      description: module.description,
-      icon: module.icon,
+      ...module,
       lastStudied: module.lastStudied ? module.lastStudied.toISOString() : null,
-      createdAt: module.createdAt.toISOString(),
-      updatedAt: module.updatedAt.toISOString(),
-      resourceCount: module.resources.length,
     }));
 
-    return NextResponse.json(formattedModules);
+    return NextResponse.json({ modules: formattedModules });
   } catch (error) {
     console.error("Error fetching modules:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch modules" },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: "Internal Server Error" }),
+      {
+        status: 500,
+      }
     );
   }
 }
