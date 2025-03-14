@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { PlusCircle, Search, Edit, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +46,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import axios from "axios";
 import { encodeModuleSlug } from "@/lib/utils";
+import { ResourceUploadButton } from "@/components/ResourceUploadButton";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -123,7 +124,6 @@ function ModulesLoading() {
 // Create a component that uses useSearchParams inside Suspense
 function ModulesPageContent() {
   const { isLoaded, isSignedIn } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
@@ -133,6 +133,12 @@ function ModulesPageContent() {
     return searchParams?.get("tab") || "modules";
   });
   const [isLoading, setIsLoading] = useState(true);
+  const shouldOpenResourceUpload =
+    searchParams?.get("openResourceUpload") === "true";
+  const preselectedModuleId = searchParams?.get("moduleId");
+  const [openResourceUpload, setOpenResourceUpload] = useState(
+    shouldOpenResourceUpload
+  );
 
   // This effect fetches the modules data from the API
   useEffect(() => {
@@ -185,6 +191,18 @@ function ModulesPageContent() {
       }
     }
   }, [searchQuery, modules, activeTab]);
+
+  // Add to existing useEffect that loads modules
+  useEffect(() => {
+    // Handle opening the resource upload dialog from URL params
+    if (shouldOpenResourceUpload) {
+      setOpenResourceUpload(true);
+      // Remove the query parameter from the URL without refreshing the page
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("openResourceUpload");
+      window.history.replaceState({}, "", newUrl.toString());
+    }
+  }, [shouldOpenResourceUpload]);
 
   if (!isLoaded) {
     return <ModulesLoading />;
@@ -412,10 +430,14 @@ function ModulesPageContent() {
                 <ModuleOperations />
               </Suspense>
             ) : (
-              <Button onClick={() => router.push("/modules/resources/new")}>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Upload Resource
-              </Button>
+              <ResourceUploadButton
+                variant="outline"
+                moduleId={preselectedModuleId || undefined}
+                initialOpen={openResourceUpload}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Resource
+              </ResourceUploadButton>
             )}
           </div>
 
