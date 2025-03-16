@@ -1,6 +1,6 @@
 // lib/modules.ts
 
-import { prisma } from "./prisma";
+import prisma from "./prisma";
 
 export async function getModuleContext(moduleId: string): Promise<string> {
   const modules = await prisma.module.findUnique({
