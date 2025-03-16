@@ -6,6 +6,7 @@ import { useModuleStore } from "@/lib/store";
 import { fetchModules } from "@/lib/api";
 import Sidebar from "./Sidebar";
 import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 export default function ClientSidebar() {
   const { isLoaded, isSignedIn, userId } = useAuth();
@@ -16,12 +17,64 @@ export default function ClientSidebar() {
 
   // Activate the component after mount
   useEffect(() => {
-    // Immediate activation
     setIsActivated(true);
-  }, []);
+
+    // Detect production environment
+    if (typeof window !== "undefined") {
+      console.log(
+        "Environment:",
+        process.env.NODE_ENV,
+        "User authenticated:",
+        isSignedIn,
+        "User ID:",
+        userId
+      );
+    }
+  }, [isSignedIn, userId]);
 
   // Only fetch if we're authenticated
   const enabled = isLoaded && isSignedIn && isActivated;
+
+  // Direct fetch without React Query (as a fallback)
+  useEffect(() => {
+    // If React Query isn't working, try a direct fetch as fallback
+    if (enabled && modules.length === 0 && fetchError) {
+      console.log("Attempting direct fetch as fallback");
+
+      const directFetch = async () => {
+        try {
+          const response = await fetch("/api/modules", {
+            headers: {
+              "Cache-Control": "no-store",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`API responded with status ${response.status}`);
+          }
+
+          const data = await response.json();
+          console.log("Direct fetch result:", data);
+
+          if (data.modules && Array.isArray(data.modules)) {
+            setModules(data.modules);
+            setLoading(false);
+            if (data.modules.length > 0) {
+              toast.success(
+                `Loaded ${data.modules.length} modules via direct fetch`
+              );
+            } else {
+              console.log("No modules found via direct fetch");
+            }
+          }
+        } catch (err) {
+          console.error("Direct fetch failed:", err);
+        }
+      };
+
+      directFetch();
+    }
+  }, [enabled, modules.length, fetchError, setModules, setLoading]);
 
   // Use React Query to fetch modules with more debugging
   const { data, isLoading, error } = useQuery({
@@ -46,7 +99,6 @@ export default function ClientSidebar() {
 
   // Set up periodic refetching
   useEffect(() => {
-    // Force an immediate fetch when component mounts
     if (enabled) {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
     }
@@ -68,15 +120,27 @@ export default function ClientSidebar() {
       setLoading(false);
       setFetchError(null); // Clear any previous errors
     } else if (!isLoading && isLoaded && isActivated) {
-      // If we're not loading, and we're fully activated, set an empty array
       if (error) {
         console.error("Error loading modules:", error);
         setFetchError(error instanceof Error ? error.message : String(error));
       }
-      setModules([]);
-      setLoading(false);
+
+      // Don't clear modules if we already have some
+      if (modules.length === 0) {
+        setModules([]);
+        setLoading(false);
+      }
     }
-  }, [data, isLoading, isLoaded, isActivated, error, setModules, setLoading]);
+  }, [
+    data,
+    isLoading,
+    isLoaded,
+    isActivated,
+    error,
+    modules.length,
+    setModules,
+    setLoading,
+  ]);
 
   // Manual loading control
   const loadingState = isLoading || !isActivated || !isLoaded;
@@ -85,7 +149,6 @@ export default function ClientSidebar() {
   useEffect(() => {
     if (fetchError && modules.length === 0 && !loadingState) {
       console.error(`Module fetch error: ${fetchError}`);
-      // This adds debug info to the console in production
     }
   }, [fetchError, modules.length, loadingState]);
 

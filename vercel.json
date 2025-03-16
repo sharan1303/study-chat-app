@@ -9,6 +9,7 @@
     "NEXT_PUBLIC_FORCE_DYNAMIC": "true",
     "NEXT_PRIVATE_STANDALONE": "1",
     "NEXT_PUBLIC_DEBUG": "true",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "PRISMA_CLIENT_ENGINE_TYPE": "dataproxy"
   }
 } 

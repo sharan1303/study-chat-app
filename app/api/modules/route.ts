@@ -4,26 +4,57 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-  const searchParams = request.nextUrl.searchParams;
-  const name = searchParams.get("name");
-
-  if (!userId) {
-    return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-    });
-  }
-
   try {
+    // Get user ID from auth
+    const { userId } = await auth();
+    const searchParams = request.nextUrl.searchParams;
+    const name = searchParams.get("name");
+
+    if (!userId) {
+      console.error("API: No userId found in request");
+      return NextResponse.json(
+        { error: "Unauthorized", modules: [] },
+        { status: 401 }
+      );
+    }
+
+    console.log(`API: Fetching modules for user ${userId}`);
+
+    // Check if user exists in the database
+    let user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    // If user doesn't exist but we have a userId from auth, auto-create the user
+    if (!user && userId) {
+      console.log(`API: User ${userId} not found in DB, auto-creating`);
+      try {
+        // Get user email from Clerk (in a real app)
+        // For now, use a placeholder
+        const email = `user-${userId}@example.com`;
+
+        user = await prisma.user.create({
+          data: {
+            id: userId,
+            email: email,
+            name: `User ${userId.substring(0, 8)}`,
+          },
+        });
+        console.log("API: New user created:", user.id);
+      } catch (userError) {
+        console.error("API: Error creating user:", userError);
+      }
+    }
+
     // If a name parameter is provided, filter modules by name
     if (name) {
-      // First try exact match (case-insensitive)
-      const moduleByExactName = await prisma.module.findFirst({
+      // Simplified query for name filtering
+      const modules = await prisma.module.findMany({
         where: {
           userId,
           name: {
+            contains: name,
             mode: "insensitive",
-            equals: name,
           },
         },
         select: {
@@ -32,118 +63,66 @@ export async function GET(request: NextRequest) {
           description: true,
           icon: true,
           lastStudied: true,
-          createdAt: true,
-          updatedAt: true,
           resources: {
-            select: {
-              id: true,
-            },
+            select: { id: true },
           },
         },
       });
 
-      if (moduleByExactName) {
-        // Return the exact match with the new response format
-        const formattedModule = {
-          id: moduleByExactName.id,
-          name: moduleByExactName.name,
-          description: moduleByExactName.description,
-          icon: moduleByExactName.icon,
-          lastStudied: moduleByExactName.lastStudied
-            ? moduleByExactName.lastStudied.toISOString()
-            : null,
-          createdAt: moduleByExactName.createdAt.toISOString(),
-          updatedAt: moduleByExactName.updatedAt.toISOString(),
-          resourceCount: moduleByExactName.resources.length,
-        };
+      const formattedModules = modules.map((module) => ({
+        id: module.id,
+        name: module.name,
+        description: module.description,
+        icon: module.icon,
+        lastStudied: module.lastStudied
+          ? module.lastStudied.toISOString()
+          : null,
+        resourceCount: module.resources.length,
+      }));
 
-        return NextResponse.json({ modules: [formattedModule] });
-      }
+      console.log(
+        `API: Found ${formattedModules.length} modules matching "${name}"`
+      );
 
-      // If no exact match, try fuzzy matching
-      // Get all modules to try fuzzy matching on the server side
-      const allModules = await prisma.module.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          icon: true,
-          lastStudied: true,
-          createdAt: true,
-          updatedAt: true,
-          resources: {
-            select: {
-              id: true,
-            },
-          },
-        },
-      });
-
-      // Find modules that match when normalized
-      const matchingModules = allModules.filter((module) => {
-        const normalizedDbName = module.name
-          .toLowerCase()
-          .replace(/[^\w\s]/g, "");
-        const normalizedSearchName = name.toLowerCase().replace(/[^\w\s]/g, "");
-        return (
-          normalizedDbName.includes(normalizedSearchName) ||
-          normalizedSearchName.includes(normalizedDbName)
-        );
-      });
-
-      if (matchingModules.length > 0) {
-        // Format modules and return them
-        const formattedModules = matchingModules.map((module) => ({
-          id: module.id,
-          name: module.name,
-          description: module.description,
-          icon: module.icon,
-          lastStudied: module.lastStudied
-            ? module.lastStudied.toISOString()
-            : null,
-          createdAt: module.createdAt.toISOString(),
-          updatedAt: module.updatedAt.toISOString(),
-          resourceCount: module.resources.length,
-        }));
-
-        return NextResponse.json({ modules: formattedModules });
-      }
-
-      // If no match found, return empty array
-      return NextResponse.json({ modules: [] });
+      return NextResponse.json({ modules: formattedModules });
     }
 
     // Default behavior - fetch all modules
+    console.log("API: Fetching all modules");
+
     const modules = await prisma.module.findMany({
-      where: {
-        userId,
-      },
-      orderBy: {
-        lastStudied: "desc",
-      },
+      where: { userId },
+      orderBy: { lastStudied: "desc" },
       select: {
         id: true,
         name: true,
+        description: true,
         icon: true,
         lastStudied: true,
+        resources: {
+          select: { id: true },
+        },
       },
     });
 
     // Transform date objects to strings for client components
     const formattedModules = modules.map((module) => ({
-      ...module,
+      id: module.id,
+      name: module.name,
+      description: module.description,
+      icon: module.icon,
       lastStudied: module.lastStudied ? module.lastStudied.toISOString() : null,
+      resourceCount: module.resources ? module.resources.length : 0,
     }));
+
+    console.log(`API: Returning ${formattedModules.length} modules`);
 
     return NextResponse.json({ modules: formattedModules });
   } catch (error) {
-    console.error("Error fetching modules:", error);
-    return new NextResponse(
-      JSON.stringify({ error: "Internal Server Error" }),
-      {
-        status: 500,
-      }
+    console.error("API: Error in modules GET endpoint:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error", modules: [] },
+      { status: 500 }
     );
   }
 }
