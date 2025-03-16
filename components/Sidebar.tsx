@@ -3,45 +3,47 @@
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn, encodeModuleSlug } from "@/lib/utils";
-import { useModuleStore, Module } from "@/lib/store";
 
 // Import component files
 import SidebarHeader from "./SidebarHeader";
 import ModuleList from "./ModuleList";
 import UserSection from "./UserSection";
 
+// Define Module interface within the file
+export interface Module {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon: string;
+  lastStudied?: string | null;
+  createdAt?: string | null;
+  resourceCount?: number;
+}
+
 interface SidebarProps {
-  modules?: Module[];
+  modules: Module[];
   loading?: boolean;
   activeModule?: string | null;
   onModuleChange?: (moduleId: string) => void;
+  errorMessage?: string | null;
 }
 
 export default function Sidebar({
-  modules: propModules,
-  loading: propLoading = false,
+  modules,
+  loading = false,
   activeModule = null,
   onModuleChange,
+  errorMessage = null,
 }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Get modules from the store for shared state across pages
-  const {
-    modules: storeModules,
-    loading: storeLoading,
-    setActiveModuleId,
-  } = useModuleStore();
-
-  // Use props if provided, otherwise use store
-  const modules =
-    propModules && propModules.length > 0 ? propModules : storeModules;
-  // Simplified loading state
-  const loading = propLoading || storeLoading;
-
   // Initialize with a default value to avoid hydration mismatch
   const [collapsed, setCollapsed] = useState<boolean>(false);
+
+  // Track current active module ID - we'll use this for future chat history
+  const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
 
   // Use a separate effect to handle localStorage after mounting
   const [hasMounted, setHasMounted] = useState(false);
@@ -71,12 +73,23 @@ export default function Sidebar({
   // Get active module from URL if not provided in props
   const currentModule = activeModule || searchParams?.get("module") || null;
 
-  // Update the activeModuleId in store when it changes
+  // Update the activeModuleId when it changes
   useEffect(() => {
     if (currentModule) {
       setActiveModuleId(currentModule);
     }
-  }, [currentModule, setActiveModuleId]);
+  }, [currentModule]);
+
+  // Add an effect to report the active module ID when it changes
+  useEffect(() => {
+    if (activeModuleId && typeof window !== "undefined") {
+      // This could be expanded in the future to implement chat history
+      console.log(`Active module changed to: ${activeModuleId}`);
+
+      // Store the last active module ID in localStorage
+      localStorage.setItem("lastActiveModuleId", activeModuleId);
+    }
+  }, [activeModuleId]);
 
   // Determine if a navigation item is active
   const isActive = (path: string) => {
@@ -85,8 +98,9 @@ export default function Sidebar({
 
   // Handle clicking on a module - either call the parent callback or navigate
   const handleModuleClick = (moduleId: string, moduleName: string) => {
-    // Update active module in store
+    // Update active module state for future chat history implementation
     setActiveModuleId(moduleId);
+    console.log(`Active module set to: ${moduleId}`);
 
     if (onModuleChange) {
       onModuleChange(moduleId);
@@ -110,15 +124,25 @@ export default function Sidebar({
 
       {/* Modules list - only show when expanded */}
       {!collapsed && (
-        <ModuleList
-          modules={modules}
-          loading={loading}
-          currentModule={currentModule}
-          isActive={isActive}
-          handleModuleClick={handleModuleClick}
-          pathname={pathname}
-          router={router}
-        />
+        <>
+          {/* Show error message if there is one */}
+          {errorMessage && (
+            <div className="px-4 py-2 mt-2 text-sm text-red-600 bg-red-50 rounded mx-2">
+              <p className="font-semibold">Error loading modules:</p>
+              <p className="text-xs break-words">{errorMessage}</p>
+            </div>
+          )}
+
+          <ModuleList
+            modules={modules}
+            loading={loading}
+            currentModule={currentModule}
+            isActive={isActive}
+            handleModuleClick={handleModuleClick}
+            pathname={pathname}
+            router={router}
+          />
+        </>
       )}
 
       {/* User section - only show when expanded */}

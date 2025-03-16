@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import axios from "axios";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -20,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { encodeModuleSlug } from "@/lib/utils";;
+import { encodeModuleSlug } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -59,7 +58,7 @@ interface ModuleFormProps {
 }
 
 export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
-  const router = useRouter();
+  // Remove router since we're using direct window.location changes
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -88,50 +87,55 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
       if (initialData) {
         // Update existing module
         console.log("Updating module:", initialData.id);
-        const response = await axios.put(
+        const updateResponse = await axios.post(
           `/api/modules/${initialData.id}`,
           values
         );
-        console.log("Module updated response:", response.data);
+        console.log("Module updated response:", updateResponse.data);
         toast.success("Module updated");
 
-        // Close the dialog first
+        // Notify other components via storage event
+        if (typeof window !== "undefined") {
+          localStorage.setItem("module-updated", new Date().toISOString());
+        }
+
+        // First close the dialog
         onSuccess();
 
-        // If the name was changed, redirect to the new URL with a full page reload
+        // For navigation or reload
         if (values.name !== initialData.name) {
+          // If name changed, navigate to new URL
           setTimeout(() => {
             const formattedName = encodeModuleSlug(values.name);
-            window.location.href = `/modules/${formattedName}`;
+            window.location.href = `/${formattedName}`;
           }, 600);
         } else {
-          // For non-name updates, just use router.refresh()
-          router.refresh();
+          // Otherwise, just reload the page
+          setTimeout(() => {
+            window.location.reload();
+          }, 600);
         }
-        return;
       } else {
         // Create new module
         console.log("Creating new module");
-        const response = await axios.post("/api/modules", values, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        console.log("Module created response:", response.data);
-        toast.success("Module created");
+        const createResponse = await axios.post("/api/modules", values);
+        console.log("Module created response:", createResponse.data);
 
-        const newModule = response.data;
-        // Format the module name for URL - encode all punctuation
-        const formattedName = encodeModuleSlug(newModule.name);
+        // Notify other components via storage event
+        if (typeof window !== "undefined") {
+          localStorage.setItem("module-created", new Date().toISOString());
+        }
 
-        // Close the dialog first
+        // First close the dialog in all cases
         onSuccess();
 
-        // For new modules, always do a full redirect to refresh the sidebar
+        // Then show success message
+        toast.success("Module created");
+
+        // Force a full page reload after a short delay
         setTimeout(() => {
-          window.location.href = `/modules/${formattedName}`;
-        }, 600);
-        return;
+          window.location.reload();
+        }, 800);
       }
     } catch (error) {
       console.error("Error submitting form:", error);

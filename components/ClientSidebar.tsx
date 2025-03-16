@@ -1,67 +1,117 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useModuleStore } from "@/lib/store";
-import { fetchModules } from "@/lib/api";
 import Sidebar from "./Sidebar";
 import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
+
+// Define module type matching ServerSidebar
+export interface Module {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon: string;
+  lastStudied?: string | null;
+  resourceCount?: number;
+}
 
 export default function ClientSidebar() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const { modules, setModules, setLoading } = useModuleStore();
-  const queryClient = useQueryClient();
-  // Add manual activation state
-  const [isActivated, setIsActivated] = useState(false);
+  const { isLoaded, isSignedIn, userId } = useAuth();
+  const [modules, setModules] = useState<Module[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Activate the component after mount
+  // Fetch modules whenever auth state changes
   useEffect(() => {
-    // Immediate activation
-    setIsActivated(true);
+    if (!isLoaded) return;
+
+    const fetchModules = async () => {
+      if (!isSignedIn || !userId) {
+        console.log("User not signed in or no userId, skipping modules fetch");
+        setModules([]);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        console.log(`Fetching modules for sidebar (userId: ${userId})`);
+
+        // Request modules directly, like ServerSidebar does
+        const response = await fetch("/api/modules?source=sidebar", {
+          method: "GET",
+          headers: {
+            "Cache-Control": "no-cache",
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(
+            `Failed to fetch modules: ${response.status}`,
+            errorText
+          );
+          setError(`API Error (${response.status}): ${errorText}`);
+          throw new Error(
+            `Failed to fetch modules: ${response.status} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+
+        if (data && data.modules && Array.isArray(data.modules)) {
+          console.log(`Loaded ${data.modules.length} modules`);
+          setModules(data.modules);
+        } else {
+          console.warn("Unexpected modules data format:", data);
+          setError("Unexpected data format from API");
+          setModules([]);
+        }
+      } catch (error) {
+        console.error("Error fetching modules for sidebar:", error);
+        setError(error instanceof Error ? error.message : "Unknown error");
+        toast.error("Failed to load modules");
+        setModules([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchModules();
+
+    // Set up polling if user is signed in
+    let interval: NodeJS.Timeout | null = null;
+    if (isSignedIn && userId) {
+      interval = setInterval(fetchModules, 60000); // Poll every minute
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoaded, isSignedIn, userId]);
+
+  // Listen for module creation/update events
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "module-created" || event.key === "module-updated") {
+        console.log("Module change detected - reloading");
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Only fetch if we're authenticated
-  const enabled = isLoaded && isSignedIn && isActivated;
-
-  // Use React Query to fetch modules with immediate execution
-  const { data, isLoading } = useQuery({
-    queryKey: ["modules"],
-    queryFn: fetchModules,
-    enabled: enabled,
-    staleTime: 1000 * 60 * 2, // 2 minutes
-    refetchInterval: 1000 * 60 * 2, // Poll every 2 minutes
-  });
-
-  // Set up periodic refetching
+  // Show auth debug info in development
   useEffect(() => {
-    // Force an immediate fetch when component mounts
-    if (enabled) {
-      queryClient.invalidateQueries({ queryKey: ["modules"] });
+    if (process.env.NODE_ENV === "development") {
+      console.log("Auth state:", { isLoaded, isSignedIn, userId });
     }
+  }, [isLoaded, isSignedIn, userId]);
 
-    const interval = setInterval(() => {
-      if (enabled) {
-        queryClient.invalidateQueries({ queryKey: ["modules"] });
-      }
-    }, 1000 * 60 * 5); // Refresh every 5 minutes
-
-    return () => clearInterval(interval);
-  }, [queryClient, enabled]);
-
-  // Update our store when data changes
-  useEffect(() => {
-    if (data) {
-      setModules(data);
-      setLoading(false);
-    } else if (!isLoading && isLoaded && isActivated) {
-      // If we're not loading, and we're fully activated, set an empty array
-      setModules([]);
-      setLoading(false);
-    }
-  }, [data, isLoading, isLoaded, isActivated, setModules, setLoading]);
-
-  // Manual loading control
-  const loadingState = isLoading || !isActivated || !isLoaded;
-
-  return <Sidebar modules={modules} loading={loadingState} />;
+  // Return the sidebar component with modules and error state
+  return <Sidebar modules={modules} loading={loading} errorMessage={error} />;
 }

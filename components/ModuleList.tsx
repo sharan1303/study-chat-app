@@ -7,16 +7,7 @@ import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useModuleStore } from "@/lib/store";
-import { useQueryClient } from "@tanstack/react-query";
-import { updateModuleLastStudied } from "@/lib/api";
-
-interface Module {
-  id: string;
-  name: string;
-  icon: string;
-  lastStudied?: string | null;
-}
+import { Module } from "./Sidebar"; // Import from Sidebar to keep types consistent
 
 interface ModuleListProps {
   modules: Module[];
@@ -40,14 +31,8 @@ export default function ModuleList({
   pathname,
   router,
 }: ModuleListProps) {
-  const { updateModuleLastStudied: updateLastStudied } = useModuleStore();
-  const queryClient = useQueryClient();
-
-  // Enhanced module click handler with real-time state updates
-  const onModuleClick = async (moduleId: string, moduleName: string) => {
-    // Update the local state immediately for responsive UI
-    updateLastStudied(moduleId);
-
+  // Simple module click handler to navigate or call parent handler
+  const onModuleClick = (moduleId: string, moduleName: string) => {
     // Call parent handler if provided
     if (handleModuleClick) {
       handleModuleClick(moduleId, moduleName);
@@ -57,16 +42,6 @@ export default function ModuleList({
         moduleName.toLowerCase().replace(/\s+/g, "-")
       );
       router.push(`/${encodedName}`);
-    }
-
-    // Optimistically update the UI first, then update on the server in the background
-    try {
-      await updateModuleLastStudied(moduleId);
-      // Refresh the query after successful update
-      queryClient.invalidateQueries({ queryKey: ["modules"] });
-    } catch (error) {
-      console.error("Failed to update module last studied time:", error);
-      // No need to show error to user for background operation
     }
   };
 
