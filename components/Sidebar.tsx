@@ -8,6 +8,7 @@ import { cn, encodeModuleSlug } from "@/lib/utils";
 import SidebarHeader from "./SidebarHeader";
 import ModuleList from "./ModuleList";
 import UserSection from "./UserSection";
+import ChatHistory, { Chat } from "./ChatHistory";
 
 // Define Module interface within the file
 export interface Module {
@@ -26,6 +27,8 @@ interface SidebarProps {
   activeModule?: string | null;
   onModuleChange?: (moduleId: string) => void;
   errorMessage?: string | null;
+  chats?: Chat[];
+  chatsLoading?: boolean;
 }
 
 export default function Sidebar({
@@ -34,6 +37,8 @@ export default function Sidebar({
   activeModule = null,
   onModuleChange,
   errorMessage = null,
+  chats = [],
+  chatsLoading = false,
 }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -108,7 +113,7 @@ export default function Sidebar({
       // If no callback provided, navigate to the module name as URL path
       // Use custom slug encoding for special characters
       const encodedName = encodeModuleSlug(moduleName);
-      router.push(`/${encodedName}`);
+      router.push(`/${encodedName}/chat`);
     }
   };
 
@@ -122,27 +127,37 @@ export default function Sidebar({
       {/* App branding and toggle */}
       <SidebarHeader collapsed={collapsed} setCollapsed={setCollapsed} />
 
-      {/* Modules list - only show when expanded */}
+      {/* Modules list and Chat History Container - only show when expanded */}
       {!collapsed && (
-        <>
+        <div className="flex flex-col h-[calc(100vh-9rem)] overflow-hidden">
           {/* Show error message if there is one */}
           {errorMessage && (
-            <div className="px-4 py-2 mt-2 text-sm text-red-600 bg-red-50 rounded mx-2">
+            <div className="px-4 py-2 mt-2 text-sm text-red-600 bg-red-50 rounded mx-2 mb-2">
               <p className="font-semibold">Error loading modules:</p>
               <p className="text-xs break-words">{errorMessage}</p>
             </div>
           )}
 
-          <ModuleList
-            modules={modules}
-            loading={loading}
-            currentModule={currentModule}
-            isActive={isActive}
-            handleModuleClick={handleModuleClick}
-            pathname={pathname}
-            router={router}
-          />
-        </>
+          {/* Module List - 1/3 of the available space */}
+          <div className="h-1/3 min-h-[150px]">
+            <ModuleList
+              modules={modules}
+              loading={loading}
+              currentModule={currentModule}
+              isActive={isActive}
+              handleModuleClick={handleModuleClick}
+              pathname={pathname}
+              router={router}
+            />
+          </div>
+
+          {/* Chat History Section - 2/3 of the available space */}
+          <div className="h-2/3">
+            {(chats.length > 0 || chatsLoading) && (
+              <ChatHistory chats={chats} loading={chatsLoading} />
+            )}
+          </div>
+        </div>
       )}
 
       {/* User section - only show when expanded */}
