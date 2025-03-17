@@ -8,7 +8,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -19,9 +18,6 @@ import {
   Bot,
   ArrowLeft,
   Info,
-  AlertTriangle,
-  Zap,
-  MessagesSquare,
   Paperclip,
 } from "lucide-react";
 import Link from "next/link";
@@ -37,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { useUser, useAuth } from "@clerk/nextjs";
 import Image from "next/image";
+import { UserProfile } from "@clerk/nextjs";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -84,9 +81,9 @@ export default function SettingsPage() {
   const imageUrl = user?.imageUrl || "public/profile-circle.256x256.png";
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col px-8 py-3">
       {/* Top navigation bar */}
-      <div className="flex justify-between items-center p-5">
+      <div className="flex justify-between items-center">
         <Button variant="ghost" size="sm" asChild className="flex items-center">
           <Link href="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -152,14 +149,18 @@ export default function SettingsPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Search</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘/^</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      ⌘/^
+                    </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">K</kbd>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘/^</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      ⌘/^
+                    </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">N</kbd>
                   </div>
                 </div>
@@ -180,76 +181,28 @@ export default function SettingsPage() {
 
               {/* Account Tab */}
               <TabsContent value="account">
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle>Upgrade to Pro</CardTitle>
-                    <CardDescription>
-                      Get access to advanced features and higher usage limits
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid md:grid-cols-3 gap-6">
-                    <div className="flex items-start gap-3">
-                      <MessagesSquare className="h-5 w-5 text-pink-500 mt-1" />
-                      <div>
-                        <h3 className="font-medium">Generous Message Limits</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Send over 1,500 messages per month
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Bot className="h-5 w-5 text-purple-500 mt-1" />
-                      <div>
-                        <h3 className="font-medium">All AI Models</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Access to our full suite of models
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Zap className="h-5 w-5 text-yellow-500 mt-1" />
-                      <div>
-                        <h3 className="font-medium">Priority Support</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Get faster responses and dedicated assistance
-                        </p>
-                      </div>
+                <Card>
+                  <CardContent>
+                    <div className="w-9">
+                      <UserProfile
+                        routing="hash"
+
+                        appearance={{
+                          elements: {
+                            rootBox: {
+                              boxShadow: "none",
+                              width: "10%",
+                            },
+                            card: {
+                              border: "none",
+                              boxShadow: "none",
+                              width: "100%",
+                            },
+                          },
+                        }}
+                      />
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <Button className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700">
-                      Upgrade Now - $8/month
-                    </Button>
-                  </CardFooter>
-                </Card>
-
-                <Card>
-                  <CardHeader className="text-red-500">
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5" />
-                      Danger Zone
-                    </CardTitle>
-                    <CardDescription className="text-muted-foreground">
-                      Permanently delete your account and all associated data.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardFooter>
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            "Are you sure you want to delete your account? This action cannot be undone."
-                          )
-                        ) {
-                          // Handle account deletion
-
-                        }
-                      }}
-                    >
-                      Delete Account
-                    </Button>
-                  </CardFooter>
                 </Card>
               </TabsContent>
 

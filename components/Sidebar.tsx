@@ -102,14 +102,14 @@ export default function Sidebar({
   };
 
   // Handle clicking on a module - either call the parent callback or navigate
-  const handleModuleClick = (moduleId: string, moduleName: string) => {
+  const handleModuleClick = (moduleId: string, moduleName?: string) => {
     // Update active module state for future chat history implementation
     setActiveModuleId(moduleId);
     console.log(`Active module set to: ${moduleId}`);
 
     if (onModuleChange) {
       onModuleChange(moduleId);
-    } else {
+    } else if (moduleName) {
       // If no callback provided, navigate to the module name as URL path
       // Use custom slug encoding for special characters
       const encodedName = encodeModuleSlug(moduleName);
