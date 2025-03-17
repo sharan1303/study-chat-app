@@ -26,14 +26,6 @@ export async function GET() {
       orderBy: {
         updatedAt: "desc",
       },
-      include: {
-        module: {
-          select: {
-            name: true,
-            icon: true,
-          },
-        },
-      },
     });
 
     return Response.json(chats);

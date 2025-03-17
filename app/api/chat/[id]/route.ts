@@ -5,7 +5,7 @@ export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  const { userId } = auth();
+  const { userId } = await auth();
 
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
@@ -21,7 +21,7 @@ export async function GET(
       return new Response("User not found", { status: 404 });
     }
 
-    // Get the specific chat for this user
+    // Get chat if it exists
     const chat = await prisma.chat.findFirst({
       where: {
         id: params.id,

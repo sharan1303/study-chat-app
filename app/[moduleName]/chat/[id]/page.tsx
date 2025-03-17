@@ -61,10 +61,25 @@ export default async function ModuleChatPage({
     ? JSON.parse(JSON.stringify(chat.messages))
     : [];
 
+  // Convert Prisma Date objects to ISO strings for client components
+  const moduleWithStringDates = {
+    ...moduleData,
+    createdAt: moduleData.createdAt.toISOString(),
+    updatedAt: moduleData.updatedAt.toISOString(),
+    lastStudied: moduleData.lastStudied
+      ? moduleData.lastStudied.toISOString()
+      : null,
+    resources: moduleData.resources.map((resource) => ({
+      ...resource,
+      createdAt: resource.createdAt.toISOString(),
+      updatedAt: resource.updatedAt.toISOString(),
+    })),
+  };
+
   return (
     <Suspense fallback={<ChatPageLoading />}>
       <ClientChatPage
-        initialModuleDetails={moduleData}
+        initialModuleDetails={moduleWithStringDates}
         chatId={params.id}
         initialMessages={initialMessages}
       />
