@@ -1,13 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Chat } from "./ChatHistory";
 import useSWR from "swr";
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarTrigger,
+  SidebarRail,
+} from "@/components/ui/sidebar";
+import { useSidebar } from "@/lib/sidebar-context";
+import ModuleList from "./ModuleList";
+import ChatHistory from "./ChatHistory";
+import UserSection from "./UserSection";
+import { useRouter, usePathname } from "next/navigation";
 
-// Define module type matching ServerSidebar
+// Define module type
 export interface Module {
   id: string;
   name: string;
@@ -28,9 +40,13 @@ const fetcher = (url: string) =>
 
 export default function ClientSidebar() {
   const { isLoaded, isSignedIn, userId } = useAuth();
+  const { state } = useSidebar();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Fetch chat history using SWR
   const { data: chats, isLoading: isLoadingChats } = useSWR<Chat[]>(
@@ -129,14 +145,57 @@ export default function ClientSidebar() {
     }
   }, [isLoaded, isSignedIn, userId]);
 
-  // Return the sidebar component with modules and error state
+  // Return the new sidebar component structure
   return (
-    <Sidebar
-      modules={modules}
-      loading={loading}
-      errorMessage={error}
-      chats={chats || []}
-      chatsLoading={isLoadingChats}
-    />
+    <Sidebar side="left" collapsible="offcanvas">
+      <SidebarHeader>
+        <div className="flex items-center justify-between">
+          {state === "expanded" && (
+            <span className="text-xl font-bold">Study Chat</span>
+          )}
+          <SidebarTrigger />
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        {/* Show error message if there is one */}
+        {error && state === "expanded" && (
+          <div className="px-4 py-2 text-sm text-red-600 bg-red-50 rounded mb-2">
+            <p className="font-semibold">Error loading modules:</p>
+            <p className="text-xs break-words">{error}</p>
+          </div>
+        )}
+
+        {/* Module List */}
+        <div className={state === "expanded" ? "mb-4" : ""}>
+          <ModuleList
+            modules={modules}
+            loading={loading}
+            currentModule={activeModuleId}
+            handleModuleClick={(moduleId) => setActiveModuleId(moduleId)}
+            collapsed={state === "collapsed"}
+            router={{ push: router.push, refresh: router.refresh }}
+            pathname={pathname}
+          />
+        </div>
+
+        {/* Chat History Section */}
+        {state === "expanded" &&
+          chats &&
+          (chats.length > 0 || isLoadingChats) && (
+            <div className="mt-2">
+              <ChatHistory chats={chats || []} loading={isLoadingChats} />
+            </div>
+          )}
+      </SidebarContent>
+
+      {state === "expanded" && (
+        <SidebarFooter>
+          <UserSection />
+        </SidebarFooter>
+      )}
+
+      <SidebarRail />
+    </Sidebar>
   );
 }

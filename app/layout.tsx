@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import ClientSidebar from "@/components/ClientSidebar";
 import { Providers } from "@/lib/providers";
+import { SidebarProvider } from "@/lib/sidebar-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,8 +25,10 @@ export default function RootLayout({
         <head />
         <body className={`${inter.className} overflow-hidden flex`}>
           <Providers>
-            <ClientSidebar key="sidebar" />
-            <main className="flex-1">{children}</main>
+            <SidebarProvider defaultOpen={true}>
+              <ClientSidebar key="sidebar" />
+              <main className="flex-1">{children}</main>
+            </SidebarProvider>
           </Providers>
         </body>
       </html>
