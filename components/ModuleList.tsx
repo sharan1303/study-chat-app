@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { Edit } from "lucide-react";
 import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -70,53 +69,19 @@ export default function ModuleList({
   return (
     <div className="flex flex-col h-full">
       {!collapsed && (
-        <div className="px-4 py-2 flex items-center justify-between">
+        <div className="px-4 py-3 flex items-center">
           <Button
             variant={checkIsActive("/modules") ? "secondary" : "ghost"}
-            className="justify-start"
+            className="justify-start pl-0 w-full text-left"
             asChild
           >
             <Link href="/modules">Your Modules</Link>
           </Button>
-          <SignedIn>
-            <div className="flex gap-1">
-              {/* New Chat button - aware of module context */}
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  // If we're in a module path, get the module name from the URL
-                  const pathParts = pathname?.split("/") || [];
-                  if (
-                    pathname &&
-                    pathParts.length > 1 &&
-                    pathParts[1] !== "modules"
-                  ) {
-                    // We're in a module chat (like /module-name)
-                    router.push(`/${pathParts[1]}/chat`);
-                  } else if (
-                    pathname &&
-                    pathname.startsWith("/modules/") &&
-                    pathParts.length > 2
-                  ) {
-                    // We're in a module details page (like /modules/module-name)
-                    router.push(`/${pathParts[2]}/chat`);
-                  } else {
-                    // Not in a module context, go to the main chat
-                    router.push("/chat");
-                  }
-                }}
-                title="Start new chat"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          </SignedIn>
         </div>
       )}
 
       <ScrollArea className="flex-1 overflow-y-auto">
-        <div className={collapsed ? "p-1" : "p-2"}>
+        <div className={collapsed ? "p-1" : "p-2 pt-0"}>
           {loading ? (
             <div className="text-center py-6">
               {!collapsed && (

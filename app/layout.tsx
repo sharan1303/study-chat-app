@@ -27,7 +27,7 @@ export default function RootLayout({
           <Providers>
             <SidebarProvider defaultOpen={true}>
               <ClientSidebar key="sidebar" />
-              <main className="flex-1">{children}</main>
+              <main className="flex-1 py-2">{children}</main>
             </SidebarProvider>
           </Providers>
         </body>
