@@ -1,6 +1,6 @@
 {
-  "buildCommand": "next build",
-  "installCommand": "bun install",
+  "buildCommand": "npx prisma generate && next build",
+  "installCommand": "npm install",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "regions": ["iad1"],
@@ -8,8 +8,13 @@
   "env": {
     "NEXT_PUBLIC_FORCE_DYNAMIC": "true",
     "NEXT_PRIVATE_STANDALONE": "1",
-    "NEXT_PUBLIC_DEBUG": "true",
     "NODE_ENV": "production",
-    "PRISMA_CLIENT_ENGINE_TYPE": "dataproxy"
+    "PRISMA_CLIENT_ENGINE_TYPE": "dataproxy",
+    "PRISMA_TELEMETRY_INFORMATION": "false"
+  },
+  "build": {
+    "env": {
+      "PRISMA_TELEMETRY_INFORMATION": "false"
+    }
   }
 } 
