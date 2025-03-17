@@ -12,13 +12,27 @@ export default async function NewModuleChat({
   params: { moduleName: string };
 }) {
   const { userId } = await auth();
-
-  if (!userId) {
-    return notFound();
-  }
+  const isAuthenticated = !!userId;
 
   // Get the module name from the URL path
   const decodedModuleName = decodeModuleSlug(params.moduleName);
+
+  // Generate a new chat ID
+  const chatId = generateId();
+
+  // For unauthenticated users, we'll show a basic chat interface without module context
+  if (!isAuthenticated) {
+    return (
+      <Suspense fallback={<ChatPageLoading />}>
+        <ClientChatPage
+          initialModuleDetails={null}
+          chatId={chatId}
+          initialMessages={[]}
+          isAuthenticated={false}
+        />
+      </Suspense>
+    );
+  }
 
   try {
     // First try to find the module by exact match (case insensitive)
@@ -68,9 +82,6 @@ export default async function NewModuleChat({
       data: { lastStudied: new Date() },
     });
 
-    // Generate a new chat ID
-    const chatId = generateId();
-
     // Convert Date objects to strings for compatibility with the component
     const moduleWithStringDates = {
       ...moduleData,
@@ -92,6 +103,7 @@ export default async function NewModuleChat({
           initialModuleDetails={moduleWithStringDates}
           chatId={chatId}
           initialMessages={[]}
+          isAuthenticated={true}
         />
       </Suspense>
     );

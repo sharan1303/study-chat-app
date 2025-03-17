@@ -8,27 +8,37 @@ import { formatChatTitle, generateId } from "@/lib/utils";
 
 export async function POST(req: Request) {
   try {
+    // Parse request data
+    const {
+      messages,
+      moduleId,
+      chatId: requestedChatId,
+      isAuthenticated = true,
+    } = await req.json();
+
     // Get auth session
     const session = await auth();
     const userId = session.userId;
 
-    if (!userId) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    // Parse request data
-    const { messages, moduleId, chatId: requestedChatId } = await req.json();
-
     // Ensure we have a valid chatId - generate one if not provided
     const chatId = requestedChatId || generateId();
 
-    // Find the user by Clerk ID
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    // For unauthenticated users or when isAuthenticated is false,
+    // we allow chat but don't save history
+    const shouldSaveHistory = isAuthenticated && userId;
 
-    if (!user) {
-      return new Response("User not found", { status: 404 });
+    let user = null;
+
+    // Only try to fetch user data if we should save history
+    if (shouldSaveHistory) {
+      // Find the user by Clerk ID
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return new Response("User not found", { status: 404 });
+      }
     }
 
     // Check if we have a module ID (indicating module-specific mode)
@@ -42,7 +52,32 @@ export async function POST(req: Request) {
 
     let systemMessage = "";
 
-    if (isModuleMode) {
+    // Define a type for search results
+    interface SearchResult {
+      title: string;
+      content: string;
+    }
+
+    let searchResults: SearchResult[] = [];
+    if (shouldSearch) {
+      try {
+        // Perform search with Perplexity API
+        const results = await searchWithPerplexity(lastUserMessage);
+        searchResults = Array.isArray(results) ? results : [];
+      } catch (searchError) {
+        console.error("Error performing search:", searchError);
+      }
+    }
+
+    // Format search results for inclusion in the prompt if available
+    const searchContext =
+      searchResults.length > 0
+        ? searchResults
+            .map((result) => `[${result.title}]: ${result.content}`)
+            .join("\n\n")
+        : "";
+
+    if (isModuleMode && shouldSaveHistory) {
       // Module-specific mode: Get module context and build specialized prompt
       const moduleContext = await getModuleContext(moduleId);
 
@@ -57,7 +92,7 @@ ${
     ? "Also use the following search results to provide a comprehensive answer:"
     : ""
 }
-${shouldSearch ? await searchWithPerplexity(lastUserMessage) : ""}
+${searchContext}
 
 Always provide accurate, helpful information relative to the module context.
 Explain concepts clearly and provide examples when appropriate.
@@ -82,7 +117,7 @@ ${
     ? "Use the following search results to provide a comprehensive answer:"
     : ""
 }
-${shouldSearch ? await searchWithPerplexity(lastUserMessage) : ""}
+${searchContext}
 
 Always provide accurate, helpful information.
 Explain concepts clearly and provide examples when appropriate.
@@ -116,28 +151,34 @@ Format your responses using Markdown:
       topP: 0.95,
       maxTokens: 2048,
       onFinish: async ({ text }) => {
-        // Save the chat history with the AI's response
-        try {
-          // Create or update the chat
-          await prisma.chat.upsert({
-            where: {
-              id: chatId,
-            },
-            update: {
-              messages: messages.concat([{ role: "assistant", content: text }]),
-              updatedAt: new Date(),
-            },
-            create: {
-              id: chatId,
-              title: chatTitle,
-              messages: messages.concat([{ role: "assistant", content: text }]),
-              userId: user.id,
-              moduleId: isModuleMode ? moduleId : null,
-            },
-          });
-          console.log(`Chat history saved: ${chatId}`);
-        } catch (error) {
-          console.error("Error saving chat history:", error);
+        // Save the chat history with the AI's response - but only if authenticated
+        if (shouldSaveHistory && user) {
+          try {
+            // Create or update the chat
+            await prisma.chat.upsert({
+              where: {
+                id: chatId,
+              },
+              update: {
+                messages: messages.concat([
+                  { role: "assistant", content: text },
+                ]),
+                updatedAt: new Date(),
+              },
+              create: {
+                id: chatId,
+                title: chatTitle,
+                messages: messages.concat([
+                  { role: "assistant", content: text },
+                ]),
+                userId: user.id,
+                moduleId: isModuleMode ? moduleId : null,
+              },
+            });
+            console.log(`Chat history saved: ${chatId}`);
+          } catch (error) {
+            console.error("Error saving chat history:", error);
+          }
         }
       },
     });
@@ -152,14 +193,8 @@ Format your responses using Markdown:
       headers: headers,
     });
   } catch (error) {
-    console.error("Error in chat API:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to generate response" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    console.error("Error in chat route:", error);
+    return new Response("Error processing your request", { status: 500 });
   }
 }
 

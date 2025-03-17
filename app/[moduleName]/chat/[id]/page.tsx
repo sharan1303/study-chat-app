@@ -12,14 +12,26 @@ export default async function ModuleChatPage({
   params: { moduleName: string; id: string };
 }) {
   const session = await auth();
+  const userId = session.userId;
+  const isAuthenticated = !!userId;
 
-  if (!session.userId) {
-    return notFound();
+  // For unauthenticated users, show a basic chat interface without module context
+  if (!isAuthenticated) {
+    return (
+      <Suspense fallback={<ChatPageLoading />}>
+        <ClientChatPage
+          initialModuleDetails={null}
+          chatId={params.id}
+          initialMessages={[]}
+          isAuthenticated={false}
+        />
+      </Suspense>
+    );
   }
 
   // Find the user by Clerk ID
   const user = await prisma.user.findUnique({
-    where: { id: session.userId },
+    where: { id: userId },
   });
 
   if (!user) {
@@ -82,6 +94,7 @@ export default async function ModuleChatPage({
         initialModuleDetails={moduleWithStringDates}
         chatId={params.id}
         initialMessages={initialMessages}
+        isAuthenticated={true}
       />
     </Suspense>
   );

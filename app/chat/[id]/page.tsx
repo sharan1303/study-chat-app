@@ -7,14 +7,26 @@ import prisma from "@/lib/prisma";
 
 export default async function ChatPage({ params }: { params: { id: string } }) {
   const session = await auth();
+  const userId = session.userId;
+  const isAuthenticated = !!userId;
 
-  if (!session.userId) {
-    return notFound();
+  // For unauthenticated users, show the chat UI but with empty history
+  if (!isAuthenticated) {
+    return (
+      <Suspense fallback={<ChatPageLoading />}>
+        <ClientChatPage
+          initialModuleDetails={null}
+          chatId={params.id}
+          initialMessages={[]}
+          isAuthenticated={false}
+        />
+      </Suspense>
+    );
   }
 
   // Find the user by Clerk ID
   const user = await prisma.user.findUnique({
-    where: { id: session.userId },
+    where: { id: userId },
   });
 
   if (!user) {
@@ -41,6 +53,7 @@ export default async function ChatPage({ params }: { params: { id: string } }) {
         initialModuleDetails={null}
         chatId={params.id}
         initialMessages={initialMessages}
+        isAuthenticated={true}
       />
     </Suspense>
   );
