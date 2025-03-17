@@ -1,11 +1,35 @@
 import { google } from "@ai-sdk/google";
-import { Message as VercelChatMessage, streamText } from "ai";
+import { Message, streamText } from "ai";
 import { searchWithPerplexity } from "@/lib/search";
 import { getModuleContext } from "@/lib/modules";
+import { auth } from "@clerk/nextjs/server";
+import prisma from "@/lib/prisma";
+import { formatChatTitle, generateId } from "@/lib/utils";
 
 export async function POST(req: Request) {
   try {
-    const { messages, moduleId } = await req.json();
+    // Get auth session
+    const session = await auth();
+    const userId = session.userId;
+
+    if (!userId) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    // Parse request data
+    const { messages, moduleId, chatId: requestedChatId } = await req.json();
+
+    // Ensure we have a valid chatId - generate one if not provided
+    const chatId = requestedChatId || generateId();
+
+    // Find the user by Clerk ID
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return new Response("User not found", { status: 404 });
+    }
 
     // Check if we have a module ID (indicating module-specific mode)
     const isModuleMode = moduleId != null;
@@ -74,10 +98,15 @@ Format your responses using Markdown:
     }
 
     // Format messages for the model including the system message
-    const formattedMessages: VercelChatMessage[] = [
+    const formattedMessages: Message[] = [
       { id: "system", role: "system", content: systemMessage },
       ...messages,
     ];
+
+    // Create chat title from first user message
+    const firstUserMessage =
+      messages.find((m: Message) => m.role === "user")?.content || "";
+    const chatTitle = formatChatTitle(firstUserMessage);
 
     // Use the streamText function from the AI SDK
     const result = await streamText({
@@ -86,6 +115,31 @@ Format your responses using Markdown:
       temperature: 0.7,
       topP: 0.95,
       maxTokens: 2048,
+      onFinish: async ({ text }) => {
+        // Save the chat history with the AI's response
+        try {
+          // Create or update the chat
+          await prisma.chat.upsert({
+            where: {
+              id: chatId,
+            },
+            update: {
+              messages: messages.concat([{ role: "assistant", content: text }]),
+              updatedAt: new Date(),
+            },
+            create: {
+              id: chatId,
+              title: chatTitle,
+              messages: messages.concat([{ role: "assistant", content: text }]),
+              userId: user.id,
+              moduleId: isModuleMode ? moduleId : null,
+            },
+          });
+          console.log(`Chat history saved: ${chatId}`);
+        } catch (error) {
+          console.error("Error saving chat history:", error);
+        }
+      },
     });
 
     // Get a data stream response and add model information in the header

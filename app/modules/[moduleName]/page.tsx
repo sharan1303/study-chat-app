@@ -423,7 +423,9 @@ export default function ModuleDetailsPage({
             <Button
               className="flex items-center gap-2"
               variant="outline"
-              onClick={() => router.push(`/${module.name}`)}
+              onClick={() =>
+                router.push(`/${formatModuleNameForUrl(module.name)}/chat`)
+              }
             >
               <MessageSquare className="h-5 w-5" />
               Go to Chat
