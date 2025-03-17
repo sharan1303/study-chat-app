@@ -65,3 +65,28 @@ export function decodeModuleSlug(encodedSlug: string): string {
   // Step 2: Replace hyphens with spaces for matching with database records
   return decodedSlug.replace(/-/g, " ");
 }
+
+/**
+ * Generate a unique ID for chats
+ * @returns A unique string ID
+ */
+export function generateId(): string {
+  // Generate a random string with timestamp to ensure uniqueness
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15) +
+    Date.now().toString(36)
+  );
+}
+
+/**
+ * Format chat title from first message
+ * @param message The first message content
+ * @returns A formatted chat title
+ */
+export function formatChatTitle(message: string): string {
+  if (!message) return "New Chat";
+
+  const title = message.substring(0, 50);
+  return title + (message.length > 50 ? "..." : "");
+}

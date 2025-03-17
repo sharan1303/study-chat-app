@@ -37,17 +37,17 @@ export default function ModuleList({
     if (handleModuleClick) {
       handleModuleClick(moduleId, moduleName);
     } else {
-      // Default behavior - navigate to the module
+      // Default behavior - navigate to the module chat page
       const encodedName = encodeURIComponent(
         moduleName.toLowerCase().replace(/\s+/g, "-")
       );
-      router.push(`/${encodedName}`);
+      router.push(`/${encodedName}/chat`);
     }
   };
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="p-4 flex items-center justify-between">
+    <div className="flex flex-col h-full">
+      <div className="px-4 py-2 flex items-center justify-between">
         <Button
           variant={isActive("/modules") ? "secondary" : "ghost"}
           className="justify-start"
@@ -70,17 +70,17 @@ export default function ModuleList({
                   pathParts[1] !== "modules"
                 ) {
                   // We're in a module chat (like /module-name)
-                  router.push(`/${pathParts[1]}`);
+                  router.push(`/${pathParts[1]}/chat`);
                 } else if (
                   pathname &&
                   pathname.startsWith("/modules/") &&
                   pathParts.length > 2
                 ) {
                   // We're in a module details page (like /modules/module-name)
-                  router.push(`/${pathParts[2]}`);
+                  router.push(`/${pathParts[2]}/chat`);
                 } else {
                   // Not in a module context, go to the main chat
-                  router.push("/");
+                  router.push("/chat");
                 }
               }}
               title="Start new chat"
@@ -91,8 +91,8 @@ export default function ModuleList({
         </SignedIn>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-13rem)]">
-        <div className="p-4 pt-0">
+      <ScrollArea className="flex-1 overflow-y-auto">
+        <div className="p-2">
           {loading ? (
             <div className="text-center py-6">
               <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-r-transparent mx-auto mb-2" />

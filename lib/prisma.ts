@@ -1,43 +1,39 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 
-// Define global type
+// Define global type for PrismaClient
 declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 
-// PrismaClient initialization with proper logging
-function getPrismaClient() {
-  const prismaOptions: Prisma.PrismaClientOptions = {
-    log:
-      process.env.NODE_ENV === "development"
-        ? (["query", "error", "warn"] as Prisma.LogLevel[])
-        : (["error"] as Prisma.LogLevel[]),
-  };
+// Prisma client configuration
+const prismaOptions: Prisma.PrismaClientOptions = {
+  log:
+    process.env.NODE_ENV === "development"
+      ? (["error", "warn"] as Prisma.LogLevel[])
+      : (["error"] as Prisma.LogLevel[]),
+};
 
-  try {
-    console.log("Initializing Prisma client");
-    return new PrismaClient(prismaOptions);
-  } catch (error) {
-    console.error("Error initializing Prisma client:", error);
-    // Fallback with delay
-    console.log("Retrying Prisma client initialization...");
-    return new PrismaClient(prismaOptions);
-  }
+// Create PrismaClient singleton
+function createPrismaClient() {
+  return new PrismaClient(prismaOptions);
 }
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
+// Use a single instance of Prisma Client in development
+// In production (Vercel), each serverless function will get its own instance
+// but connection pooling at the database level will be efficient
 let prisma: PrismaClient;
 
-if (process.env.NODE_ENV === "production") {
-  prisma = getPrismaClient();
-} else {
-  // In development, keep the connection alive between hot reloads
+// In development, we attach to the global object to prevent multiple instances
+if (process.env.NODE_ENV === "development") {
   if (!global.prisma) {
-    global.prisma = getPrismaClient();
+    global.prisma = createPrismaClient();
   }
   prisma = global.prisma;
+} else {
+  // In production, create a new client for each serverless function
+  // Connection pooling will handle the efficiency
+  prisma = createPrismaClient();
 }
 
 export default prisma;

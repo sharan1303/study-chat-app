@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
+import { Chat } from "./ChatHistory";
+import useSWR from "swr";
 
 // Define module type matching ServerSidebar
 export interface Module {
@@ -15,11 +17,26 @@ export interface Module {
   resourceCount?: number;
 }
 
+// SWR fetcher function
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) {
+      throw new Error("Failed to fetch data");
+    }
+    return res.json();
+  });
+
 export default function ClientSidebar() {
   const { isLoaded, isSignedIn, userId } = useAuth();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch chat history using SWR
+  const { data: chats, isLoading: isLoadingChats } = useSWR<Chat[]>(
+    isSignedIn ? "/api/chat/history" : null,
+    fetcher
+  );
 
   // Fetch modules whenever auth state changes
   useEffect(() => {
@@ -113,5 +130,13 @@ export default function ClientSidebar() {
   }, [isLoaded, isSignedIn, userId]);
 
   // Return the sidebar component with modules and error state
-  return <Sidebar modules={modules} loading={loading} errorMessage={error} />;
+  return (
+    <Sidebar
+      modules={modules}
+      loading={loading}
+      errorMessage={error}
+      chats={chats || []}
+      chatsLoading={isLoadingChats}
+    />
+  );
 }

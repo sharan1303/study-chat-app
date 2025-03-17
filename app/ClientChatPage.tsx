@@ -57,8 +57,14 @@ export function ChatPageLoading() {
 // Main chat component that uses hooks
 export default function ClientChatPage({
   initialModuleDetails,
+  chatId,
+  initialMessages = [],
+  isAuthenticated = true,
 }: {
   initialModuleDetails?: ModuleWithResources | null;
+  chatId: string;
+  initialMessages?: Message[];
+  isAuthenticated?: boolean;
 }) {
   // These states are used for initial values and potential future updates
   const [activeModule] = React.useState<string | null>(
@@ -80,9 +86,12 @@ export default function ClientChatPage({
     isLoading: chatLoading,
   } = useChat({
     api: "/api/chat",
-    id: activeModule ? `module-${activeModule}` : undefined,
+    id: chatId,
+    initialMessages,
     body: {
       moduleId: activeModule,
+      chatId: chatId,
+      isAuthenticated: isAuthenticated,
     },
     onResponse: (response) => {
       // Try to extract model information from headers if available
@@ -90,7 +99,35 @@ export default function ClientChatPage({
       if (modelHeader) {
         setModelName(modelHeader);
       }
-      // For module tracking - you could add analytics here
+
+      // Only update URL with chat ID for authenticated users
+      if (isAuthenticated) {
+        // Update URL to include the chat ID after user sends a message
+        const currentPath = window.location.pathname;
+
+        // Make sure chatId is defined before updating URL
+        if (!chatId) {
+          console.error("Error: chatId is undefined");
+          return;
+        }
+
+        if (currentPath === "/chat" && !activeModule) {
+          // Only update URL if we're on the main chat page and not in a module
+          window.history.replaceState({}, "", `/chat/${chatId}`);
+        } else if (activeModule && moduleDetails) {
+          // For module chats, update URL to the proper format
+          const encodedName = encodeModuleSlug(moduleDetails.name);
+
+          // Check if we're on a module path without chat ID
+          if (currentPath === `/${encodedName}/chat`) {
+            window.history.replaceState(
+              {},
+              "",
+              `/${encodedName}/chat/${chatId}`
+            );
+          }
+        }
+      }
     },
     onError: (error: Error) => {
       toast.error("Error: " + (error.message || "Failed to send message"));
