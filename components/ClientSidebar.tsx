@@ -23,6 +23,7 @@ import { encodeModuleSlug } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
+import { Edit } from "lucide-react";
 
 // Define module type
 export interface Module {
@@ -219,23 +220,9 @@ export default function ClientSidebar() {
                 size="icon"
                 onClick={() => router.push("/chat")}
                 title="New chat"
-                className="h-7 w-7"
+                className="h-8 w-8"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
+                <Edit className="h-4 w-4" />
               </Button>
             )}
             <SidebarTrigger />
@@ -293,7 +280,7 @@ export default function ClientSidebar() {
       {/* Expand button that aligns with header and sits next to collapsed sidebar */}
       <div
         className={cn(
-          "pt-3 fixed left-[1rem] transition-all duration-200 ease-in-out z-30",
+          "pt-3 fixed left-0 ml-[1rem] transition-all duration-200 ease-in-out z-30",
           state === "collapsed"
             ? "opacity-100 translate-x-0"
             : "opacity-0 pointer-events-none -translate-x-2"
@@ -303,7 +290,7 @@ export default function ClientSidebar() {
           variant="outline"
           size="icon"
           onClick={toggleSidebar}
-          className="h-7 w-7 shadow-md"
+          className="h-8 w-8 shadow-md"
           title="Expand sidebar"
         >
           <ChevronRight className="h-4 w-4" />

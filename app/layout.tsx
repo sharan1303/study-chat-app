@@ -26,8 +26,8 @@ export default function RootLayout({
         <body className={`${inter.className} overflow-hidden flex`}>
           <Providers>
             <SidebarProvider defaultOpen={true}>
-              <ClientSidebar key="sidebar" />
-              <main className="flex-1 py-2">{children}</main>
+              <ClientSidebar />
+              <main className="flex-1 pl-6">{children}</main>
             </SidebarProvider>
           </Providers>
         </body>

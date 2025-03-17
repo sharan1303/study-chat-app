@@ -394,7 +394,7 @@ function ModulesPageContent() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4 px-8">
-        <div className="flex items-center justify-between px-3 py-5">
+        <div className="flex items-center justify-between px-3 py-4">
           <h1 className="font-bold text-xl">Content</h1>
         </div>
 

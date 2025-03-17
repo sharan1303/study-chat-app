@@ -266,11 +266,11 @@ export default function ModuleDetailsPage({
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen w-full">
-        <div className="flex-1 space-y-4 px-8">
-          <div className="flex items-center justify-between p-5">
-            <div className="flex items-center gap-2">
+        <div className="flex-1 space-y-4 px-6">
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3">
               {/* Icon skeleton */}
-              <div className="h-10 w-10 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-7 w-7 bg-gray-200 animate-pulse rounded"></div>
               {/* Title skeleton */}
               <div className="h-7 w-48 bg-gray-200 animate-pulse rounded"></div>
             </div>
@@ -354,15 +354,15 @@ export default function ModuleDetailsPage({
 
   return (
     <div className="flex flex-col min-h-screen w-full">
-      <div className="flex-1 space-y-4 px-8">
-        <div className="flex items-center justify-between p-5">
-          <div className="flex items-center gap-2">
+      <div className="flex-1 space-y-4 px-6">
+        <div className="flex items-center justify-between py-2">
+          <div className="flex items-center">
             {/* Module icon with popover for changing */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="text-xl p-2 cursor-pointer hover:bg-muted h-10 w-10"
+                  className="text-xl cursor-pointer hover:bg-muted h-10 w-10"
                 >
                   {module.icon}
                 </Button>

@@ -165,10 +165,10 @@ export default function ClientChatPage({
       >
         {/* Chat Header - Now inside the scrollable area */}
         {moduleDetails && (
-          <div className="px-3 py-4 flex items-center justify-between sticky top-0 bg-background z-10">
+          <div className="px-10 py-3 flex items-center justify-between sticky top-0 bg-background">
             <Button
               variant="ghost"
-              className="flex items-center gap-2 -ml-3 px-8 hover:bg-muted/50 rounded"
+              className="flex items-center gap-3 -ml-3 px-3 hover:bg-muted/50 rounded"
               onClick={navigateToModuleDetails}
             >
               <span className="text-2xl">{moduleDetails.icon}</span>
