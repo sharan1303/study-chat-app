@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { PlusCircle, Search, Edit, Trash } from "lucide-react";
+import { Search, Edit, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -434,10 +434,7 @@ function ModulesPageContent() {
                 variant="outline"
                 moduleId={preselectedModuleId || undefined}
                 initialOpen={openResourceUpload}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Resource
-              </ResourceUploadButton>
+              ></ResourceUploadButton>
             )}
           </div>
 

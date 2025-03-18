@@ -496,7 +496,6 @@ export default function ModuleDetailsPage({
                 <p className="text-muted-foreground">
                   Add resources to this module to get started
                 </p>
-                <ResourceUploadButton moduleId={module.id} />
               </div>
             ) : (
               <div className="overflow-x-auto border rounded-md">

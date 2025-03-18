@@ -203,11 +203,6 @@ export default function ClientChatPage({
                       <p className="text-muted-foreground">
                         Try the chat or sign in to access your modules
                       </p>
-                      <div className="mt-4">
-                        <SignInButton mode="modal">
-                          <Button>Sign in</Button>
-                        </SignInButton>
-                      </div>
                     </SignedOut>
                   </div>
                 </div>

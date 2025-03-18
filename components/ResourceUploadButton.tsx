@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { ResourceUploadDialog } from "@/components/dialogs/ResourceUploadDialog";
 
 interface ResourceUploadButtonProps extends ButtonProps {
@@ -28,7 +28,7 @@ export function ResourceUploadButton({
       <Button onClick={() => setOpen(true)} {...props}>
         {children || (
           <>
-            <Plus className="mr-2 h-4 w-4" />
+            <PlusCircle className="mr-2 h-4 w-4" />
             Upload Resource
           </>
         )}

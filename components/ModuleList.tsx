@@ -95,19 +95,16 @@ export default function ModuleList({
             </div>
           ) : modules.length === 0 ? (
             !collapsed && (
-              <div className="text-center py-6">
-                <p className="text-sm text-muted-foreground">
-                  No modules found
-                </p>
+              <div className="text-center p-3">
                 <SignedIn>
                   <Button className="mt-2" size="sm" asChild>
                     <Link href="/modules">Create your first module</Link>
                   </Button>
                 </SignedIn>
                 <SignedOut>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Sign in to create modules
-                  </p>
+                  <Button className="mt-2" size="sm" asChild>
+                    <Link href="/modules">Create your first module</Link>
+                  </Button>
                 </SignedOut>
               </div>
             )

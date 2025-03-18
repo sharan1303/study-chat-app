@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 
 // Main NotFound component with client directive
