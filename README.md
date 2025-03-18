@@ -1,17 +1,20 @@
-# StudyAI - AI-Powered Study Assistant
+# Study Chat - AI-Powered Study Assistant
 
 This is an AI-powered study assistant application built with Next.js that helps students learn and understand their university modules through interactive chat conversations.
 
 ## Project Overview
 
-StudyAI provides an intelligent chat interface where students can:
+Study Chat provides an intelligent chat interface where students can:
 
 - Ask questions about their course materials
 - Get explanations for complex concepts
 - Study with AI assistants specialized for different modules
 - Access their study modules and resources in one place
+- Track chat history across different modules
 
 The application uses the Vercel AI SDK to power conversations with AI models and provides a clean, modern UI built with shadcn/ui components.
+
+[Production deployment can be found here at Study Chat](https://study-chat-app.vercel.app/)
 
 ## Features
 
@@ -20,23 +23,19 @@ The application uses the Vercel AI SDK to power conversations with AI models and
 - **Resource Library**: Browse and access study resources organized by module
 - **User Authentication**: Secure sign-in with Clerk authentication
 - **Dynamic Rendering**: Fast, responsive interface with server-side rendering support
+- **Chat History**: Save and browse previous conversations for easy reference
+- **Collapsible Sidebar**: Improved UI with collapsible sidebar for better screen utilization
+- **Profile Management**: Integrated Clerk user profile management
+- **Responsive Design**: Optimized for both desktop and mobile devices
 
 ## Getting Started
 
-Production deployment can be found at [StudyAI](https://study-chat-app.vercel.app/)
+To run the application locally, follow these steps:
 
-currently in progress. To run the application locally, follow these steps:
+First, run the development server
 
-First, run the development server:
-
-```bash
+```shell
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -49,9 +48,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Authentication**: Clerk
 - **AI Integration**: Vercel AI SDK
 - **Database**: Prisma with Supabase
-- **AI Model Selection**: Gemini 2.0 Flash
-- **Tools**
+- **AI Models**:
+  - Primary: Gemini 2.0 Flash
   - Search: Perplexity API
+- **State Management**: React Context API
 
 ## Environment Variables
 
@@ -77,10 +77,28 @@ NEXT_PRIVATE_STANDALONE=1
 ## Project Structure
 
 - `app/` - Next.js app router pages and API routes
+  - `[moduleName]/` - Module-specific routes including chat
+  - `api/` - Backend API endpoints for chat, modules, and resources
+  - `chat/` - General chat interface
+  - `modules/` - Module management UI
+  - `settings/` - User settings and preferences
 - `components/` - Reusable UI components
+  - `ui/` - Shadcn UI components
+  - User interface elements (Sidebar, Chat, etc.)
 - `lib/` - Utility functions and shared code
+  - Context providers
+  - Helper functions
 - `prisma/` - Database schema and migrations
 - `public/` - Static assets
+
+## Recent Updates
+
+- **Sidebar Improvements**: Enhanced sidebar with collapsible functionality and animations
+- **State Management**: Implemented context-based state management for sidebar
+- **Chat History**: Added chat history display in the sidebar
+- **User Settings**: Integrated Clerk user profile management in settings page
+- **Header Alignment**: Fixed alignment issues across different pages
+- **UI Enhancements**: Improved styling and layout consistency
 
 ## Learn More
 
@@ -92,24 +110,6 @@ To learn more about the technologies used in this project:
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [Prisma](https://www.prisma.io/docs)
 - [Clerk Authentication](https://clerk.com/docs)
-
-## Todo List
-
-### UI/UX
-
-- [ ] Implement data persistence for chat history
-- [ ] Add file upload functionality for resources
-- [ ] Centre starting textbox for chat start up message
-- [ ] Implement a dark mode theme
-- [ ] Create mobile-responsive design improvements
-- [ ] Implement user profile settings and preferences
-- [ ] Implement collaborative study sessions
-
-### AI
-
-- [ ] Rework chat interface to use langgraph, maybe python usage?
-- [ ] Improve search capabilities with better context handling
-- [ ] Add support for more AI models
 
 ## Deployment Notes
 
@@ -127,5 +127,6 @@ The application uses three primary models:
 - **User**: Authenticated users with modules
 - **Module**: Study modules with names, descriptions, and resources
 - **Resource**: Study materials linked to specific modules
+- **Chat**: User conversations with metadata and module associations
 
-Each resource is associated with a module, and each module is associated with a user, creating a clean hierarchical structure.
+Each resource is associated with a module, and each module is associated with a user, creating a clean hierarchical structure. Chat history is also linked to modules when applicable.
