@@ -1,16 +1,39 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { notFound, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { generateId, decodeModuleSlug } from "@/lib/utils";
 import ClientChatPage from "@/app/ClientChatPage";
 import { ChatPageLoading } from "@/app/ClientChatPage";
 
+// Define a type for the module data
+interface Resource {
+  id: string;
+  title: string;
+  type: string;
+  content: string;
+  fileUrl: string | null;
+  moduleId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ModuleData {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  createdAt: string;
+  updatedAt: string;
+  lastStudied: string | null;
+  resources: Resource[];
+}
+
 export default function NewModuleChat() {
   const { moduleName } = useParams() as { moduleName: string };
   const { isSignedIn, user } = useUser();
-  const [moduleData, setModuleData] = useState<any>(null);
+  const [moduleData, setModuleData] = useState<ModuleData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Get the module name from the URL path

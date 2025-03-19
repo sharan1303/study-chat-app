@@ -3,7 +3,6 @@
 import { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Search, Edit, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +47,7 @@ import axios from "axios";
 import { encodeModuleSlug } from "@/lib/utils";
 import { ResourceUploadButton } from "@/components/ResourceUploadButton";
 import { useSession } from "@/context/SessionContext";
+import { useSearchParamsSafe } from "@/lib/use-safe-search-params";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -126,7 +126,7 @@ function ModulesLoading() {
 function ModulesPageContent() {
   const { isLoaded, isSignedIn } = useAuth();
   const { sessionId, isLoading: sessionLoading } = useSession();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParamsSafe();
   const [searchQuery, setSearchQuery] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
   const [filteredModules, setFilteredModules] = useState<Module[]>([]);
