@@ -16,33 +16,52 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   modules   Module[]
+  resources Resource[]
   chats     Chat[]
 }
 
 model Module {
-  id          String     @id @default(cuid())
+  id          String     @id @default(uuid())
   name        String
   description String?
-  userId      String
+  icon        String     @default("📚")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  icon        String     @default("📚")
   lastStudied DateTime?
-  user        User       @relation(fields: [userId], references: [id])
+  
+  userId      String?
+  sessionId   String?
+  
+  user        User?      @relation(fields: [userId], references: [id])
+  
   resources   Resource[]
   chats       Chat[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@unique([userId, name])
+  @@unique([sessionId, name])
 }
 
 model Resource {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   title     String
-  type      String
-  content   String
+  content   String?
+  type      String   @default("link")
   fileUrl   String?
-  moduleId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  module    Module   @relation(fields: [moduleId], references: [id])
+  
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  sessionId String?
+
+  @@index([moduleId])
+  @@index([userId])
+  @@index([sessionId])
 }
 
 model Chat {

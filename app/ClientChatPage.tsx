@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Send, Loader2, MessageSquare, Copy, Check } from "lucide-react";
-import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Message, useChat } from "@ai-sdk/react";

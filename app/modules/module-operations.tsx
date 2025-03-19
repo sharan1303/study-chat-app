@@ -9,10 +9,12 @@ import { ModuleForm } from "@/components/module-form";
 
 interface ModuleOperationsProps {
   showLarge?: boolean;
+  sessionId?: string | null;
 }
 
 export default function ModuleOperations({
   showLarge = false,
+  sessionId,
 }: ModuleOperationsProps) {
   const [isCreating, setIsCreating] = useState(false);
 
@@ -37,7 +39,7 @@ export default function ModuleOperations({
         )}
       </DialogTrigger>
       <DialogContent>
-        <ModuleForm onSuccess={handleCreateSuccess} />
+        <ModuleForm onSuccess={handleCreateSuccess} sessionId={sessionId} />
       </DialogContent>
     </Dialog>
   );

@@ -74,6 +74,7 @@ export async function getModuleDetails(
         : null,
       resources: moduleData.resources.map((resource) => ({
         ...resource,
+        content: resource.content || "",
         createdAt: resource.createdAt.toISOString(),
         updatedAt: resource.updatedAt.toISOString(),
       })),
@@ -158,6 +159,7 @@ export async function getModuleByName(
         : null,
       resources: moduleData.resources.map((resource) => ({
         ...resource,
+        content: resource.content || "",
         createdAt: resource.createdAt.toISOString(),
         updatedAt: resource.updatedAt.toISOString(),
       })),

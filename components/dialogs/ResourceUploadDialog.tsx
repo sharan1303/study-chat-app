@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -75,6 +76,7 @@ export function ResourceUploadDialog({
 }: ResourceUploadDialogProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isSignedIn } = useUser();
 
   const [modules, setModules] = useState<Module[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -152,6 +154,18 @@ export function ResourceUploadDialog({
 
     fetchModules();
   }, [open]);
+
+  // Safety check - redirect to login if not authenticated
+  useEffect(() => {
+    if (open && !isSignedIn) {
+      onOpenChange(false);
+    }
+  }, [open, isSignedIn, onOpenChange]);
+
+  // If not signed in, don't render the dialog
+  if (!isSignedIn) {
+    return null;
+  }
 
   // Handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

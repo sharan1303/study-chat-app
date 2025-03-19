@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -12,14 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
-import {
-  Sun,
-  Moon,
-  Bot,
-  ArrowLeft,
-  Info,
-  Paperclip,
-} from "lucide-react";
+import { Sun, Moon, Bot, ArrowLeft, Info, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +28,8 @@ import { useUser, useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { UserProfile } from "@clerk/nextjs";
 
-export default function SettingsPage() {
+// Create a wrapper component for the settings content
+function SettingsContent() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { isLoaded, user } = useUser();
@@ -186,7 +180,6 @@ export default function SettingsPage() {
                     <div className="w-9">
                       <UserProfile
                         routing="hash"
-
                         appearance={{
                           elements: {
                             rootBox: {
@@ -414,3 +407,14 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+// Main component with suspense boundary
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8">Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+export const dynamic = "force-dynamic";

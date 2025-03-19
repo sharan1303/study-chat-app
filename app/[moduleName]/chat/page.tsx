@@ -1,116 +1,173 @@
-import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+"use client";
+
+import { useEffect, useState } from "react";
+import { notFound, useParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { generateId, decodeModuleSlug } from "@/lib/utils";
-import prisma from "@/lib/prisma";
 import ClientChatPage from "@/app/ClientChatPage";
 import { ChatPageLoading } from "@/app/ClientChatPage";
 
-export default async function NewModuleChat({
-  params,
-}: {
-  params: { moduleName: string };
-}) {
-  const { userId } = await auth();
-  const isAuthenticated = !!userId;
+// Define a type for the module data
+interface Resource {
+  id: string;
+  title: string;
+  type: string;
+  content: string;
+  fileUrl: string | null;
+  moduleId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ModuleData {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  createdAt: string;
+  updatedAt: string;
+  lastStudied: string | null;
+  resources: Resource[];
+}
+
+export default function NewModuleChat() {
+  const { moduleName } = useParams() as { moduleName: string };
+  const { isSignedIn, user } = useUser();
+  const [moduleData, setModuleData] = useState<ModuleData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get the module name from the URL path
-  const decodedModuleName = decodeModuleSlug(params.moduleName);
+  const decodedModuleName = decodeModuleSlug(moduleName);
 
   // Generate a new chat ID
   const chatId = generateId();
 
-  // For unauthenticated users, we'll show a basic chat interface without module context
-  if (!isAuthenticated) {
-    return (
-      <Suspense fallback={<ChatPageLoading />}>
-        <ClientChatPage
-          initialModuleDetails={null}
-          chatId={chatId}
-          initialMessages={[]}
-          isAuthenticated={false}
-        />
-      </Suspense>
-    );
-  }
+  useEffect(() => {
+    async function fetchModuleData() {
+      try {
+        setIsLoading(true);
 
-  try {
-    // First try to find the module by exact match (case insensitive)
-    let moduleData = await prisma.module.findFirst({
-      where: {
-        userId,
-        name: {
-          mode: "insensitive",
-          equals: decodedModuleName,
-        },
-      },
-      include: {
-        resources: true,
-      },
-    });
+        if (!isSignedIn) {
+          // For anonymous users, get sessionId from localStorage
+          const sessionId = localStorage.getItem("anonymous_session_id");
 
-    // If not found, try a more flexible search approach
-    if (!moduleData) {
-      // Get all modules for this user
-      const allModules = await prisma.module.findMany({
-        where: { userId },
-        include: { resources: true },
-      });
+          if (sessionId) {
+            // Try to find module by session ID
+            const response = await fetch(
+              `/api/modules?name=${decodedModuleName}&sessionId=${sessionId}`
+            );
 
-      // Find modules with names that might match our URL when encoded
-      const matchingModule = allModules.find((module) => {
-        // Normalize both strings by lowercasing and removing special chars
-        const normalizedDbName = module.name
-          .toLowerCase()
-          .replace(/[^\w\s]/g, "");
-        const normalizedSearchName = decodedModuleName
-          .toLowerCase()
-          .replace(/[^\w\s]/g, "");
-        return normalizedDbName === normalizedSearchName;
-      });
+            if (response.ok) {
+              const data = await response.json();
+              const modules = data.modules || [];
 
-      if (matchingModule) {
-        moduleData = matchingModule;
-      } else {
-        return notFound();
+              if (modules.length > 0) {
+                const formattedModule = {
+                  ...modules[0],
+                  resources: modules[0].resources || [],
+                };
+                setModuleData(formattedModule);
+
+                // Update lastStudied timestamp (silently)
+                try {
+                  fetch(
+                    `/api/modules/${modules[0].id}?sessionId=${sessionId}`,
+                    {
+                      method: "PUT",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        lastStudied: new Date().toISOString(),
+                      }),
+                    }
+                  ).catch((e) =>
+                    console.error("Error updating lastStudied:", e)
+                  );
+                } catch (error) {
+                  console.error("Error updating lastStudied:", error);
+                }
+
+                setIsLoading(false);
+                return;
+              }
+            }
+          }
+
+          // If no module found or no sessionId, we'll show a basic chat interface
+          setModuleData(null);
+          setIsLoading(false);
+          return;
+        }
+
+        // For authenticated users
+        const userId = user?.id;
+
+        if (userId) {
+          // Fetch the module
+          const response = await fetch(
+            `/api/modules?name=${decodedModuleName}`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            const modules = data.modules || [];
+
+            if (modules.length > 0) {
+              const formattedModule = {
+                ...modules[0],
+                resources: modules[0].resources || [],
+              };
+              setModuleData(formattedModule);
+
+              // Update lastStudied timestamp (silently)
+              try {
+                fetch(`/api/modules/${modules[0].id}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    lastStudied: new Date().toISOString(),
+                  }),
+                }).catch((e) =>
+                  console.error("Error updating lastStudied:", e)
+                );
+              } catch (error) {
+                console.error("Error updating lastStudied:", error);
+              }
+            } else {
+              // No module found
+              notFound();
+            }
+          } else {
+            // Error fetching module
+            notFound();
+          }
+        }
+      } catch (error) {
+        console.error("Error loading module:", error);
+        notFound();
+      } finally {
+        setIsLoading(false);
       }
     }
 
-    // Update lastStudied timestamp
-    await prisma.module.update({
-      where: { id: moduleData.id },
-      data: { lastStudied: new Date() },
-    });
+    fetchModuleData();
+  }, [decodedModuleName, isSignedIn, user]);
 
-    // Convert Date objects to strings for compatibility with the component
-    const moduleWithStringDates = {
-      ...moduleData,
-      createdAt: moduleData.createdAt.toISOString(),
-      updatedAt: moduleData.updatedAt.toISOString(),
-      lastStudied: moduleData.lastStudied
-        ? moduleData.lastStudied.toISOString()
-        : null,
-      resources: moduleData.resources.map((resource) => ({
-        ...resource,
-        createdAt: resource.createdAt.toISOString(),
-        updatedAt: resource.updatedAt.toISOString(),
-      })),
-    };
-
-    return (
-      <Suspense fallback={<ChatPageLoading />}>
-        <ClientChatPage
-          initialModuleDetails={moduleWithStringDates}
-          chatId={chatId}
-          initialMessages={[]}
-          isAuthenticated={true}
-        />
-      </Suspense>
-    );
-  } catch (error) {
-    console.error("Error loading module:", error);
-    return notFound();
+  if (isLoading) {
+    return <ChatPageLoading />;
   }
+
+  return (
+    <ClientChatPage
+      initialModuleDetails={moduleData}
+      chatId={chatId}
+      initialMessages={[]}
+      isAuthenticated={!!isSignedIn}
+    />
+  );
 }
 
 // Add this export to allow dynamic rendering

@@ -92,21 +92,22 @@ export default function ClientSidebar() {
     if (!isLoaded) return;
 
     const fetchModules = async () => {
-      if (!isSignedIn || !userId) {
-        console.log("User not signed in or no userId, skipping modules fetch");
-        setModules([]);
-        setLoading(false);
-        setError(null);
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
-        console.log(`Fetching modules for sidebar (userId: ${userId})`);
+        console.log(`Fetching modules for sidebar`);
 
-        // Request modules directly, like ServerSidebar does
-        const response = await fetch("/api/modules?source=sidebar", {
+        // Get sessionId for anonymous users
+        let url = "/api/modules?source=sidebar";
+        if (!isSignedIn) {
+          const sessionId = localStorage.getItem("anonymous_session_id");
+          if (sessionId) {
+            url = `/api/modules?source=sidebar&sessionId=${sessionId}`;
+          }
+        }
+
+        // Request modules
+        const response = await fetch(url, {
           method: "GET",
           headers: {
             "Cache-Control": "no-cache",
@@ -147,16 +148,14 @@ export default function ClientSidebar() {
 
     fetchModules();
 
-    // Set up polling if user is signed in
+    // Set up polling
     let interval: NodeJS.Timeout | null = null;
-    if (isSignedIn && userId) {
-      interval = setInterval(fetchModules, 60000); // Poll every minute
-    }
+    interval = setInterval(fetchModules, 60000); // Poll every minute
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isLoaded, isSignedIn, userId]);
+  }, [isLoaded, isSignedIn]);
 
   // Listen for module creation/update events
   useEffect(() => {

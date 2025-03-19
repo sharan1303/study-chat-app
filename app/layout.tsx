@@ -6,6 +6,8 @@ import { Inter } from "next/font/google";
 import ClientSidebar from "@/components/ClientSidebar";
 import { Providers } from "@/lib/providers";
 import { SidebarProvider } from "@/lib/sidebar-context";
+import { SessionProvider } from "@/context/SessionContext";
+import AnonymousDataMigration from "@/components/AnonymousDataMigration";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,12 +26,17 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <head />
         <body className={`${inter.className} overflow-hidden flex`}>
-          <Providers>
-            <SidebarProvider defaultOpen={true}>
-              <ClientSidebar />
-              <main className="flex-1 pl-6">{children}</main>
-            </SidebarProvider>
-          </Providers>
+          <SessionProvider>
+            <Providers>
+              <SidebarProvider defaultOpen={true}>
+                <ClientSidebar />
+                <main className="flex-1 pl-6">
+                  {children}
+                  <AnonymousDataMigration />
+                </main>
+              </SidebarProvider>
+            </Providers>
+          </SessionProvider>
         </body>
       </html>
     </ClerkProvider>
