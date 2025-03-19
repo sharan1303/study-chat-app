@@ -87,9 +87,6 @@ export default function ModuleList({
               {!collapsed && (
                 <>
                   <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-r-transparent mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">
-                    Loading modules...
-                  </p>
                 </>
               )}
             </div>

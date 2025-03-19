@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Bot, ArrowLeft, Info, Paperclip } from "lucide-react";
+import { Sun, Moon, Bot, ArrowLeft, Info } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ import {
 import { useUser, useAuth } from "@clerk/nextjs";
 import Image from "next/image";
 import { UserProfile } from "@clerk/nextjs";
+import SettingsLoading from "./loading";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -63,11 +64,7 @@ function SettingsContent() {
   ];
 
   if (!isLoaded) {
-    return (
-      <div className="container mx-auto py-10 flex justify-center items-center">
-        <p>Loading...</p>
-      </div>
-    );
+    return <SettingsLoading />;
   }
 
   const fullName = user?.fullName || user?.firstName || "User";
@@ -149,7 +146,7 @@ function SettingsContent() {
                   <span className="text-sm">Search</span>
                   <div className="flex gap-1">
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">
-                      ⌘/^
+                      ⌘
                     </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">K</kbd>
                   </div>
@@ -158,7 +155,7 @@ function SettingsContent() {
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">
-                      ⌘/^
+                      ⌘
                     </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">N</kbd>
                   </div>
@@ -168,14 +165,13 @@ function SettingsContent() {
           </div>
 
           {/* Right side with settings tabs */}
-          <div className="flex-1">
+          <div className="flex-1 py-0.5">
             <Tabs defaultValue="account" className="w-full">
-              <TabsList className="grid grid-cols-5 mb-6">
+              <TabsList className="grid grid-cols-4 mb-6">
                 <TabsTrigger value="account">Account</TabsTrigger>
                 <TabsTrigger value="customization">Customization</TabsTrigger>
                 <TabsTrigger value="history">History & Sync</TabsTrigger>
                 <TabsTrigger value="models">Models</TabsTrigger>
-                <TabsTrigger value="attachments">Attachments</TabsTrigger>
               </TabsList>
 
               {/* Account Tab */}
@@ -190,11 +186,6 @@ function SettingsContent() {
                             rootBox: {
                               boxShadow: "none",
                               width: "10%",
-                            },
-                            card: {
-                              border: "none",
-                              boxShadow: "none",
-                              width: "100%",
                             },
                           },
                         }}
@@ -232,28 +223,6 @@ function SettingsContent() {
                             }
                           />
                           <Moon className="h-4 w-4 text-blue-400" />
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <h3 className="font-medium">Font Size</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Adjust the text size throughout the app
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            Small
-                          </Button>
-                          <Button variant="secondary" size="sm">
-                            Medium
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Large
-                          </Button>
                         </div>
                       </div>
                     </div>
@@ -375,33 +344,6 @@ function SettingsContent() {
                         ))}
                       </TableBody>
                     </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Attachments Tab */}
-              <TabsContent value="attachments">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Attachments</CardTitle>
-                    <CardDescription>
-                      Manage your uploaded files and attachments
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-lg">
-                      <Paperclip className="h-10 w-10 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">
-                        No attachments yet
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        When you upload files during chats, they will appear
-                        here
-                      </p>
-                      <Button variant="outline" asChild>
-                        <Link href="/modules/resources/new">Upload File</Link>
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

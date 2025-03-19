@@ -7,7 +7,13 @@ import { SessionProvider } from "@/context/SessionContext";
 
 export function Providers({ children, ...props }: ThemeProviderProps) {
   return (
-    <NextThemesProvider {...props}>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      {...props}
+    >
       <SessionProvider>{children}</SessionProvider>
       <Toaster position="top-center" />
     </NextThemesProvider>
