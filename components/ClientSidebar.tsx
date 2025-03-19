@@ -57,7 +57,12 @@ export default function ClientSidebar() {
   // Fetch chat history using SWR
   const { data: chats, isLoading: isLoadingChats } = useSWR<Chat[]>(
     isSignedIn ? "/api/chat/history" : null,
-    fetcher
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 10000, // Dedupe requests within 10 seconds
+    }
   );
 
   // Get active module from URL if not provided in props
@@ -262,13 +267,14 @@ export default function ClientSidebar() {
         </div>
 
         {/* Chat History Section */}
-        {state === "expanded" &&
-          chats &&
-          (chats.length > 0 || isLoadingChats) && (
-            <div className="h-2/3">
-              <ChatHistory chats={chats || []} loading={isLoadingChats} />
-            </div>
-          )}
+        {state === "expanded" && (
+          <div className="h-2/3">
+            <ChatHistory
+              chats={chats ?? []}
+              loading={!chats || isLoadingChats}
+            />
+          </div>
+        )}
       </SidebarContent>
 
       {state === "expanded" && (

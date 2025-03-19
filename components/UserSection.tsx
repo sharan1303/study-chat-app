@@ -4,6 +4,7 @@ import { SignedIn, SignedOut, UserButton, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UserSection() {
   const { theme } = useTheme();
@@ -14,8 +15,26 @@ export default function UserSection() {
     setMounted(true);
   }, []);
 
+  if (!mounted) {
+    return (
+      <div className="p-4 h-[68px]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-5 w-24 pl-2" />
+          </div>
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/settings">
+              <Settings className="opacity-0 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4">
+    <div className="p-4 h-[68px]">
       <div className="flex items-center justify-between">
         <SignedIn>
           <UserButton
@@ -26,10 +45,10 @@ export default function UserSection() {
                 },
                 // Apply different text colors based on theme
                 userButtonOuterIdentifier: {
-                  color: mounted && theme === "dark" ? "white" : "black",
+                  color: theme === "dark" ? "white" : "black",
                 },
                 userButtonTrigger: {
-                  color: mounted && theme === "dark" ? "white" : "black",
+                  color: theme === "dark" ? "white" : "black",
                 },
               },
             }}

@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, encodeModuleSlug } from "@/lib/utils";
@@ -93,16 +92,9 @@ export default function ModuleList({
           ) : modules.length === 0 ? (
             !collapsed && (
               <div className="text-center p-3">
-                <SignedIn>
-                  <Button className="mt-2" size="sm" asChild>
-                    <Link href="/modules">Create your first module</Link>
-                  </Button>
-                </SignedIn>
-                <SignedOut>
-                  <Button className="mt-2" size="sm" asChild>
-                    <Link href="/modules">Create your first module</Link>
-                  </Button>
-                </SignedOut>
+                <Button className="mt-2 w-full" size="sm" asChild>
+                  <Link href="/modules">Create your first module</Link>
+                </Button>
               </div>
             )
           ) : (

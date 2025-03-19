@@ -6,6 +6,7 @@ import { MessageSquare } from "lucide-react";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface Chat {
   id: string;
@@ -50,11 +51,23 @@ export default function ChatHistory({
 
       <div className="flex-1 overflow-hidden">
         {loading ? (
-          <div className="px-4 py-2 text-sm text-muted-foreground">
-            Loading...
-          </div>
+          <ScrollArea className="h-full">
+            <div className="space-y-1 p-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="px-2 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-3.5 rounded" />
+                      <Skeleton className="h-3.5 w-[180px] rounded" />
+                    </div>
+                    <Skeleton className="h-3 w-12 rounded hidden group-hover/chat:inline" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         ) : chats.length === 0 ? (
-          <div className="px-4 py-2 text-sm text-muted-foreground">
+          <div className="p-4 text-sm text-muted-foreground">
             No chat history
           </div>
         ) : (
@@ -77,7 +90,10 @@ export default function ChatHistory({
                     }}
                   >
                     <div className="flex items-center truncate">
-                      <MessageSquare size={14} className="mr-2 flex-shrink-0" />
+                      <MessageSquare
+                        size={14}
+                        className="mr-2 mt-0.5 flex-shrink-0"
+                      />
                       <span className="truncate">{chat.title}</span>
                     </div>
                     <span className="text-xs text-muted-foreground hidden group-hover/chat:inline">
