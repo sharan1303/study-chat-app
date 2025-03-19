@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { ResourceUploadDialog } from "@/components/dialogs/ResourceUploadDialog";
+import { LoginRequiredDialog } from "@/components/dialogs/LoginRequiredDialog";
+import { useUser } from "@clerk/nextjs";
 
 interface ResourceUploadButtonProps extends ButtonProps {
   moduleId?: string;
@@ -15,17 +17,31 @@ export function ResourceUploadButton({
   initialOpen = false,
   ...props
 }: ResourceUploadButtonProps) {
-  const [open, setOpen] = useState(initialOpen);
+  const [openUpload, setOpenUpload] = useState(initialOpen);
+  const [openLoginRequired, setOpenLoginRequired] = useState(false);
+  const { isSignedIn } = useUser();
 
   useEffect(() => {
     if (initialOpen) {
-      setOpen(true);
+      if (isSignedIn) {
+        setOpenUpload(true);
+      } else {
+        setOpenLoginRequired(true);
+      }
     }
-  }, [initialOpen]);
+  }, [initialOpen, isSignedIn]);
+
+  const handleButtonClick = () => {
+    if (isSignedIn) {
+      setOpenUpload(true);
+    } else {
+      setOpenLoginRequired(true);
+    }
+  };
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} {...props}>
+      <Button onClick={handleButtonClick} {...props}>
         {children || (
           <>
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -33,10 +49,19 @@ export function ResourceUploadButton({
           </>
         )}
       </Button>
+
+      {/* Show resource upload dialog for authenticated users */}
       <ResourceUploadDialog
-        open={open}
-        onOpenChange={setOpen}
+        open={!!(openUpload && isSignedIn)}
+        onOpenChange={setOpenUpload}
         preselectedModuleId={moduleId}
+      />
+
+      {/* Show login required dialog for unauthenticated users */}
+      <LoginRequiredDialog
+        open={openLoginRequired}
+        onOpenChange={setOpenLoginRequired}
+        featureName="resource uploads"
       />
     </>
   );
