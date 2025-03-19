@@ -77,14 +77,19 @@ function SettingsContent() {
   return (
     <div className="h-full flex flex-col py-3">
       {/* Top navigation bar */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center pr-5">
         <Button variant="ghost" size="sm" asChild className="flex items-center">
           <Link href="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Chat
           </Link>
         </Button>
-        <Button className="pr-8" variant="ghost" size="sm" onClick={() => signOut()}>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="w-fit"
+          onClick={() => signOut()}
+        >
           Sign out
         </Button>
       </div>

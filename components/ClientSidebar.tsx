@@ -22,7 +22,6 @@ import Link from "next/link";
 import { encodeModuleSlug } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PanelLeft } from "lucide-react";
 import { Edit } from "lucide-react";
 
 // Define module type
@@ -46,7 +45,7 @@ const fetcher = (url: string) =>
 
 export default function ClientSidebar() {
   const { isLoaded, isSignedIn, userId } = useAuth();
-  const { state, toggleSidebar } = useSidebar();
+  const { state } = useSidebar();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

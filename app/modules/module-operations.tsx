@@ -27,12 +27,12 @@ export default function ModuleOperations({
     <Dialog open={isCreating} onOpenChange={setIsCreating}>
       <DialogTrigger asChild>
         {showLarge ? (
-          <Button size="lg">
+          <Button size="lg" variant="outline">
             <PlusCircle className="h-4 w-4 mr-2" />
             Create Module
           </Button>
         ) : (
-          <Button>
+          <Button variant="outline">
             <PlusCircle className="h-4 w-4 mr-2" />
             Create Module
           </Button>
