@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PlusCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -28,12 +28,12 @@ export default function ModuleOperations({
       <DialogTrigger asChild>
         {showLarge ? (
           <Button size="lg" variant="outline">
-            <PlusCircle className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-2" />
             Create Module
           </Button>
         ) : (
           <Button variant="outline">
-            <PlusCircle className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-2" />
             Create Module
           </Button>
         )}

@@ -77,7 +77,7 @@ function SettingsContent() {
   return (
     <div className="h-full flex flex-col py-3">
       {/* Top navigation bar */}
-      <div className="flex justify-between items-center pr-5">
+      <div className="flex justify-between items-center pr-6">
         <Button variant="ghost" size="sm" asChild className="flex items-center">
           <Link href="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
