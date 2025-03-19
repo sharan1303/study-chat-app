@@ -22,7 +22,7 @@ import Link from "next/link";
 import { encodeModuleSlug } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { Edit } from "lucide-react";
 
 // Define module type
@@ -292,7 +292,7 @@ export default function ClientSidebar() {
           className="h-8 w-8 shadow-md"
           title="Expand sidebar"
         >
-          <ChevronRight className="h-4 w-4" />
+          <PanelLeft className="h-4 w-4" />
         </Button>
       </div>
     </Sidebar>
