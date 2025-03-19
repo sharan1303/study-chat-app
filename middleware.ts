@@ -7,6 +7,9 @@ const isPublicRoute = createRouteMatcher([
   "/", // Allow the homepage without authentication
   "/settings", // Allow the settings page without authentication
   "/api/chat(.*)", // Allow chat API for unauthenticated users
+  "/api/modules(.*)", // Allow modules API for anonymous users
+  "/api/check-anonymous-data(.*)", // Allow checking anonymous data
+  "/modules(.*)", // Allow modules pages for anonymous users
   // Add other public routes as needed
 ]);
 

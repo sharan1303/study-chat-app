@@ -5,6 +5,8 @@ import axios from "axios";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useSession } from "@/context/SessionContext";
+import { useUser } from "@clerk/nextjs";
 
 import {
   Form,
@@ -55,12 +57,22 @@ interface ModuleFormProps {
     icon: string;
   };
   onSuccess: () => void;
+  sessionId?: string | null;
 }
 
-export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
+export const ModuleForm = ({
+  initialData,
+  onSuccess,
+  sessionId: propSessionId,
+}: ModuleFormProps) => {
   // Remove router since we're using direct window.location changes
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const { sessionId: contextSessionId } = useSession();
+  const { isSignedIn } = useUser();
+
+  // Use sessionId from props if provided, otherwise use from context
+  const sessionId = propSessionId ?? contextSessionId;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -87,10 +99,14 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
       if (initialData) {
         // Update existing module
         console.log("Updating module:", initialData.id);
-        const updateResponse = await axios.post(
-          `/api/modules/${initialData.id}`,
-          values
-        );
+
+        // Check if we need to add sessionId
+        let updateUrl = `/api/modules/${initialData.id}`;
+        if (!isSignedIn && sessionId) {
+          updateUrl = `/api/modules/${initialData.id}?sessionId=${sessionId}`;
+        }
+
+        const updateResponse = await axios.post(updateUrl, values);
         console.log("Module updated response:", updateResponse.data);
         toast.success("Module updated");
 
@@ -107,7 +123,7 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
           // If name changed, navigate to new URL
           setTimeout(() => {
             const formattedName = encodeModuleSlug(values.name);
-            window.location.href = `/${formattedName}`;
+            window.location.href = `/modules/${formattedName}`;
           }, 600);
         } else {
           // Otherwise, just reload the page
@@ -118,7 +134,13 @@ export const ModuleForm = ({ initialData, onSuccess }: ModuleFormProps) => {
       } else {
         // Create new module
         console.log("Creating new module");
-        const createResponse = await axios.post("/api/modules", values);
+        // Build URL with sessionId if user is not signed in
+        let url = "/api/modules";
+        if (!isSignedIn && sessionId) {
+          url = `/api/modules?sessionId=${sessionId}`;
+        }
+
+        const createResponse = await axios.post(url, values);
         console.log("Module created response:", createResponse.data);
 
         // Notify other components via storage event

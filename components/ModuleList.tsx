@@ -60,9 +60,9 @@ export default function ModuleList({
     if (handleModuleClick) {
       handleModuleClick(moduleId, moduleName);
     } else {
-      // Default behavior - navigate to the module chat page
+      // Default behavior - navigate to the module
       const encodedName = encodeModuleSlug(moduleName);
-      router.push(`/${encodedName}/chat`);
+      router.push(`/modules/${encodedName}`);
     }
   };
 

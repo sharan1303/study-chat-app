@@ -47,6 +47,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import { encodeModuleSlug } from "@/lib/utils";
 import { ResourceUploadButton } from "@/components/ResourceUploadButton";
+import { useSession } from "@/context/SessionContext";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -124,6 +125,7 @@ function ModulesLoading() {
 // Create a component that uses useSearchParams inside Suspense
 function ModulesPageContent() {
   const { isLoaded, isSignedIn } = useAuth();
+  const { sessionId, isLoading: sessionLoading } = useSession();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
@@ -145,7 +147,14 @@ function ModulesPageContent() {
     async function fetchModules() {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/modules");
+
+        // Add sessionId parameter for anonymous users
+        let url = "/api/modules";
+        if (!isSignedIn && sessionId) {
+          url = `/api/modules?sessionId=${sessionId}`;
+        }
+
+        const response = await fetch(url);
 
         if (!response.ok) {
           throw new Error("Failed to fetch modules");
@@ -166,12 +175,10 @@ function ModulesPageContent() {
       }
     }
 
-    if (isSignedIn) {
+    if (isLoaded && !sessionLoading) {
       fetchModules();
-    } else {
-      setIsLoading(false);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, isLoaded, sessionId, sessionLoading]);
 
   // Filter modules based on search query whenever searchQuery changes
   useEffect(() => {
@@ -204,11 +211,14 @@ function ModulesPageContent() {
     }
   }, [shouldOpenResourceUpload]);
 
-  if (!isLoaded) {
+  if (!isLoaded || sessionLoading) {
     return <ModulesLoading />;
   }
 
-  if (!isSignedIn) {
+  // Check if the user can access modules (signed in or has sessionId)
+  const canAccessModules = isSignedIn || !!sessionId;
+
+  if (!canAccessModules) {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <div className="flex-1 space-y-4">
@@ -236,6 +246,8 @@ function ModulesPageContent() {
       { id: string; name: string; icon: string }[]
     >([]);
     const [resourcesLoading, setResourcesLoading] = useState(true);
+    const { sessionId } = useSession();
+    const { isSignedIn } = useAuth();
 
     // Fetch resources from the API
     useEffect(() => {
@@ -244,7 +256,12 @@ function ModulesPageContent() {
           setResourcesLoading(true);
 
           // Fetch all modules for the selector
-          const modulesResponse = await fetch("/api/modules");
+          let url = "/api/modules";
+          if (!isSignedIn && sessionId) {
+            url = `/api/modules?sessionId=${sessionId}`;
+          }
+
+          const modulesResponse = await fetch(url);
           if (!modulesResponse.ok) {
             throw new Error("Failed to fetch modules");
           }
@@ -258,7 +275,8 @@ function ModulesPageContent() {
             }))
           );
 
-          // Fetch resources
+          // Fetch resources - note these require authentication
+          // so we don't need to add sessionId here (it won't work for anon users)
           const resourcesResponse = await fetch("/api/resources");
           if (!resourcesResponse.ok) {
             throw new Error("Failed to fetch resources");
@@ -296,7 +314,7 @@ function ModulesPageContent() {
       }
 
       fetchData();
-    }, [searchQuery]);
+    }, [searchQuery, isSignedIn, sessionId]);
 
     if (resourcesLoading) {
       return (
@@ -427,7 +445,7 @@ function ModulesPageContent() {
             {/* Contextual button that changes based on active tab */}
             {activeTab === "modules" ? (
               <Suspense fallback={<Button disabled>Loading...</Button>}>
-                <ModuleOperations />
+                <ModuleOperations sessionId={sessionId} />
               </Suspense>
             ) : (
               <ResourceUploadButton

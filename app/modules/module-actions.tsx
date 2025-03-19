@@ -43,7 +43,15 @@ export default function ModuleActions({
   // Fetch module details for editing
   const handleEdit = async () => {
     try {
-      const response = await axios.get(`/api/modules/${moduleId}`);
+      // Check for anonymous sessionId
+      const sessionId = localStorage.getItem("anonymous_session_id");
+
+      let apiUrl = `/api/modules/${moduleId}`;
+      if (sessionId) {
+        apiUrl = `/api/modules/${moduleId}?sessionId=${sessionId}`;
+      }
+
+      const response = await axios.get(apiUrl);
       setModuleDetails({
         id: response.data.id,
         name: response.data.name,
@@ -72,7 +80,16 @@ export default function ModuleActions({
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await axios.delete(`/api/modules/${moduleId}`);
+
+      // Check for anonymous sessionId
+      const sessionId = localStorage.getItem("anonymous_session_id");
+
+      let apiUrl = `/api/modules/${moduleId}`;
+      if (sessionId) {
+        apiUrl = `/api/modules/${moduleId}?sessionId=${sessionId}`;
+      }
+
+      await axios.delete(apiUrl);
       toast.success(`Module "${moduleName}" deleted successfully`);
 
       // Use setTimeout to ensure toast is visible before redirect
@@ -128,8 +145,8 @@ export default function ModuleActions({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete module &quot;{moduleName}&quot; and all its
-              resources. This action cannot be undone.
+              This will permanently delete module &quot;{moduleName}&quot; and
+              all its resources. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

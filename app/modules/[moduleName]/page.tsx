@@ -103,8 +103,15 @@ export default function ModuleDetailsPage({
         // Decode the module name from URL parameters
         const decodedModuleName = decodeModuleSlug(params.moduleName);
 
+        // Check for anonymous sessionId
+        const sessionId = localStorage.getItem("anonymous_session_id");
+        let apiUrl = "/api/modules";
+        if (sessionId) {
+          apiUrl = `/api/modules?sessionId=${sessionId}`;
+        }
+
         // Fetch all modules for the module selector
-        const allModulesResponse = await axios.get("/api/modules");
+        const allModulesResponse = await axios.get(apiUrl);
         // Handle the new API response format where modules are in a nested 'modules' property
         const modulesData = allModulesResponse.data.modules || [];
 
@@ -138,9 +145,12 @@ export default function ModuleDetailsPage({
           // If still not found, try API query
           if (!moduleData) {
             // If not found by case-insensitive match, try direct API query
-            const moduleResponse = await axios.get(
-              `/api/modules?name=${decodedModuleName}`
-            );
+            let moduleQueryUrl = `/api/modules?name=${decodedModuleName}`;
+            if (sessionId) {
+              moduleQueryUrl = `/api/modules?name=${decodedModuleName}&sessionId=${sessionId}`;
+            }
+
+            const moduleResponse = await axios.get(moduleQueryUrl);
 
             // Handle the new API response format
             const responseData =
@@ -157,9 +167,12 @@ export default function ModuleDetailsPage({
         setModule(moduleData);
 
         // Fetch resources for this module
-        const resourcesResponse = await axios.get(
-          `/api/resources?moduleId=${moduleData.id}`
-        );
+        let resourcesUrl = `/api/resources?moduleId=${moduleData.id}`;
+        if (sessionId) {
+          resourcesUrl = `/api/resources?moduleId=${moduleData.id}&sessionId=${sessionId}`;
+        }
+
+        const resourcesResponse = await axios.get(resourcesUrl);
         setResources(resourcesResponse.data);
       } catch (error) {
         console.error("Error fetching module details:", error);
@@ -168,7 +181,10 @@ export default function ModuleDetailsPage({
       }
     };
 
-    fetchModuleDetails();
+    // Check if we're running in the browser before accessing localStorage
+    if (typeof window !== "undefined") {
+      fetchModuleDetails();
+    }
   }, [params.moduleName]);
 
   // Set initial edit values when module data loads
@@ -194,7 +210,16 @@ export default function ModuleDetailsPage({
 
     try {
       setIsSaving(true);
-      await axios.put(`/api/modules/${module.id}`, {
+
+      // Check for anonymous sessionId
+      const sessionId = localStorage.getItem("anonymous_session_id");
+
+      let updateUrl = `/api/modules/${module.id}`;
+      if (sessionId) {
+        updateUrl = `/api/modules/${module.id}?sessionId=${sessionId}`;
+      }
+
+      await axios.put(updateUrl, {
         name: updates.name !== undefined ? updates.name : module.name,
         description:
           updates.description !== undefined
