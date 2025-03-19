@@ -291,7 +291,7 @@ export default function ModuleDetailsPage({
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen w-full">
-        <div className="flex-1 space-y-4 px-6">
+        <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
               {/* Icon skeleton */}
@@ -379,7 +379,7 @@ export default function ModuleDetailsPage({
 
   return (
     <div className="flex flex-col min-h-screen w-full">
-      <div className="flex-1 space-y-4 px-6">
+      <div className="flex-1 space-y-4">
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center">
             {/* Module icon with popover for changing */}

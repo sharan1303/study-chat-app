@@ -133,3 +133,14 @@
 .animate-slide-in-right {
   animation: slide-in-right 0.3s ease-out;
 }
+
+/* Add margin to main content when sidebar is collapsed */
+.peer[data-state="collapsed"] ~ * {
+  margin-left: 4rem;
+  transition: margin-left 0.2s ease-in-out;
+}
+
+.peer[data-state="expanded"] ~ * {
+  margin-left: 0;
+  transition: margin-left 0.2s ease-in-out;
+}

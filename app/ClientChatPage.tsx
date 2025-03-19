@@ -19,8 +19,8 @@ export function ChatPageLoading() {
       {/* Main Content Area with Full-height Scrollbar */}
       <div className="flex-1 flex flex-col overflow-hidden pr-0 scroll-smooth scrollbar-smooth custom-scrollbar">
         {/* Chat Header - Skeleton */}
-        <div className="px-3 py-4 flex items-center justify-between sticky top-0 bg-background z-10">
-          <div className="flex items-center gap-2 px-3 py-2">
+        <div className="py-3 flex items-center justify-between sticky top-0 bg-background z-10">
+          <div className="flex items-center gap-2 px-1 py-1">
             <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
             <div className="h-6 w-40 bg-gray-200 animate-pulse rounded"></div>
           </div>
@@ -165,10 +165,10 @@ export default function ClientChatPage({
       >
         {/* Chat Header - Now inside the scrollable area */}
         {moduleDetails && (
-          <div className="px-10 py-3 flex items-center justify-between sticky top-0 bg-background">
+          <div className="px-3 py-3 flex items-center justify-between sticky top-0 bg-background">
             <Button
               variant="ghost"
-              className="flex items-center gap-3 -ml-3 px-3 hover:bg-muted/50 rounded"
+              className="flex items-center gap-3 -ml-3 px-1 hover:bg-muted/50 rounded"
               onClick={navigateToModuleDetails}
             >
               <span className="text-2xl">{moduleDetails.icon}</span>

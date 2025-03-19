@@ -75,7 +75,7 @@ function SettingsContent() {
   const imageUrl = user?.imageUrl || "public/profile-circle.256x256.png";
 
   return (
-    <div className="h-full flex flex-col px-8 py-3">
+    <div className="h-full flex flex-col py-3">
       {/* Top navigation bar */}
       <div className="flex justify-between items-center">
         <Button variant="ghost" size="sm" asChild className="flex items-center">
@@ -84,7 +84,7 @@ function SettingsContent() {
             Back to Chat
           </Link>
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => signOut()}>
+        <Button className="pr-8" variant="ghost" size="sm" onClick={() => signOut()}>
           Sign out
         </Button>
       </div>

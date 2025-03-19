@@ -216,7 +216,7 @@ export default function ClientSidebar() {
             className={cn(
               "flex items-center gap-2",
               state === "collapsed" &&
-                "fixed left-[0.75rem] top-3 bg-accent/50 rounded-md p-1.5"
+                "fixed left-[0.75rem] top-3 bg-accent/50 rounded-md px-0.5"
             )}
           >
             <Button
