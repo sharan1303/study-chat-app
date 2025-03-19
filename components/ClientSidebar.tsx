@@ -199,11 +199,11 @@ export default function ClientSidebar() {
 
   // Return the new sidebar component structure with old functionality
   return (
-    <Sidebar side="left" collapsible="offcanvas">
+    <Sidebar side="left" collapsible="offcanvas" className="peer">
       <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
         <div
           className={cn(
-            "flex items-center",
+            "flex items-center relative z-50",
             state === "expanded" ? "justify-between" : "justify-center"
           )}
         >
@@ -212,18 +212,22 @@ export default function ClientSidebar() {
               Study Chat
             </Link>
           )}
-          <div className="flex items-center gap-1">
-            {state === "expanded" && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push("/chat")}
-                title="New chat"
-                className="h-8 w-8"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
+          <div
+            className={cn(
+              "flex items-center gap-2",
+              state === "collapsed" &&
+                "fixed left-[0.75rem] top-3 bg-accent/50 rounded-md p-1.5"
             )}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/chat")}
+              title="New chat"
+              className="h-8 w-8"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
             <SidebarTrigger />
           </div>
         </div>
@@ -275,26 +279,6 @@ export default function ClientSidebar() {
       )}
 
       <SidebarRail />
-
-      {/* Expand button that aligns with header and sits next to collapsed sidebar */}
-      <div
-        className={cn(
-          "pt-3 fixed left-0 ml-[1rem] transition-all duration-200 ease-in-out z-30",
-          state === "collapsed"
-            ? "opacity-100 translate-x-0"
-            : "opacity-0 pointer-events-none -translate-x-2"
-        )}
-      >
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleSidebar}
-          className="h-8 w-8 shadow-md"
-          title="Expand sidebar"
-        >
-          <PanelLeft className="h-4 w-4" />
-        </Button>
-      </div>
     </Sidebar>
   );
 }
