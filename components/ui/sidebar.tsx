@@ -4,7 +4,7 @@ import { useSidebar } from "@/lib/sidebar-context";
 
 // For mobile we'll need a sliding sheet component
 import { Sheet, SheetContent } from "../ui/sheet";
-import { ChevronLeft} from "lucide-react";
+import { PanelLeft } from "lucide-react";
 
 export const Sidebar = React.forwardRef<
   HTMLDivElement,
@@ -119,7 +119,7 @@ export const SidebarTrigger = React.forwardRef<
       ref={ref}
       data-sidebar="trigger"
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex h-8 w-8 items-center justify-center transition-colors hover:text-accent-foreground",
         state === "collapsed" ? "mx-auto" : "",
         className
       )}
@@ -129,8 +129,10 @@ export const SidebarTrigger = React.forwardRef<
       }}
       {...props}
     >
-      <ChevronLeft className="h-4 w-4" />
-      <span className="sr-only">Collapse Sidebar</span>
+      <PanelLeft className="h-4 w-4" />
+      <span className="sr-only">
+        {state === "expanded" ? "Collapse" : "Expand"} Sidebar
+      </span>
     </button>
   );
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, ButtonProps } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { Upload } from "lucide-react";
 import { ResourceUploadDialog } from "@/components/dialogs/ResourceUploadDialog";
 import { LoginRequiredDialog } from "@/components/dialogs/LoginRequiredDialog";
 import { useUser } from "@clerk/nextjs";
@@ -44,7 +44,7 @@ export function ResourceUploadButton({
       <Button onClick={handleButtonClick} {...props}>
         {children || (
           <>
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <Upload className="mr-2 h-4 w-4" />
             Upload Resource
           </>
         )}
