@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useTheme } from "next-themes";
-import { Sun, Moon, Bot, ArrowLeft, Info } from "lucide-react";
+import { Bot, ArrowLeft, Info } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -29,18 +28,12 @@ import Image from "next/image";
 import { UserProfile } from "@clerk/nextjs";
 import SettingsLoading from "./loading";
 import { cn } from "@/lib/utils";
+import ThemeToggle from "@/components/ThemeToggle";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const { isLoaded, user } = useUser();
   const { signOut } = useAuth();
-
-  // After mounting, we can access the theme
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // AI models available in the application
   const aiModels = [
@@ -62,7 +55,7 @@ function SettingsContent() {
       features: ["Multiple AI models", "Specialized use cases"],
       status: "Coming soon",
     },
-  ];
+  ] as const;
 
   if (!isLoaded) {
     return <SettingsLoading />;
@@ -82,13 +75,19 @@ function SettingsContent() {
             Back to Chat
           </Link>
         </Button>
-        <SignedIn>
-          <Button variant="destructive" size="sm"
-            className="w-fit" onClick={() => signOut()}
-          >
-            Sign out
-          </Button>
-        </SignedIn>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <SignedIn>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="w-fit"
+              onClick={() => signOut()}
+            >
+              Sign out
+            </Button>
+          </SignedIn>
+        </div>
       </div>
 
       {/* Main content */}
@@ -103,10 +102,7 @@ function SettingsContent() {
                   alt={fullName}
                   width={128}
                   height={128}
-                  className={cn(
-                    "w-full h-full object-cover",
-                    theme === "dark" && "invert brightness-[0.87]"
-                  )}
+                  className={cn("w-full h-full object-cover")}
                 />
               </div>
               <h2 className="text-2xl font-bold">{fullName}</h2>
@@ -209,21 +205,11 @@ function SettingsContent() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <h3 className="font-medium">Dark Mode</h3>
+                          <h3 className="font-medium">Theme Preferences</h3>
                           <p className="text-sm text-muted-foreground">
-                            Toggle between light and dark themes
+                            Your theme preference is automatically saved and
+                            synced across devices
                           </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Sun className="h-4 w-4 text-amber-500" />
-                          <Switch
-                            id="theme-mode"
-                            checked={mounted && theme === "dark"}
-                            onCheckedChange={(checked) =>
-                              setTheme(checked ? "dark" : "light")
-                            }
-                          />
-                          <Moon className="h-4 w-4 text-blue-400" />
                         </div>
                       </div>
                     </div>

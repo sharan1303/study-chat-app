@@ -8,6 +8,7 @@ import { Providers } from "@/lib/providers";
 import { SidebarProvider } from "@/lib/sidebar-context";
 import { SessionProvider } from "@/context/SessionContext";
 import AnonymousDataMigration from "@/components/AnonymousDataMigration";
+import Header from "@/components/Header";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,7 +31,8 @@ export default function RootLayout({
             <Providers>
               <SidebarProvider defaultOpen={true}>
                 <ClientSidebar />
-                <main className="flex-1 pl-6">
+                <main className="flex-1 pl-6 relative">
+                  <Header />
                   {children}
                   <AnonymousDataMigration />
                 </main>
