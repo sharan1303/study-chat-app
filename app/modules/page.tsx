@@ -95,7 +95,7 @@ function ModulesLoading() {
             <div className="relative flex-1 max-w-md">
               <div className="h-9 w-full bg-gray-200 animate-pulse rounded"></div>
             </div>
-            <div className="h-9 w-36 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-9 w-40 bg-gray-200 animate-pulse rounded"></div>
           </div>
 
           {/* Module cards skeleton */}
@@ -442,7 +442,24 @@ function ModulesPageContent() {
           </div>
 
           <TabsContent value="modules" className="mt-2">
-            {filteredModules.length === 0 ? (
+            {isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardHeader>
+                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-1"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    </CardContent>
+                    <CardFooter>
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredModules.length === 0 ? (
               <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
                 <h3 className="text-xl font-medium">No modules found</h3>
                 <p className="text-muted-foreground">
