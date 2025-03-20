@@ -23,6 +23,7 @@ import { encodeModuleSlug } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
+import { fetcher, swrConfig } from "@/lib/swr-config";
 
 // Define module type
 export interface Module {
@@ -33,15 +34,6 @@ export interface Module {
   lastStudied?: string | null;
   resourceCount?: number;
 }
-
-// SWR fetcher function
-const fetcher = (url: string) =>
-  fetch(url).then((res) => {
-    if (!res.ok) {
-      throw new Error("Failed to fetch data");
-    }
-    return res.json();
-  });
 
 export default function ClientSidebar() {
   const { isLoaded, isSignedIn, userId } = useAuth();
@@ -54,10 +46,15 @@ export default function ClientSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Fetch chat history using SWR
+  // Fetch chat history using SWR with our optimized config
   const { data: chats, isLoading: isLoadingChats } = useSWR<Chat[]>(
     isSignedIn ? "/api/chat/history" : null,
-    fetcher
+    fetcher,
+    {
+      ...swrConfig,
+      // Override specific options as needed
+      suspense: false, // Don't use suspense for the sidebar
+    }
   );
 
   // Get active module from URL if not provided in props
@@ -198,7 +195,11 @@ export default function ClientSidebar() {
 
   // Return the new sidebar component structure with old functionality
   return (
-    <Sidebar side="left" collapsible="offcanvas" className="peer">
+    <Sidebar
+      side="left"
+      collapsible="offcanvas"
+      className="peer bg-[hsl(var(--sidebar-background))]"
+    >
       <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
         <div
           className={cn(
@@ -262,13 +263,14 @@ export default function ClientSidebar() {
         </div>
 
         {/* Chat History Section */}
-        {state === "expanded" &&
-          chats &&
-          (chats.length > 0 || isLoadingChats) && (
-            <div className="h-2/3">
-              <ChatHistory chats={chats || []} loading={isLoadingChats} />
-            </div>
-          )}
+        {state === "expanded" && (
+          <div className="h-2/3">
+            <ChatHistory
+              chats={chats ?? []}
+              loading={Boolean(isSignedIn) && (!chats || isLoadingChats)}
+            />
+          </div>
+        )}
       </SidebarContent>
 
       {state === "expanded" && (

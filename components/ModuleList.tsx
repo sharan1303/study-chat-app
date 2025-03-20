@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { ModuleForm } from "@/components/module-form";
 
 // Define the Module type here instead of importing from Sidebar
 export interface Module {
@@ -40,27 +41,27 @@ export default function ModuleList({
   router: routerFromProps,
   collapsed = false,
 }: ModuleListProps) {
-  // Use Next.js hooks if props are not provided
+  const [isCreating, setIsCreating] = useState(false);
   const nextRouter = useRouter();
   const nextPathname = usePathname();
 
-  // Use props if provided, otherwise use hooks
   const router = routerFromProps || {
     push: (url: string) => nextRouter.push(url),
     refresh: () => nextRouter.refresh(),
   };
   const pathname = pathnameFromProps || nextPathname;
 
-  // Default isActive if not provided
   const checkIsActive = isActive || ((path: string) => pathname === path);
 
-  // Simple module click handler to navigate or call parent handler
+  const handleCreateSuccess = () => {
+    setIsCreating(false);
+    router.refresh();
+  };
+
   const onModuleClick = (moduleId: string, moduleName: string) => {
-    // Call parent handler if provided
     if (handleModuleClick) {
       handleModuleClick(moduleId, moduleName);
     } else {
-      // Default behavior - navigate to the module
       const encodedName = encodeModuleSlug(moduleName);
       router.push(`/modules/${encodedName}`);
     }
@@ -87,25 +88,22 @@ export default function ModuleList({
               {!collapsed && (
                 <>
                   <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-r-transparent mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">
-                    Loading modules...
-                  </p>
                 </>
               )}
             </div>
           ) : modules.length === 0 ? (
             !collapsed && (
               <div className="text-center p-3">
-                <SignedIn>
-                  <Button className="mt-2" size="sm" asChild>
-                    <Link href="/modules">Create your first module</Link>
-                  </Button>
-                </SignedIn>
-                <SignedOut>
-                  <Button className="mt-2" size="sm" asChild>
-                    <Link href="/modules">Create your first module</Link>
-                  </Button>
-                </SignedOut>
+                <Dialog open={isCreating} onOpenChange={setIsCreating}>
+                  <DialogTrigger asChild>
+                    <Button className="mt-2 w-full" size="sm">
+                      Create your first module
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <ModuleForm onSuccess={handleCreateSuccess} />
+                  </DialogContent>
+                </Dialog>
               </div>
             )
           ) : (

@@ -96,7 +96,10 @@ export const Sidebar = React.forwardRef<
         >
           <div
             data-sidebar="sidebar"
-            className="flex h-full w-full flex-col bg-background group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow"
+            className={cn(
+              "flex h-full w-full flex-col bg-[hsl(var(--sidebar-background))] group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow",
+              className
+            )}
           >
             {children}
           </div>
@@ -119,7 +122,7 @@ export const SidebarTrigger = React.forwardRef<
       ref={ref}
       data-sidebar="trigger"
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center transition-colors hover:text-accent-foreground",
+        "inline-flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         state === "collapsed" ? "mx-auto" : "",
         className
       )}

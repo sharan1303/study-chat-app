@@ -79,23 +79,23 @@ function ModulesLoading() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between px-3 py-5">
-          <div className="h-7 w-36 bg-gray-200 animate-pulse rounded"></div>
+        <div className="flex items-center justify-between px-3 py-4">
+          <div className="h-6 w-36 bg-gray-200 animate-pulse rounded"></div>
         </div>
 
         {/* Tabs skeleton */}
         <div className="px-3">
-          <div className="grid w-full max-w-md grid-cols-2 h-10 bg-gray-100 rounded-md">
-            <div className="m-1 h-8 w-auto bg-gray-200 animate-pulse rounded-sm"></div>
-            <div className="m-1 h-8 w-auto bg-gray-100 rounded-sm"></div>
+          <div className="grid w-full max-w-md grid-cols-2 h-9 bg-gray-100 rounded-md">
+            <div className="m-1 h-7 w-auto bg-gray-200 animate-pulse rounded-sm"></div>
+            <div className="m-1 h-7 w-auto bg-gray-100 rounded-sm"></div>
           </div>
 
           {/* Search bar and button skeleton */}
           <div className="relative flex items-center gap-2 mt-4 mb-6">
             <div className="relative flex-1 max-w-md">
-              <div className="h-10 w-full bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-9 w-full bg-gray-200 animate-pulse rounded"></div>
             </div>
-            <div className="h-10 w-36 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-9 w-40 bg-gray-200 animate-pulse rounded"></div>
           </div>
 
           {/* Module cards skeleton */}
@@ -103,11 +103,10 @@ function ModulesLoading() {
             {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <CardHeader>
-                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-1"></div>
                   <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
                   <div className="h-4 bg-gray-200 rounded w-2/3"></div>
                 </CardContent>
                 <CardFooter>
@@ -318,22 +317,8 @@ function ModulesPageContent() {
 
     if (resourcesLoading) {
       return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-              </CardContent>
-              <CardFooter>
-                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-              </CardFooter>
-            </Card>
-          ))}
+        <div className="flex flex-col items-center justify-center space-y-4 py-8">
+          <p className="text-muted-foreground text-sm">Loading resources...</p>
         </div>
       );
     }
@@ -462,11 +447,10 @@ function ModulesPageContent() {
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Card key={i} className="animate-pulse">
                     <CardHeader>
-                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-1"></div>
                       <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                     </CardHeader>
                     <CardContent>
-                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
                       <div className="h-4 bg-gray-200 rounded w-2/3"></div>
                     </CardContent>
                     <CardFooter>
