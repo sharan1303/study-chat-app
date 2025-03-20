@@ -293,34 +293,34 @@ export default function ModuleDetailsPage({
       <div className="flex flex-col min-h-screen w-full">
         <div className="flex-1 space-y-4">
           <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center">
               {/* Icon skeleton */}
-              <div className="h-7 w-7 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-10 w-10 bg-gray-200 animate-pulse rounded"></div>
               {/* Title skeleton */}
-              <div className="h-7 w-48 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-8 w-48 bg-gray-200 animate-pulse rounded ml-2"></div>
             </div>
 
             {/* Action buttons skeleton */}
-            <div className="flex gap-2">
-              <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+            <div className="flex gap-2 pr-16">
+              <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
               <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
             </div>
           </div>
 
           <div className="space-y-6 px-3">
             {/* Description section skeleton */}
-            <div className="space-y-4 mb-6">
-              <div className="h-5 w-32 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-20 w-full bg-gray-200 animate-pulse rounded p-4"></div>
+            <div className="space-y-2">
+              <div className="h-7 w-32 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-24 w-full bg-gray-200 animate-pulse rounded p-4 min-h-[158px]"></div>
             </div>
 
-            <div className="my-6 h-px bg-gray-200 animate-pulse"></div>
+            <div className="my-6 h-px bg-gray-200"></div>
 
             {/* Resources section skeleton */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="h-6 w-32 bg-gray-200 animate-pulse rounded"></div>
-                <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
+                <div className="h-7 w-32 bg-gray-200 animate-pulse rounded"></div>
+                <div className="h-9 min-w-[180px] bg-gray-200 animate-pulse rounded"></div>
               </div>
 
               {/* Resource table skeleton - an alternate view that better represents the table layout */}
@@ -359,7 +359,7 @@ export default function ModuleDetailsPage({
                           <div className="h-4 bg-gray-200 animate-pulse rounded w-20"></div>
                         </td>
                         <td className="p-3 text-right">
-                          <div className="h-8 w-8 ml-auto bg-gray-200 animate-pulse rounded"></div>
+                          <div className="h-8 w-16 ml-auto bg-gray-200 animate-pulse rounded"></div>
                         </td>
                       </tr>
                     ))}
@@ -444,7 +444,7 @@ export default function ModuleDetailsPage({
               </h1>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pr-16">
             <Button
               className="flex items-center gap-2"
               variant="outline"
@@ -498,7 +498,7 @@ export default function ModuleDetailsPage({
               </div>
             ) : (
               <p
-                className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[80px]"
+                className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[158px]"
                 onClick={() => setIsEditingDescription(true)}
               >
                 {module.description ||
