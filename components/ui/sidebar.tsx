@@ -122,7 +122,7 @@ export const SidebarTrigger = React.forwardRef<
       ref={ref}
       data-sidebar="trigger"
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center transition-colors hover:text-accent-foreground",
+        "inline-flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         state === "collapsed" ? "mx-auto" : "",
         className
       )}

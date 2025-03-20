@@ -20,7 +20,7 @@ export function ChatPageLoading() {
       <div className="flex-1 flex flex-col overflow-hidden pr-0 scroll-smooth scrollbar-smooth custom-scrollbar">
         {/* Chat Header - Skeleton */}
         <div className="py-3 flex items-center justify-between sticky top-0 bg-background z-10">
-          <div className="flex items-center gap-2 px-1 py-1">
+          <div className="flex items-center gap-2 py-1">
             <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
             <div className="h-6 w-40 bg-gray-200 animate-pulse rounded"></div>
           </div>
@@ -42,9 +42,9 @@ export function ChatPageLoading() {
 
         {/* Input form skeleton */}
         <div className="sticky bottom-0 bg-transparent">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto pl-8 pr-6">
             <div className="relative">
-              <div className="flex-1 min-h-[69px] max-h-[120px] border-2 bg-transparent animate-pulse rounded-t-lg resize-none pr-14 w-full"></div>
+              <div className="flex-1 min-h-[69px] max-h-[120px] border-2 bg-transparent animate-pulse rounded-t-lg resize-none w-full"></div>
               <div className="absolute right-3 bottom-3 h-10 w-10 bg-gray-200 animate-pulse rounded-full"></div>
             </div>
           </div>
@@ -78,61 +78,67 @@ export default function ClientChatPage({
   // Reference to the scroll container, but don't auto-scroll
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
+  // Memoize the chat options to prevent unnecessary re-initialization
+  const chatOptions = React.useMemo(
+    () => ({
+      api: "/api/chat",
+      id: chatId,
+      initialMessages,
+      body: {
+        moduleId: activeModule,
+        chatId: chatId,
+        isAuthenticated: isAuthenticated,
+      },
+      onResponse: (response: Response) => {
+        // Try to extract model information from headers if available
+        const modelHeader = response.headers.get("x-model-used");
+        if (modelHeader) {
+          setModelName(modelHeader);
+        }
+
+        // Only update URL with chat ID for authenticated users
+        if (isAuthenticated) {
+          // Update URL to include the chat ID after user sends a message
+          const currentPath = window.location.pathname;
+
+          // Make sure chatId is defined before updating URL
+          if (!chatId) {
+            console.error("Error: chatId is undefined");
+            return;
+          }
+
+          if (currentPath === "/chat" && !activeModule) {
+            // Only update URL if we're on the main chat page and not in a module
+            window.history.replaceState({}, "", `/chat/${chatId}`);
+          } else if (activeModule && moduleDetails) {
+            // For module chats, update URL to the proper format
+            const encodedName = encodeModuleSlug(moduleDetails.name);
+
+            // Check if we're on a module path without chat ID
+            if (currentPath === `/${encodedName}/chat`) {
+              window.history.replaceState(
+                {},
+                "",
+                `/${encodedName}/chat/${chatId}`
+              );
+            }
+          }
+        }
+      },
+      onError: (error: Error) => {
+        toast.error("Error: " + (error.message || "Failed to send message"));
+      },
+    }),
+    [chatId, initialMessages, activeModule, isAuthenticated, moduleDetails]
+  );
+
   const {
     messages,
     input,
     handleInputChange,
     handleSubmit,
     isLoading: chatLoading,
-  } = useChat({
-    api: "/api/chat",
-    id: chatId,
-    initialMessages,
-    body: {
-      moduleId: activeModule,
-      chatId: chatId,
-      isAuthenticated: isAuthenticated,
-    },
-    onResponse: (response) => {
-      // Try to extract model information from headers if available
-      const modelHeader = response.headers.get("x-model-used");
-      if (modelHeader) {
-        setModelName(modelHeader);
-      }
-
-      // Only update URL with chat ID for authenticated users
-      if (isAuthenticated) {
-        // Update URL to include the chat ID after user sends a message
-        const currentPath = window.location.pathname;
-
-        // Make sure chatId is defined before updating URL
-        if (!chatId) {
-          console.error("Error: chatId is undefined");
-          return;
-        }
-
-        if (currentPath === "/chat" && !activeModule) {
-          // Only update URL if we're on the main chat page and not in a module
-          window.history.replaceState({}, "", `/chat/${chatId}`);
-        } else if (activeModule && moduleDetails) {
-          // For module chats, update URL to the proper format
-          const encodedName = encodeModuleSlug(moduleDetails.name);
-
-          // Check if we're on a module path without chat ID
-          if (currentPath === `/${encodedName}/chat`) {
-            window.history.replaceState(
-              {},
-              "",
-              `/${encodedName}/chat/${chatId}`
-            );
-          }
-        }
-      }
-    },
-    onError: (error: Error) => {
-      toast.error("Error: " + (error.message || "Failed to send message"));
-    },
-  });
+  } = useChat(chatOptions);
 
   const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(
     null

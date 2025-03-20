@@ -23,6 +23,7 @@ import { encodeModuleSlug } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
+import { fetcher, swrConfig } from "@/lib/swr-config";
 
 // Define module type
 export interface Module {
@@ -33,15 +34,6 @@ export interface Module {
   lastStudied?: string | null;
   resourceCount?: number;
 }
-
-// SWR fetcher function
-const fetcher = (url: string) =>
-  fetch(url).then((res) => {
-    if (!res.ok) {
-      throw new Error("Failed to fetch data");
-    }
-    return res.json();
-  });
 
 export default function ClientSidebar() {
   const { isLoaded, isSignedIn, userId } = useAuth();
@@ -54,14 +46,14 @@ export default function ClientSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Fetch chat history using SWR
+  // Fetch chat history using SWR with our optimized config
   const { data: chats, isLoading: isLoadingChats } = useSWR<Chat[]>(
     isSignedIn ? "/api/chat/history" : null,
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 10000, // Dedupe requests within 10 seconds
+      ...swrConfig,
+      // Override specific options as needed
+      suspense: false, // Don't use suspense for the sidebar
     }
   );
 
