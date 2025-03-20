@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UserSection() {
-  const { theme } = useTheme();
+  const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // After mounting, we can access the theme
@@ -33,6 +33,8 @@ export default function UserSection() {
     );
   }
 
+  const currentTheme = theme === "system" ? systemTheme : theme;
+
   return (
     <div className="p-4 h-[68px]">
       <div className="flex items-center justify-between">
@@ -43,12 +45,11 @@ export default function UserSection() {
                 userButtonBox: {
                   flexDirection: "row-reverse",
                 },
-                // Apply different text colors based on theme
                 userButtonOuterIdentifier: {
-                  color: theme === "dark" ? "white" : "black",
+                  color: currentTheme === "dark" ? "white" : "black",
                 },
                 userButtonTrigger: {
-                  color: theme === "dark" ? "white" : "black",
+                  color: currentTheme === "dark" ? "white" : "black",
                 },
               },
             }}
