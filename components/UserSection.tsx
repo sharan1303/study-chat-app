@@ -55,17 +55,17 @@ export default function UserSection() {
             }}
             showName
           />
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/settings">
-              <Settings className="h-4 w-4" />
-            </Link>
-          </Button>
         </SignedIn>
         <SignedOut>
           <SignInButton mode="modal">
-            <Button className="w-full">Sign in</Button>
+            <Button className="w-40">Sign in</Button>
           </SignInButton>
         </SignedOut>
+        <Button variant="ghost" size="icon">
+            <Link href="/settings">
+              <Settings className="h-4 w-4" />
+            </Link>
+        </Button>
       </div>
     </div>
   );

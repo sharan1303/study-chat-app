@@ -24,10 +24,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useUser, useAuth } from "@clerk/nextjs";
+import { useUser, useAuth, SignedIn } from "@clerk/nextjs";
 import Image from "next/image";
 import { UserProfile } from "@clerk/nextjs";
 import SettingsLoading from "./loading";
+import { cn } from "@/lib/utils";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -69,7 +70,7 @@ function SettingsContent() {
 
   const fullName = user?.fullName || user?.firstName || "User";
   const email = user?.primaryEmailAddress?.emailAddress || "";
-  const imageUrl = user?.imageUrl || "public/profile-circle.256x256.png";
+  const imageUrl = user?.imageUrl || "/profile-circle.256x256.png";
 
   return (
     <div className="h-full flex flex-col py-3">
@@ -81,14 +82,13 @@ function SettingsContent() {
             Back to Chat
           </Link>
         </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          className="w-fit"
-          onClick={() => signOut()}
-        >
-          Sign out
-        </Button>
+        <SignedIn>
+          <Button variant="destructive" size="sm"
+            className="w-fit" onClick={() => signOut()}
+          >
+            Sign out
+          </Button>
+        </SignedIn>
       </div>
 
       {/* Main content */}
@@ -103,7 +103,10 @@ function SettingsContent() {
                   alt={fullName}
                   width={128}
                   height={128}
-                  className="w-full h-full object-cover"
+                  className={cn(
+                    "w-full h-full object-cover",
+                    theme === "dark" && "invert brightness-[0.87]"
+                  )}
                 />
               </div>
               <h2 className="text-2xl font-bold">{fullName}</h2>
@@ -145,18 +148,14 @@ function SettingsContent() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Search</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
-                      ⌘
-                    </kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">K</kbd>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
-                      ⌘
-                    </kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">N</kbd>
                   </div>
                 </div>
@@ -179,17 +178,19 @@ function SettingsContent() {
                 <Card>
                   <CardContent>
                     <div className="w-9">
-                      <UserProfile
-                        routing="hash"
-                        appearance={{
-                          elements: {
-                            rootBox: {
-                              boxShadow: "none",
-                              width: "10%",
+                      <SignedIn>
+                        <UserProfile
+                          routing="hash"
+                          appearance={{
+                            elements: {
+                              rootBox: {
+                                boxShadow: "none",
+                                width: "10%",
+                              },
                             },
-                          },
-                        }}
-                      />
+                          }}
+                        />
+                      </SignedIn>
                     </div>
                   </CardContent>
                 </Card>

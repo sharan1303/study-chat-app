@@ -203,7 +203,11 @@ export default function ClientSidebar() {
 
   // Return the new sidebar component structure with old functionality
   return (
-    <Sidebar side="left" collapsible="offcanvas" className="peer">
+    <Sidebar
+      side="left"
+      collapsible="offcanvas"
+      className="peer bg-[hsl(var(--sidebar-background))]"
+    >
       <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
         <div
           className={cn(
@@ -271,7 +275,7 @@ export default function ClientSidebar() {
           <div className="h-2/3">
             <ChatHistory
               chats={chats ?? []}
-              loading={!chats || isLoadingChats}
+              loading={Boolean(isSignedIn) && (!chats || isLoadingChats)}
             />
           </div>
         )}
