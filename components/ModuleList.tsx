@@ -93,7 +93,7 @@ export default function ModuleList({
             </div>
           ) : modules.length === 0 ? (
             !collapsed && (
-              <div className="text-center p-3">
+              <div className="text-center p-2">
                 <Dialog open={isCreating} onOpenChange={setIsCreating}>
                   <DialogTrigger asChild>
                     <Button className="mt-2 w-full" size="sm">
