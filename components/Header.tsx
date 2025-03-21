@@ -12,7 +12,7 @@ export default function Header() {
   }
 
   return (
-    <div className="absolute top-2.5 right-4 z-[60]">
+    <div className="absolute top-2.5 right-4 z-[30]">
       <ThemeToggle />
     </div>
   );

@@ -83,6 +83,17 @@ export default function ClientSidebar() {
     return pathname === path;
   };
 
+  // Determine if a module is active (either in /modules/[name] or /[name]/chat)
+  const isModuleActive = (moduleName: string) => {
+    if (!pathname) return false;
+
+    const encodedName = encodeModuleSlug(moduleName);
+    return (
+      pathname.startsWith(`/modules/${encodedName}`) ||
+      pathname.startsWith(`/${encodedName}/chat`)
+    );
+  };
+
   // Fetch modules whenever auth state changes
   useEffect(() => {
     if (!isLoaded) return;
@@ -214,9 +225,9 @@ export default function ClientSidebar() {
           )}
           <div
             className={cn(
-              "flex items-center gap-2",
+              "flex items-center gap-1",
               state === "collapsed" &&
-                "fixed left-[0.75rem] top-3 bg-accent/50 rounded-md px-0.5"
+                "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
             )}
           >
             <Button
@@ -224,7 +235,10 @@ export default function ClientSidebar() {
               size="icon"
               onClick={() => router.push("/chat")}
               title="New chat"
-              className="h-8 w-8"
+              className={cn(
+                "h-9 w-9",
+                state === "collapsed" && "bg-[hsl(var(--sidebar-background))]"
+              )}
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -248,7 +262,7 @@ export default function ClientSidebar() {
             modules={modules}
             loading={loading}
             currentModule={currentModule}
-            isActive={isActive}
+            isActive={isModuleActive}
             handleModuleClick={(moduleId, moduleName) => {
               setActiveModuleId(moduleId);
               if (moduleName) {

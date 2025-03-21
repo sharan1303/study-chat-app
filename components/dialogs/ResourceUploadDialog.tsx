@@ -276,7 +276,7 @@ export function ResourceUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto z-[100]">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Upload Resource</DialogTitle>

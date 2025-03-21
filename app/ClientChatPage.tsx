@@ -7,33 +7,33 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Message, useChat } from "@ai-sdk/react";
 import { toast } from "sonner";
-import { ModuleWithResources } from "@/app/actions";
+import { ModuleWithResources } from "@/lib/actions";
 import ReactMarkdown from "react-markdown";
 import { useRouter } from "next/navigation";
 import { encodeModuleSlug } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Loading component for Suspense fallback
 export function ChatPageLoading() {
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      {/* Main Content Area with Full-height Scrollbar */}
-      <div className="flex-1 flex flex-col overflow-hidden pr-0 scroll-smooth scrollbar-smooth custom-scrollbar">
-        {/* Chat Header - Skeleton */}
-        <div className="py-3 flex items-center justify-between sticky top-0 bg-background z-10">
-          <div className="flex items-center gap-2 py-1">
-            <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
-            <div className="h-6 w-40 bg-gray-200 animate-pulse rounded"></div>
+    <div className="min-h-[calc(100vh-var(--header-height))] flex flex-col">
+      <div className="flex-1 flex flex-col pr-0">
+        {/* Chat Header - Make it sticky at the top like the real header */}
+        <div className="py-4 px-1 flex items-center justify-between sticky top-0 bg-background z-10">
+          <div className="flex items-center gap-2">
+            <Skeleton className="w-8 h-8 rounded-md" />
+            <Skeleton className="h-6 w-40" />
           </div>
         </div>
 
-        {/* Chat content centered container */}
         <div className="flex-1">
           <div className="max-w-3xl mx-auto w-full transition-all duration-200">
             <div className="px-0">
-              <div className="flex items-center justify-center h-screen z-20 pl-8">
-                <div className="text-center">
-                  <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
-                  <p className="text-muted-foreground">Loading chat...</p>
+              <div className="flex items-center justify-center h-screen z-20">
+                <div className="flex flex-col items-center space-y-4">
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-4 w-64" />
                 </div>
               </div>
             </div>
@@ -44,8 +44,11 @@ export function ChatPageLoading() {
         <div className="sticky bottom-0 bg-transparent">
           <div className="max-w-3xl mx-auto pl-8 pr-6">
             <div className="relative">
-              <div className="flex-1 min-h-[69px] max-h-[120px] border-2 bg-transparent animate-pulse rounded-t-lg resize-none w-full"></div>
-              <div className="absolute right-3 bottom-3 h-10 w-10 bg-gray-200 animate-pulse rounded-full"></div>
+              <Skeleton
+                variant="input"
+                className="flex-1 min-h-[98px] max-h-[120px] resize-none w-full"
+              />
+              <Skeleton className="absolute right-3 top-3 h-10 w-10 rounded-lg bg-primary" />
             </div>
           </div>
         </div>
@@ -200,16 +203,9 @@ export default function ClientChatPage({
                     <h3 className="text-lg font-medium">
                       Start a conversation
                     </h3>
-                    <SignedIn>
-                      <p className="text-muted-foreground">
-                        Ask questions about your module content
-                      </p>
-                    </SignedIn>
-                    <SignedOut>
-                      <p className="text-muted-foreground">
-                        Try the chat or sign in to access your modules
-                      </p>
-                    </SignedOut>
+                    <p className="text-muted-foreground">
+                      Ask questions about your module content
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -340,10 +336,10 @@ export default function ClientChatPage({
             <form onSubmit={handleSubmit}>
               <div className="relative">
                 <Textarea
-                  placeholder="Type your message..."
+                  placeholder="Type your message here..."
                   value={input}
                   onChange={handleInputChange}
-                  className="flex-1 min-h-[69px] max-h-[120px] border-2 rounded-t-lg rounded-b-none resize-none pr-14 w-full border-b-0"
+                  className="flex-1 min-h-[100px] max-h-[120px] border-2 rounded-t-lg rounded-b-none resize-none pr-14 w-full border-b-0"
                   rows={2}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -358,7 +354,7 @@ export default function ClientChatPage({
                 <Button
                   type="submit"
                   size="icon"
-                  className="absolute right-3 bottom-3 h-10 w-10 rounded-full"
+                  className="absolute right-3 top-3 h-10 w-10 rounded-lg"
                   disabled={chatLoading || !input.trim()}
                 >
                   {chatLoading ? (

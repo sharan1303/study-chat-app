@@ -4,32 +4,32 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 40% 92%;
     --foreground: 222.2 84% 4.9%;
 
-    --card: 0 0% 100%;
+    --card: 210 40% 85%;
     --card-foreground: 222.2 84% 4.9%;
 
-    --popover: 0 0% 100%;
+    --popover: 210 40% 92%;
     --popover-foreground: 222.2 84% 4.9%;
 
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
+    --secondary: 210 40% 92%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 210 40% 92%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 210 45% 86%;
+    --input: 210 40% 88%;
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 0.5rem;
@@ -38,36 +38,36 @@
     --sidebar-width: 16rem;
     --sidebar-width-icon: 3rem;
     --sidebar-width-mobile: 18rem;
-    --sidebar-background: 210 40% 93%;
+    --sidebar-background: 210 45% 85%;
   }
 
   .dark {
     --background: 230 20% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 230 20% 11%;
+    --card: 230 20% 15%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 230 20% 11%;
+    --popover: 230 20% 5%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217.2 32.6% 20%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
+    --muted: 217.2 32.6% 20%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 217.2 32.6% 20%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 40.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 230 20% 17%;
+    --input: 230 25% 18%;
     --ring: 224.3 76.3% 48%;
 
     /* Sidebar Variables (Dark) */
@@ -85,6 +85,50 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Input styling */
+input[type="text"],
+input[type="search"],
+textarea,
+.input-container,
+div[contenteditable="true"] {
+  background-color: hsl(var(--input)) !important;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+/* Chat input specific styling */
+.chat-input-area {
+  background-color: hsl(var(--input)) !important;
+}
+
+/* Skeleton loading styling */
+.skeleton {
+  @apply animate-pulse rounded-md;
+}
+
+.skeleton-muted {
+  background-color: hsl(var(--muted));
+}
+
+.skeleton-input {
+  background-color: hsl(var(--input));
+  border: 1px solid hsl(var(--border));
+}
+
+.skeleton-card {
+  background-color: hsl(var(--card));
+}
+
+/* Remap outline buttons to match card colors */
+.border.border-input.bg-background {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.border.border-input.bg-background:hover {
+  background-color: hsl(var(--card) / 0.9) !important;
 }
 
 /* Scrollbar styling */

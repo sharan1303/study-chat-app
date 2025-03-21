@@ -77,8 +77,10 @@ export default function ChatHistory({
                 <div key={chat.id} className="group/chat">
                   <button
                     className={cn(
-                      "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-muted flex items-center justify-between",
-                      isActiveChat(chat) ? "bg-muted font-medium" : ""
+                      "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
+                      isActiveChat(chat)
+                        ? "bg-accent text-accent-foreground font-medium"
+                        : ""
                     )}
                     onClick={() => {
                       if (chat.moduleId && chat.module) {
@@ -89,7 +91,7 @@ export default function ChatHistory({
                       }
                     }}
                   >
-                    <div className="flex items-center truncate">
+                    <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-80px)]">
                       <MessageSquare
                         size={14}
                         className="mr-2 mt-0.5 flex-shrink-0"
