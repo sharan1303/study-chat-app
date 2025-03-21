@@ -66,7 +66,7 @@ function SettingsContent() {
   const imageUrl = user?.imageUrl || "/profile-circle.256x256.png";
 
   return (
-    <div className="h-full flex flex-col py-3">
+    <div className="h-full flex flex-col py-2.5">
       {/* Top navigation bar */}
       <div className="flex justify-between items-center pr-6">
         <Button variant="ghost" size="sm" asChild className="flex items-center">

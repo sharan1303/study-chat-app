@@ -31,7 +31,7 @@ export default function RootLayout({
             <Providers>
               <SidebarProvider defaultOpen={true}>
                 <ClientSidebar />
-                <main className="flex-1 pl-6 relative">
+                <main className="flex-1 pl-7 pt-0.5 relative">
                   <Header />
                   {children}
                   <AnonymousDataMigration />

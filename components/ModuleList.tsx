@@ -70,10 +70,10 @@ export default function ModuleList({
   return (
     <div className="flex flex-col h-full">
       {!collapsed && (
-        <div className="px-4 py-3 flex items-center">
+        <div className="px-2 py-3 flex items-center">
           <Button
-            variant={checkIsActive("/modules") ? "secondary" : "ghost"}
-            className="justify-start pl-0 w-full text-left"
+            variant={pathname?.startsWith("/modules") ? "secondary" : "ghost"}
+            className="justify-start w-full pl-2 text-left"
             asChild
           >
             <Link href="/modules">Your Modules</Link>
@@ -93,7 +93,7 @@ export default function ModuleList({
             </div>
           ) : modules.length === 0 ? (
             !collapsed && (
-              <div className="text-center p-3">
+              <div className="text-center p-2">
                 <Dialog open={isCreating} onOpenChange={setIsCreating}>
                   <DialogTrigger asChild>
                     <Button className="mt-2 w-full" size="sm">
@@ -115,7 +115,8 @@ export default function ModuleList({
                   className={cn(
                     "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground w-full text-left",
                     collapsed && "justify-center p-1",
-                    currentModule === module.id &&
+                    (currentModule === module.id ||
+                      checkIsActive(module.name)) &&
                       "bg-accent text-accent-foreground"
                   )}
                   title={collapsed ? module.name : undefined}
