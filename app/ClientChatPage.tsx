@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Send, Loader2, MessageSquare, Copy, Check } from "lucide-react";
-import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Message, useChat } from "@ai-sdk/react";
@@ -201,10 +200,10 @@ export default function ClientChatPage({
                       <MessageSquare className="h-12 w-12 text-muted-foreground" />
                     </div>
                     <h3 className="text-lg font-medium">
-                      Start a conversation
+                      Start a general chat
                     </h3>
                     <p className="text-muted-foreground">
-                      Ask questions about your module content
+                      Create a module to provide context for your chat
                     </p>
                   </div>
                 </div>

@@ -68,7 +68,6 @@ export default function ChatHistory({
           </ScrollArea>
         ) : chats.length === 0 ? (
           <div className="p-4 text-sm text-muted-foreground">
-            No chat history
           </div>
         ) : (
           <ScrollArea className="h-full pr-1">

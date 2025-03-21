@@ -78,11 +78,6 @@ export default function ClientSidebar() {
     }
   }, [activeModuleId]);
 
-  // Determine if a navigation item is active
-  const isActive = (path: string) => {
-    return pathname === path;
-  };
-
   // Determine if a module is active (either in /modules/[name] or /[name]/chat)
   const isModuleActive = (moduleName: string) => {
     if (!pathname) return false;
