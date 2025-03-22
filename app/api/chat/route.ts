@@ -24,13 +24,38 @@ export async function POST(request: Request) {
 
     // Only try to fetch user data if we should save history with a userId
     if (shouldSaveHistory && userId) {
-      // Find the user by Clerk ID
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
+      try {
+        // Find the user by Clerk ID
+        user = await prisma.user.findUnique({
+          where: { id: userId },
+        });
 
-      if (!user) {
-        return new Response("User not found", { status: 404 });
+        // If user doesn't exist, create a new one using Clerk data
+        if (!user && currentUserObj) {
+          console.log(`Creating new user for Clerk ID: ${userId}`);
+          user = await prisma.user.create({
+            data: {
+              id: userId,
+              email:
+                currentUserObj.emailAddresses[0]?.emailAddress ||
+                "user@example.com",
+              name: currentUserObj.firstName
+                ? `${currentUserObj.firstName} ${currentUserObj.lastName || ""}`
+                : "Anonymous User",
+            },
+          });
+          console.log(`User created: ${user.id}`);
+        }
+
+        if (!user) {
+          console.error(`Failed to find or create user with ID: ${userId}`);
+          return new Response("User not found and could not be created", {
+            status: 500,
+          });
+        }
+      } catch (error) {
+        console.error("Error finding/creating user:", error);
+        return new Response("Error processing user data", { status: 500 });
       }
     }
 
