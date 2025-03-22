@@ -45,7 +45,7 @@ export default function ChatHistory({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center px-4 pt-4 border-t">
+      <div className="flex items-center px-4 pt-4 pb-2 border-t">
         <h3 className="text-sm font-medium">Chat History</h3>
       </div>
 
@@ -54,11 +54,11 @@ export default function ChatHistory({
           <ScrollArea className="h-full">
             <div className="space-y-1 p-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="px-2 py-3">
+                <div key={i} className="px-2 py-3 group/chat">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-3.5 rounded" />
-                      <Skeleton className="h-3.5 w-[180px] rounded" />
+                      <Skeleton className="h-4 w-4 rounded flex-shrink-0" />
+                      <Skeleton className="h-4 w-[180px] rounded" />
                     </div>
                     <Skeleton className="h-3 w-12 rounded hidden group-hover/chat:inline" />
                   </div>
@@ -67,8 +67,7 @@ export default function ChatHistory({
             </div>
           </ScrollArea>
         ) : chats.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground">
-          </div>
+          <div className="p-4 text-sm text-muted-foreground"></div>
         ) : (
           <ScrollArea className="h-full pr-1">
             <div className="space-y-1 p-2">

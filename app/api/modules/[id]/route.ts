@@ -123,7 +123,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     });
 
     // Broadcast event for real-time updates
-    broadcastModuleUpdated(updatedModule, [userId || sessionId]);
+    broadcastModuleUpdated(updatedModule, [(userId || sessionId) as string]);
 
     return NextResponse.json(updatedModule);
   } catch (error) {
@@ -205,7 +205,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     });
 
     // Broadcast event for real-time updates
-    broadcastModuleDeleted(moduleId, [userId || sessionId]);
+    broadcastModuleDeleted(moduleId, [(userId || sessionId) as string]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

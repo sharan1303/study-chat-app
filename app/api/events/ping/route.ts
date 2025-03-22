@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
       if (userId) {
         console.log(`Broadcasting test event to user: ${userId}`);
-        broadcastEvent("chat.created", testData, [userId]);
+        broadcastEvent("chat.created", testData, [userId as string]);
       } else {
         console.log("Broadcasting test event to all clients");
         broadcastEvent("chat.created", testData);

@@ -387,7 +387,134 @@ export default function ClientChatPage({
                 </div>
               ) : (
                 <div className="flex flex-col space-y-8 pt-4 pb-8 pl-8 pr-6">
+<<<<<<< HEAD
                   {renderedMessages}
+=======
+                  {messages.reduce(
+                    (
+                      result: React.ReactNode[],
+                      message: Message,
+                      index: number
+                    ) => {
+                      if (message.role === "user") {
+                        // For user messages, we check if the next message is from AI
+                        const nextMessage = messages[index + 1];
+                        const hasAIResponse =
+                          nextMessage && nextMessage.role === "assistant";
+
+                        // Add the user message with its styling
+                        result.push(
+                          <div
+                            key={`user-${message.id}`}
+                            className="flex justify-end"
+                          >
+                            <div className="flex items-center gap-2 max-w-full flex-row-reverse">
+                              <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground break-words">
+                                <div className="whitespace-pre-wrap">
+                                  {message.content}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+
+                        // If there's an AI response to this message, add it directly below
+                        if (hasAIResponse) {
+                          result.push(
+                            <div
+                              key={`assistant-${nextMessage.id}`}
+                              className="mt-4 text-gray-800 dark:text-gray-200 group relative"
+                            >
+                              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                                <ReactMarkdown>
+                                  {nextMessage.content}
+                                </ReactMarkdown>
+                              </div>
+                              <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
+                                <button
+                                  onClick={() =>
+                                    copyToClipboard(
+                                      nextMessage.content,
+                                      nextMessage.id
+                                    )
+                                  }
+                                  className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                                  aria-label="Copy response"
+                                >
+                                  {copiedMessageId === nextMessage.id ? (
+                                    <span
+                                      key={`copied-${nextMessage.id}`}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Check className="h-4 w-4 text-green-500" />
+                                      <span>Copied!</span>
+                                    </span>
+                                  ) : (
+                                    <span
+                                      key={`copy-${nextMessage.id}`}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                      <span>Copy</span>
+                                    </span>
+                                  )}
+                                </button>
+                                <div className="text-xs text-muted-foreground">
+                                  Generated with {modelName}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                      } else if (index === 0 && message.role === "assistant") {
+                        // Handle case where the first message is from the assistant
+                        result.push(
+                          <div
+                            key={`first-assistant-${message.id}`}
+                            className="text-gray-800 dark:text-gray-200 group relative"
+                          >
+                            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                              <ReactMarkdown>{message.content}</ReactMarkdown>
+                            </div>
+                            <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
+                              <button
+                                onClick={() =>
+                                  copyToClipboard(message.content, message.id)
+                                }
+                                className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                                aria-label="Copy response"
+                              >
+                                {copiedMessageId === message.id ? (
+                                  <span
+                                    key={`copied-${message.id}`}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Check className="h-4 w-4 text-green-500" />
+                                    <span>Copied!</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    key={`copy-${message.id}`}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                    <span>Copy</span>
+                                  </span>
+                                )}
+                              </button>
+                              <div className="text-xs text-muted-foreground">
+                                Generated with {modelName}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      // We skip AI messages as they're handled alongside their corresponding user messages
+                      return result;
+                    },
+                    []
+                  )}
+>>>>>>> 1642ec3 (Refactor chat response button labels and improve type safety in event broadcasting)
                 </div>
               )}
               {chatLoading && (
