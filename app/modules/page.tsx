@@ -48,6 +48,7 @@ import { encodeModuleSlug } from "@/lib/utils";
 import { ResourceUploadButton } from "@/components/ResourceUploadButton";
 import { useSession } from "@/context/SessionContext";
 import { useSearchParamsSafe } from "@/lib/use-safe-search-params";
+import { api } from "@/lib/api";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -147,19 +148,8 @@ function ModulesPageContent() {
       try {
         setIsLoading(true);
 
-        // Add sessionId parameter for anonymous users
-        let url = "/api/modules";
-        if (!isSignedIn && sessionId) {
-          url = `/api/modules?sessionId=${sessionId}`;
-        }
+        const data = await api.getModules(searchQuery || undefined);
 
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch modules");
-        }
-
-        const data = await response.json();
         // Extract modules from the response object
         const modulesList = data.modules || [];
         setModules(modulesList);
@@ -177,7 +167,7 @@ function ModulesPageContent() {
     if (isLoaded && !sessionLoading) {
       fetchModules();
     }
-  }, [isSignedIn, isLoaded, sessionId, sessionLoading]);
+  }, [isSignedIn, isLoaded, sessionId, sessionLoading, searchQuery]);
 
   // Filter modules based on search query whenever searchQuery changes
   useEffect(() => {
@@ -255,16 +245,7 @@ function ModulesPageContent() {
           setResourcesLoading(true);
 
           // Fetch all modules for the selector
-          let url = "/api/modules";
-          if (!isSignedIn && sessionId) {
-            url = `/api/modules?sessionId=${sessionId}`;
-          }
-
-          const modulesResponse = await fetch(url);
-          if (!modulesResponse.ok) {
-            throw new Error("Failed to fetch modules");
-          }
-          const modulesData = await modulesResponse.json();
+          const modulesData = await api.getModules();
           const modulesList = modulesData.modules || [];
           setModules(
             modulesList.map((m: Module) => ({

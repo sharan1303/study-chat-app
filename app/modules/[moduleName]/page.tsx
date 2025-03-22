@@ -5,6 +5,7 @@ import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
 import { Check, Edit, MessageSquare, Trash, X } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,17 +104,11 @@ export default function ModuleDetailsPage({
         // Decode the module name from URL parameters
         const decodedModuleName = decodeModuleSlug(params.moduleName);
 
-        // Check for anonymous sessionId
-        const sessionId = localStorage.getItem("anonymous_session_id");
-        let apiUrl = "/api/modules";
-        if (sessionId) {
-          apiUrl = `/api/modules?sessionId=${sessionId}`;
-        }
+        // Fetch all modules
+        const allModulesData = await api.getModules();
 
-        // Fetch all modules for the module selector
-        const allModulesResponse = await axios.get(apiUrl);
         // Handle the new API response format where modules are in a nested 'modules' property
-        const modulesData = allModulesResponse.data.modules || [];
+        const modulesData = allModulesData.modules || [];
 
         setAllModules(
           modulesData.map((m: Module) => ({
@@ -145,16 +140,10 @@ export default function ModuleDetailsPage({
           // If still not found, try API query
           if (!moduleData) {
             // If not found by case-insensitive match, try direct API query
-            let moduleQueryUrl = `/api/modules?name=${decodedModuleName}`;
-            if (sessionId) {
-              moduleQueryUrl = `/api/modules?name=${decodedModuleName}&sessionId=${sessionId}`;
-            }
-
-            const moduleResponse = await axios.get(moduleQueryUrl);
+            const moduleQueryData = await api.getModules(decodedModuleName);
 
             // Handle the new API response format
-            const responseData =
-              moduleResponse.data.modules || moduleResponse.data;
+            const responseData = moduleQueryData.modules || [];
 
             if (Array.isArray(responseData) && responseData.length > 0) {
               moduleData = responseData[0];
@@ -167,13 +156,8 @@ export default function ModuleDetailsPage({
         setModule(moduleData);
 
         // Fetch resources for this module
-        let resourcesUrl = `/api/resources?moduleId=${moduleData.id}`;
-        if (sessionId) {
-          resourcesUrl = `/api/resources?moduleId=${moduleData.id}&sessionId=${sessionId}`;
-        }
-
-        const resourcesResponse = await axios.get(resourcesUrl);
-        setResources(resourcesResponse.data);
+        const resourcesData = await api.getResources(moduleData.id);
+        setResources(resourcesData.resources || []);
       } catch (error) {
         console.error("Error fetching module details:", error);
       } finally {

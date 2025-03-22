@@ -45,18 +45,38 @@ export default function ModuleList({
   const nextRouter = useRouter();
   const nextPathname = usePathname();
 
-  const router = routerFromProps || {
-    push: (url: string) => nextRouter.push(url),
-    refresh: () => nextRouter.refresh(),
-  };
+  const router = React.useMemo(
+    () =>
+      routerFromProps || {
+        push: (url: string) => nextRouter.push(url),
+        refresh: () => nextRouter.refresh(),
+      },
+    [routerFromProps, nextRouter]
+  );
+
   const pathname = pathnameFromProps || nextPathname;
 
   const checkIsActive = isActive || ((path: string) => pathname === path);
 
-  const handleCreateSuccess = () => {
+  const handleCreateSuccess = React.useCallback(() => {
     setIsCreating(false);
     router.refresh();
-  };
+  }, [router, setIsCreating]);
+
+  // Listen for module create success event
+  React.useEffect(() => {
+    const handleModuleCreateSuccess = () => {
+      handleCreateSuccess();
+    };
+
+    window.addEventListener("module-create-success", handleModuleCreateSuccess);
+    return () => {
+      window.removeEventListener(
+        "module-create-success",
+        handleModuleCreateSuccess
+      );
+    };
+  }, [handleCreateSuccess]);
 
   const onModuleClick = (moduleId: string, moduleName: string) => {
     if (handleModuleClick) {
@@ -101,7 +121,7 @@ export default function ModuleList({
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <ModuleForm onSuccess={handleCreateSuccess} />
+                    <ModuleForm successEventName="module-create-success" />
                   </DialogContent>
                 </Dialog>
               </div>

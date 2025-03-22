@@ -1,22 +1,23 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = []
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String     @id @default(cuid())
+  email     String     @unique
   name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  chats     Chat[]
   modules   Module[]
   resources Resource[]
-  chats     Chat[]
 }
 
 model Module {
@@ -27,19 +28,16 @@ model Module {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   lastStudied DateTime?
-  
   userId      String?
   sessionId   String?
-  
-  user        User?      @relation(fields: [userId], references: [id])
-  
-  resources   Resource[]
   chats       Chat[]
+  user        User?      @relation(fields: [userId], references: [id])
+  resources   Resource[]
 
-  @@index([userId])
-  @@index([sessionId])
   @@unique([userId, name])
   @@unique([sessionId, name])
+  @@index([userId])
+  @@index([sessionId])
 }
 
 model Resource {
@@ -50,13 +48,11 @@ model Resource {
   fileUrl   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
   moduleId  String
-  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
   sessionId String?
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([moduleId])
   @@index([userId])
@@ -64,13 +60,17 @@ model Resource {
 }
 
 model Chat {
-  id          String    @id @default(cuid())
-  title       String    @default("New Chat")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  messages    Json
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  moduleId    String?
-  module      Module?   @relation(fields: [moduleId], references: [id])
+  id        String   @id @default(cuid())
+  title     String   @default("New Chat")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  Json
+  userId    String?
+  sessionId String?
+  moduleId  String?
+  module    Module?  @relation(fields: [moduleId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([sessionId])
 }

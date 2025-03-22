@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { SESSION_ID_KEY } from "@/lib/session";
+
+// Define a type for the module with count
+type ModuleWithCount = {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string | null;
+  sessionId: string | null;
+  _count: {
+    resources: number;
+  };
+};
 
 // Helper function to process module requests
 async function processModulesRequest(
@@ -49,7 +65,7 @@ async function processModulesRequest(
     });
 
     // Map the modules to the expected format
-    const formattedModules = modules.map((module) => ({
+    const formattedModules = modules.map((module: ModuleWithCount) => ({
       id: module.id,
       name: module.name,
       description: module.description,
@@ -74,21 +90,37 @@ export async function GET(request: NextRequest) {
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
   const name = searchParams.get("name") || undefined;
-  const sessionId = searchParams.get("sessionId") || null;
 
-  return processModulesRequest(userId || null, sessionId, name);
+  // Get sessionId from URL - try both parameter names for compatibility
+  const sessionIdFromParam = searchParams.get("sessionId");
+  const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
+  const sessionId = sessionIdFromParam || sessionIdFromKey;
+
+  // If no userId and no sessionId was provided in the URL, return error
+  if (!userId && !sessionId) {
+    return NextResponse.json(
+      { error: "Session ID or authentication required" },
+      { status: 401 }
+    );
+  }
+
+  return processModulesRequest(userId || null, sessionId || null, name);
 }
 
 // POST /api/modules - Create a new module
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
-  const sessionId = searchParams.get("sessionId") || null;
+
+  // Get sessionId from URL - try both parameter names for compatibility
+  const sessionIdFromParam = searchParams.get("sessionId");
+  const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
+  const sessionId = sessionIdFromParam || sessionIdFromKey;
 
   // Require either userId or sessionId
   if (!userId && !sessionId) {
     return NextResponse.json(
-      { error: "Authentication required" },
+      { error: "Session ID or authentication required" },
       { status: 401 }
     );
   }
@@ -114,13 +146,21 @@ export async function POST(request: NextRequest) {
     if (userId) {
       // @ts-expect-error - Known property but type system disagrees
       data.userId = userId;
+      console.log(`Creating module with userId: ${userId}`);
     } else if (sessionId) {
       // @ts-expect-error - Known property but type system disagrees
       data.sessionId = sessionId;
+      console.log(`Creating module with sessionId: ${sessionId}`);
     }
+
+    console.log(
+      "Module data being sent to database:",
+      JSON.stringify(data, null, 2)
+    );
 
     // Create the module with Prisma
     const moduleData = await prisma.module.create({ data });
+    console.log("Created module:", JSON.stringify(moduleData, null, 2));
 
     return NextResponse.json(moduleData);
   } catch (error) {

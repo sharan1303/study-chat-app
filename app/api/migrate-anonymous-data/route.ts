@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+
+  // Require authentication
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    // Check if user is authenticated
-    const { userId } = await auth();
-    const user = await currentUser();
-
-    if (!userId || !user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    // Get sessionId from request body
-    const { sessionId } = await request.json();
+    // Get the sessionId from the request body
+    const body = await request.json();
+    const { sessionId } = body;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -26,40 +22,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Start transaction to ensure all data is migrated or nothing is
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Update all modules from session to user
-      const updatedModules = await tx.module.updateMany({
-        where: {
-          sessionId: sessionId,
-        } as Prisma.ModuleWhereInput,
-        data: {
-          userId: userId,
-          sessionId: null,
-        } as Prisma.ModuleUpdateManyMutationInput,
+    // Start a transaction to ensure data integrity
+    const result = await prisma.$transaction(async (prismaClient) => {
+      // 1. Find all modules with this sessionId
+      const modules = await prismaClient.module.findMany({
+        where: { sessionId },
+        include: { resources: true },
       });
 
-      // 2. Update all resources from session to user
-      const updatedResources = await tx.resource.updateMany({
+      // 2. Update all modules to associate them with the user
+      let migratedModules = 0;
+      if (modules.length > 0) {
+        await prismaClient.module.updateMany({
+          where: { sessionId },
+          data: {
+            userId,
+            sessionId: "", // Empty string instead of null
+          },
+        });
+        migratedModules = modules.length;
+      }
+
+      // 3. Find all resources with this sessionId (that weren't already included with modules)
+      const orphanedResources = await prismaClient.resource.findMany({
         where: {
-          sessionId: sessionId,
-        } as Prisma.ResourceWhereInput,
-        data: {
-          userId: userId,
-          sessionId: null,
-        } as Prisma.ResourceUpdateManyMutationInput,
+          sessionId,
+          moduleId: { equals: undefined }, // Using equals for null check
+        },
       });
 
-      return {
-        modules: updatedModules.count,
-        resources: updatedResources.count,
-      };
+      // 4. Update all resources to associate them with the user
+      let migratedResources = 0;
+      if (orphanedResources.length > 0) {
+        await prismaClient.resource.updateMany({
+          where: {
+            sessionId,
+            moduleId: { equals: undefined }, // Using equals for null check
+          },
+          data: {
+            userId,
+            sessionId: "", // Empty string instead of null
+          },
+        });
+        migratedResources = orphanedResources.length;
+      }
+
+      // 5. Also update any resources directly associated with the sessionId
+      const directResources = await prismaClient.resource.findMany({
+        where: { sessionId },
+      });
+
+      if (directResources.length > 0) {
+        await prismaClient.resource.updateMany({
+          where: { sessionId },
+          data: {
+            userId,
+            sessionId: "", // Empty string instead of null
+          },
+        });
+        migratedResources += directResources.length;
+      }
+
+      return { migratedModules, migratedResources };
     });
 
     return NextResponse.json({
       success: true,
-      message: "Anonymous data migrated successfully",
-      migrated: result,
+      migrated: {
+        modules: result.migratedModules,
+        resources: result.migratedResources,
+      },
     });
   } catch (error) {
     console.error("Error migrating anonymous data:", error);
@@ -70,4 +102,5 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Add this export to tell Next.js that this route should be treated as dynamic
 export const dynamic = "force-dynamic";

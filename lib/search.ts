@@ -30,6 +30,12 @@ export async function searchWithPerplexity(query: string): Promise<string> {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        console.warn(
+          "Perplexity API authentication failed. Please check your API key."
+        );
+        return "Search is currently unavailable due to authentication issues. The assistant will rely on its existing knowledge.";
+      }
       throw new Error(`Search failed with status: ${response.status}`);
     }
 

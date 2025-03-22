@@ -1,36 +1,29 @@
-import { google } from "@ai-sdk/google";
 import { Message, streamText } from "ai";
+import { google } from "@ai-sdk/google";
 import { searchWithPerplexity } from "@/lib/search";
 import { getModuleContext } from "@/lib/modules";
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    // Parse request data
-    const {
-      messages,
-      moduleId,
-      chatId: requestedChatId,
-      isAuthenticated = true,
-    } = await req.json();
+    const body = await request.json();
+    const { messages, chatId, moduleId } = body;
 
-    // Get auth session
-    const session = await auth();
-    const userId = session.userId;
+    const isModuleMode = !!moduleId;
+    let chatTitle = body.title || "New Chat";
+    const shouldSaveHistory = body.saveHistory !== false;
+    const currentUserObj = await currentUser();
+    const userId = currentUserObj?.id || null;
 
     // Ensure we have a valid chatId - generate one if not provided
-    const chatId = requestedChatId || generateId();
-
-    // For unauthenticated users or when isAuthenticated is false,
-    // we allow chat but don't save history
-    const shouldSaveHistory = isAuthenticated && userId;
+    const requestedChatId = chatId || generateId();
 
     let user = null;
 
-    // Only try to fetch user data if we should save history
-    if (shouldSaveHistory) {
+    // Only try to fetch user data if we should save history with a userId
+    if (shouldSaveHistory && userId) {
       // Find the user by Clerk ID
       user = await prisma.user.findUnique({
         where: { id: userId },
@@ -40,9 +33,6 @@ export async function POST(req: Request) {
         return new Response("User not found", { status: 404 });
       }
     }
-
-    // Check if we have a module ID (indicating module-specific mode)
-    const isModuleMode = moduleId != null;
 
     // Get the last message from the user for potential search needs
     const lastUserMessage = messages[messages.length - 1].content;
@@ -62,8 +52,14 @@ export async function POST(req: Request) {
     if (shouldSearch) {
       try {
         // Perform search with Perplexity API
-        const results = await searchWithPerplexity(lastUserMessage);
-        searchResults = Array.isArray(results) ? results : [];
+        const resultsText = await searchWithPerplexity(lastUserMessage);
+        // Create a single search result with the entire text response
+        searchResults = [
+          {
+            title: "Search Results",
+            content: resultsText,
+          },
+        ];
       } catch (searchError) {
         console.error("Error performing search:", searchError);
       }
@@ -141,60 +137,87 @@ Format your responses using Markdown:
     // Create chat title from first user message
     const firstUserMessage =
       messages.find((m: Message) => m.role === "user")?.content || "";
-    const chatTitle = formatChatTitle(firstUserMessage);
+    chatTitle = formatChatTitle(firstUserMessage);
 
-    // Use the streamText function from the AI SDK
-    const result = await streamText({
-      model: google("models/gemini-2.0-flash"),
-      messages: formattedMessages,
-      temperature: 0.7,
-      topP: 0.95,
-      maxTokens: 2048,
-      onFinish: async ({ text }) => {
-        // Save the chat history with the AI's response - but only if authenticated
-        if (shouldSaveHistory && user) {
-          try {
-            // Create or update the chat
-            await prisma.chat.upsert({
-              where: {
-                id: chatId,
-              },
-              update: {
-                messages: messages.concat([
-                  { role: "assistant", content: text },
-                ]),
-                updatedAt: new Date(),
-              },
-              create: {
-                id: chatId,
-                title: chatTitle,
-                messages: messages.concat([
-                  { role: "assistant", content: text },
-                ]),
-                userId: user.id,
-                moduleId: isModuleMode ? moduleId : null,
-              },
-            });
-            console.log(`Chat history saved: ${chatId}`);
-          } catch (error) {
-            console.error("Error saving chat history:", error);
+    try {
+      // Use the streamText function from the AI SDK
+      const result = await streamText({
+        model: google("models/gemini-2.0-flash"),
+        messages: formattedMessages,
+        temperature: 0.7,
+        topP: 0.95,
+        maxTokens: 2048,
+        onFinish: async ({ text }) => {
+          // Save chat history for authenticated users only
+          if (shouldSaveHistory && userId) {
+            try {
+              await prisma.chat.upsert({
+                where: { id: requestedChatId },
+                update: {
+                  messages: messages.concat([
+                    { role: "assistant", content: text },
+                  ]),
+                  updatedAt: new Date(),
+                },
+                create: {
+                  id: requestedChatId,
+                  title: chatTitle,
+                  messages: messages.concat([
+                    { role: "assistant", content: text },
+                  ]),
+                  userId: userId,
+                  moduleId: isModuleMode ? moduleId : null,
+                },
+              });
+              console.log(`Chat history saved for user: ${userId}`);
+            } catch (error) {
+              console.error("Error saving chat history:", error);
+            }
           }
+        },
+      });
+
+      // Get a data stream response and add model information in the header
+      const response = result.toDataStreamResponse();
+      const headers = new Headers(response.headers);
+      headers.set("x-model-used", "Gemini 2.0 Flash");
+
+      // Return a new response with our custom headers
+      return new Response(response.body, {
+        headers: headers,
+      });
+    } catch (aiError) {
+      console.error("Error with AI model:", aiError);
+
+      // Fallback to a basic error message
+      return new Response(
+        JSON.stringify({
+          error:
+            "Unable to generate a response. The AI service may be temporarily unavailable.",
+          details: aiError instanceof Error ? aiError.message : String(aiError),
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
-      },
-    });
-
-    // Get a data stream response and add model information in the header
-    const response = result.toDataStreamResponse();
-    const headers = new Headers(response.headers);
-    headers.set("x-model-used", "Gemini 2.0 Flash");
-
-    // Return a new response with our custom headers
-    return new Response(response.body, {
-      headers: headers,
-    });
+      );
+    }
   } catch (error) {
     console.error("Error in chat route:", error);
-    return new Response("Error processing your request", { status: 500 });
+    return new Response(
+      JSON.stringify({
+        error: "Error processing your request",
+        details: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
   }
 }
 

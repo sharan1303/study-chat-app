@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/modules(.*)", // Allow modules API for anonymous users
   "/api/check-anonymous-data(.*)", // Allow checking anonymous data
   "/modules(.*)", // Allow modules pages for anonymous users
+  "/chat(.*)", // Allow chat pages for anonymous users
   // Add other public routes as needed
 ]);
 

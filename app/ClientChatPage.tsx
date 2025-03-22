@@ -77,6 +77,22 @@ export default function ClientChatPage({
   );
   const router = useRouter();
 
+  // Get the session ID from local storage for anonymous users
+  const [sessionId, setSessionId] = React.useState<string | null>(null);
+
+  // Load sessionId from localStorage on component mount (client-side only)
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && !isAuthenticated) {
+      // Import the session utility dynamically since it's a client-side module
+      import("@/lib/session").then(({ getOrCreateSessionIdClient }) => {
+        const storedSessionId = getOrCreateSessionIdClient();
+        if (storedSessionId) {
+          setSessionId(storedSessionId);
+        }
+      });
+    }
+  }, [isAuthenticated]);
+
   // Reference to the scroll container, but don't auto-scroll
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -90,6 +106,7 @@ export default function ClientChatPage({
         moduleId: activeModule,
         chatId: chatId,
         isAuthenticated: isAuthenticated,
+        sessionId: !isAuthenticated ? sessionId : undefined,
       },
       onResponse: (response: Response) => {
         // Try to extract model information from headers if available
@@ -131,7 +148,14 @@ export default function ClientChatPage({
         toast.error("Error: " + (error.message || "Failed to send message"));
       },
     }),
-    [chatId, initialMessages, activeModule, isAuthenticated, moduleDetails]
+    [
+      chatId,
+      initialMessages,
+      activeModule,
+      isAuthenticated,
+      moduleDetails,
+      sessionId,
+    ]
   );
 
   const {

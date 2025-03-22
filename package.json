@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "sync-users": "node -r @babel/register scripts/sync-clerk-users.js"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.1.20",
@@ -36,22 +37,28 @@
     "@radix-ui/react-switch": "^1.1.3",
     "@radix-ui/react-tabs": "^1.1.3",
     "@tanstack/react-query": "^5.68.0",
+    "@types/uuid": "^10.0.0",
     "ai": "^4.1.54",
     "axios": "^1.8.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dotenv": "^16.4.7",
     "langchain": "^0.3.19",
     "lucide-react": "^0.477.0",
     "next": "^14.2.24",
     "next-themes": "^0.4.6",
+    "pg": "^8.14.1",
+    "prisma": "^6.5.0",
     "Prisma": "npm:prisma@^6.4.1",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.54.2",
     "react-markdown": "^10.1.0",
     "sonner": "^2.0.1",
+    "svix": "^1.62.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^11.1.0",
     "zod": "^3.24.2",
     "zustand": "^5.0.3"
   },
@@ -65,7 +72,6 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.16",
     "postcss": "^8",
-    "prisma": "^6.5.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

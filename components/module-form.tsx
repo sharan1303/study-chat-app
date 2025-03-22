@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "@/context/SessionContext";
 import { useUser } from "@clerk/nextjs";
+import { api } from "@/lib/api";
 
 import {
   Form,
@@ -56,13 +57,13 @@ interface ModuleFormProps {
     description?: string;
     icon: string;
   };
-  onSuccess: () => void;
+  successEventName: string;
   sessionId?: string | null;
 }
 
 export const ModuleForm = ({
   initialData,
-  onSuccess,
+  successEventName,
   sessionId: propSessionId,
 }: ModuleFormProps) => {
   // Remove router since we're using direct window.location changes
@@ -88,6 +89,13 @@ export const ModuleForm = ({
   useEffect(() => {
     setFormError(null);
   }, [formValues]);
+
+  const triggerSuccess = () => {
+    // Dispatch custom event that parent can listen for
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(successEventName));
+    }
+  };
 
   const onSubmit = async (values: FormValues) => {
     console.log("Form submitted with values:", values);
@@ -116,7 +124,7 @@ export const ModuleForm = ({
         }
 
         // First close the dialog
-        onSuccess();
+        triggerSuccess();
 
         // For navigation or reload
         if (values.name !== initialData.name) {
@@ -134,30 +142,34 @@ export const ModuleForm = ({
       } else {
         // Create new module
         console.log("Creating new module");
-        // Build URL with sessionId if user is not signed in
-        let url = "/api/modules";
-        if (!isSignedIn && sessionId) {
-          url = `/api/modules?sessionId=${sessionId}`;
+
+        try {
+          const createdModule = await api.createModule(values);
+          console.log("Module created response:", createdModule);
+
+          // Notify other components via storage event
+          if (typeof window !== "undefined") {
+            localStorage.setItem("module-created", new Date().toISOString());
+          }
+
+          // First close the dialog in all cases
+          triggerSuccess();
+
+          // Then show success message
+          toast.success("Module created");
+
+          // Force a full page reload after a short delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        } catch (error: unknown) {
+          console.error("Error creating module:", error);
+          const errorMessage =
+            error instanceof Error ? error.message : "Failed to create module";
+          setFormError(errorMessage);
+          toast.error("Failed to create module");
+          throw error; // Re-throw to be caught by the outer catch
         }
-
-        const createResponse = await axios.post(url, values);
-        console.log("Module created response:", createResponse.data);
-
-        // Notify other components via storage event
-        if (typeof window !== "undefined") {
-          localStorage.setItem("module-created", new Date().toISOString());
-        }
-
-        // First close the dialog in all cases
-        onSuccess();
-
-        // Then show success message
-        toast.success("Module created");
-
-        // Force a full page reload after a short delay
-        setTimeout(() => {
-          window.location.reload();
-        }, 800);
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -249,7 +261,7 @@ export const ModuleForm = ({
             <Button
               type="button"
               variant="outline"
-              onClick={onSuccess}
+              onClick={triggerSuccess}
               disabled={isSubmitting}
             >
               Cancel
