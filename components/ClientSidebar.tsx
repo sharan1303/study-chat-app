@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { fetcher, swrConfig } from "@/lib/swr-config";
 import { api } from "@/lib/api";
+import { EventType } from "@/lib/events";
 
 // Define module type
 export interface Module {
@@ -46,6 +47,7 @@ export default function ClientSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Fetch chat history using SWR with our optimized config
   const { data: chats, isLoading: isLoadingChats } = useSWR<Chat[]>(
@@ -90,58 +92,113 @@ export default function ClientSidebar() {
     );
   };
 
-  // Fetch modules whenever auth state changes
+  // Initialize SSE connection for real-time updates
   useEffect(() => {
     if (!isLoaded) return;
 
-    const fetchModules = async () => {
+    const setupEventSource = () => {
+      // Clean up any existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+
       try {
-        setLoading(true);
-        setError(null);
-        console.log(`Fetching modules for sidebar`);
+        // Determine the URL based on auth status
+        const url = isSignedIn
+          ? `/api/events`
+          : `/api/events?sessionId=${localStorage.getItem(
+              "anonymous_session_id"
+            )}`;
 
-        const data = await api.getModules();
+        // Create a new event source
+        const eventSource = new EventSource(url);
+        eventSourceRef.current = eventSource;
 
-        if (data && data.modules && Array.isArray(data.modules)) {
-          console.log(`Loaded ${data.modules.length} modules`);
-          setModules(data.modules);
-        } else {
-          console.warn("Unexpected modules data format:", data);
-          setError("Unexpected data format from API");
-          setModules([]);
-        }
+        // Handle connection open
+        eventSource.onopen = () => {
+          console.log("SSE connection established");
+        };
+
+        // Handle events
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            console.log("SSE event received:", data);
+
+            // Handle different event types
+            if (
+              data.type === EventType.MODULE_CREATED ||
+              data.type === EventType.MODULE_UPDATED
+            ) {
+              // Fetch updated modules list
+              fetchModules();
+            } else if (data.type === EventType.MODULE_DELETED) {
+              // Remove the deleted module from the list
+              setModules((prevModules) =>
+                prevModules.filter((module) => module.id !== data.data.id)
+              );
+            } else if (data.type === EventType.CHAT_CREATED) {
+              // No need to reload modules for chat updates, handled by SWR
+            }
+          } catch (error) {
+            console.error("Error processing SSE event:", error);
+          }
+        };
+
+        // Handle errors
+        eventSource.onerror = (error) => {
+          console.error("SSE connection error:", error);
+          // Attempt to reconnect after a short delay
+          setTimeout(setupEventSource, 5000);
+        };
       } catch (error) {
-        console.error("Error fetching modules for sidebar:", error);
-        setError(error instanceof Error ? error.message : "Unknown error");
-        toast.error("Failed to load modules");
-        setModules([]);
-      } finally {
-        setLoading(false);
+        console.error("Error setting up SSE connection:", error);
       }
     };
 
-    fetchModules();
+    setupEventSource();
 
-    // We don't need polling as the sidebar will update when modules are created/updated
-    // through the storage event listener below
-
+    // Clean up on component unmount
     return () => {
-      // Cleanup function if needed
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, [isLoaded, isSignedIn]);
 
-  // Listen for module creation/update events
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === "module-created" || event.key === "module-updated") {
-        console.log("Module change detected - reloading");
-        window.location.reload();
-      }
-    };
+  // Fetch modules function - can be called on-demand or by SSE events
+  const fetchModules = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log(`Fetching modules for sidebar`);
 
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+      const data = await api.getModules();
+
+      if (data && data.modules && Array.isArray(data.modules)) {
+        console.log(`Loaded ${data.modules.length} modules`);
+        setModules(data.modules);
+      } else {
+        console.warn("Unexpected modules data format:", data);
+        setError("Unexpected data format from API");
+        setModules([]);
+      }
+    } catch (error) {
+      console.error("Error fetching modules for sidebar:", error);
+      setError(error instanceof Error ? error.message : "Unknown error");
+      toast.error("Failed to load modules");
+      setModules([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch modules once on initial load
+  useEffect(() => {
+    if (!isLoaded) return;
+    fetchModules();
+  }, [isLoaded, isSignedIn]);
 
   // Show auth debug info in development
   useEffect(() => {
