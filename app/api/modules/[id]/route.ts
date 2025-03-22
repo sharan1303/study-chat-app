@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { broadcastModuleUpdated, broadcastModuleDeleted } from "@/lib/events";
 
 // GET /api/modules/[id] - Get a specific module by ID
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -121,6 +122,9 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       },
     });
 
+    // Broadcast event for real-time updates
+    broadcastModuleUpdated(updatedModule, [userId || sessionId]);
+
     return NextResponse.json(updatedModule);
   } catch (error) {
     console.error("Error updating module:", error);
@@ -199,6 +203,9 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     await prisma.module.delete({
       where: { id: moduleId },
     });
+
+    // Broadcast event for real-time updates
+    broadcastModuleDeleted(moduleId, [userId || sessionId]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { SESSION_ID_KEY } from "@/lib/session";
+import { broadcastModuleCreated } from "@/lib/events";
 
 // Define a type for the module with count
 type ModuleWithCount = {
@@ -56,7 +57,7 @@ async function processModulesRequest(
     // Fetch modules with the constructed where clause
     const modules = await prisma.module.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
+      orderBy: { createdAt: "desc" },
       include: {
         _count: {
           select: { resources: true },
@@ -161,6 +162,9 @@ export async function POST(request: NextRequest) {
     // Create the module with Prisma
     const moduleData = await prisma.module.create({ data });
     console.log("Created module:", JSON.stringify(moduleData, null, 2));
+
+    // Broadcast event for real-time updates
+    broadcastModuleCreated(moduleData, [userId || sessionId]);
 
     return NextResponse.json(moduleData);
   } catch (error) {

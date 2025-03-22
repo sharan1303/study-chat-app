@@ -125,27 +125,18 @@ export const ModuleForm = ({
         console.log("Module updated response:", updateResponse.data);
         toast.success("Module updated");
 
-        // Notify other components via storage event
-        if (typeof window !== "undefined") {
-          localStorage.setItem("module-updated", new Date().toISOString());
-        }
-
         // First close the dialog
         triggerSuccess();
 
-        // For navigation or reload
+        // For navigation if name changed
         if (values.name !== initialData.name) {
           // If name changed, navigate to new URL
           setTimeout(() => {
             const formattedName = encodeModuleSlug(values.name);
             window.location.href = `/modules/${formattedName}`;
           }, 600);
-        } else {
-          // Otherwise, just reload the page
-          setTimeout(() => {
-            window.location.reload();
-          }, 600);
         }
+        // No need for else clause with page reload - SSE will handle it
       } else {
         // Create new module
         console.log("Creating new module");
@@ -154,21 +145,13 @@ export const ModuleForm = ({
           const createdModule = await api.createModule(values);
           console.log("Module created response:", createdModule);
 
-          // Notify other components via storage event
-          if (typeof window !== "undefined") {
-            localStorage.setItem("module-created", new Date().toISOString());
-          }
-
-          // First close the dialog in all cases
+          // Close the dialog
           triggerSuccess();
 
-          // Then show success message
+          // Show success message
           toast.success("Module created");
 
-          // Force a full page reload after a short delay
-          setTimeout(() => {
-            window.location.reload();
-          }, 800);
+          // No need to force a page reload - SSE will handle the sidebar update
         } catch (error: unknown) {
           console.error("Error creating module:", error);
           const errorMessage =

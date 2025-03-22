@@ -5,6 +5,7 @@ import { getModuleContext } from "@/lib/modules";
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
+import { broadcastChatCreated } from "@/lib/events";
 
 export async function POST(request: Request) {
   try {
@@ -180,7 +181,9 @@ Format your responses using Markdown:
           // Save chat history for authenticated users only
           if (shouldSaveHistory && userId) {
             try {
-              await prisma.chat.upsert({
+              const isNewChat = !chatId; // No chatId means it's a new chat
+
+              const savedChat = await prisma.chat.upsert({
                 where: { id: requestedChatId },
                 update: {
                   messages: messages.concat([
@@ -198,7 +201,21 @@ Format your responses using Markdown:
                   moduleId: isModuleMode ? moduleId : null,
                 },
               });
+
               console.log(`Chat history saved for user: ${userId}`);
+
+              // Only broadcast for new chats
+              if (isNewChat) {
+                // Broadcast chat creation event for real-time updates
+                const chatData = {
+                  id: savedChat.id,
+                  title: savedChat.title,
+                  moduleId: savedChat.moduleId,
+                  createdAt: savedChat.createdAt,
+                };
+
+                broadcastChatCreated(chatData, [userId]);
+              }
             } catch (error) {
               console.error("Error saving chat history:", error);
             }
