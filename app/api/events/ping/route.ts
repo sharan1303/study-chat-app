@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { broadcastEvent } from "../route";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -19,10 +18,10 @@ export async function GET(request: NextRequest) {
 
       if (userId) {
         console.log(`Broadcasting test event to user: ${userId}`);
-        broadcastEvent("chat.created", testData, [userId as string]);
+        global.broadcastEvent("chat.created", testData, [userId as string]);
       } else {
         console.log("Broadcasting test event to all clients");
-        broadcastEvent("chat.created", testData);
+        global.broadcastEvent("chat.created", testData);
       }
 
       return NextResponse.json({
