@@ -1,6 +1,8 @@
-const { clerkClient } = require("@clerk/clerk-sdk-node");
-const { PrismaClient } = require("@prisma/client");
+import { Clerk } from "@clerk/clerk-sdk-node";
+import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
 
+const clerk = Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
 const prisma = new PrismaClient();
 
 async function syncUsers() {
@@ -8,7 +10,7 @@ async function syncUsers() {
 
   try {
     // Get all users from Clerk
-    const clerkUsers = await clerkClient.users.getUserList();
+    const clerkUsers = await clerk.users.getUserList();
     console.log(`Found ${clerkUsers.length} users in Clerk`);
 
     // Process each user
