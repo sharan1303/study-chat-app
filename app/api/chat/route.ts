@@ -33,7 +33,6 @@ export async function POST(request: Request) {
 
         // If user doesn't exist, create a new one using Clerk data
         if (!user && currentUserObj) {
-          console.log(`Creating new user for Clerk ID: ${userId}`);
           user = await prisma.user.create({
             data: {
               id: userId,
@@ -45,7 +44,6 @@ export async function POST(request: Request) {
                 : "Anonymous User",
             },
           });
-          console.log(`User created: ${user.id}`);
         }
 
         if (!user) {
@@ -202,8 +200,6 @@ Format your responses using Markdown:
                 },
               });
 
-              console.log(`Chat history saved for user: ${userId}`);
-
               // Only broadcast for new chats
               if (isNewChat) {
                 // Broadcast chat creation event for real-time updates
@@ -212,9 +208,34 @@ Format your responses using Markdown:
                   title: savedChat.title,
                   moduleId: savedChat.moduleId,
                   createdAt: savedChat.createdAt,
+                  sessionId: null,
+                  updatedAt: savedChat.updatedAt,
                 };
 
-                broadcastChatCreated(chatData, [userId]);
+                // Attempt immediate and delayed broadcasts
+                try {
+                  // Direct targeted broadcast
+                  console.log(
+                    `Broadcasting chat creation to user ${userId}`,
+                    chatData
+                  );
+                  const result = broadcastChatCreated(chatData, [userId]);
+                  console.log(`Broadcast result:`, result);
+
+                  // Try a delayed broadcast to catch reconnections
+                  setTimeout(() => {
+                    // Try both targeted and fallback broadcasts
+                    console.log(`Delayed broadcast for user ${userId}`);
+                    broadcastChatCreated(chatData, [userId]);
+                    console.log("Fallback broadcast to all clients");
+                    broadcastChatCreated(chatData);
+                  }, 1000);
+                } catch (broadcastError) {
+                  console.error(
+                    "Error broadcasting chat creation:",
+                    broadcastError
+                  );
+                }
               }
             } catch (error) {
               console.error("Error saving chat history:", error);

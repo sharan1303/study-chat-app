@@ -1,56 +1,36 @@
-import { ReadableStreamDefaultController } from "stream/web";
+import type { Chat, Module } from "@prisma/client";
 
-// Define event types for type safety
-export enum EventType {
-  MODULE_CREATED = "module-created",
-  MODULE_UPDATED = "module-updated",
-  MODULE_DELETED = "module-deleted",
-  CHAT_CREATED = "chat-created",
-}
-
-// Define event data interfaces
-export interface BaseEventData {
-  timestamp?: string;
-}
-
-export interface ModuleEventData extends BaseEventData {
+// Type for event data payloads
+export interface EventData {
   id: string;
-  name: string;
-  description?: string | null;
-  icon: string;
-  [key: string]: unknown;
+  [key: string]: string | number | boolean | null | undefined | Date | object;
 }
 
-export interface ModuleDeletedEventData extends BaseEventData {
-  id: string;
-}
-
-export interface ChatEventData extends BaseEventData {
-  id: string;
-  title: string;
-  moduleId?: string | null;
-  createdAt?: string | Date;
-  [key: string]: unknown;
-}
-
-// Union type for all possible event data
-export type EventData =
-  | ModuleEventData
-  | ModuleDeletedEventData
-  | ChatEventData
-  | BaseEventData;
-
-// Types for SSE clients
-type SseClient = {
+// Type for SSE client connections
+export interface SSEClient {
   id: string;
   controller: ReadableStreamDefaultController;
+  connectedAt: number;
+  lastActivity: number;
+  ip: string;
+  userAgent: string;
   send: (data: { type: string; data: EventData; timestamp: string }) => void;
+}
+
+// Event types
+export const EVENT_TYPES = {
+  CHAT_CREATED: "chat.created",
+  MODULE_CREATED: "module.created",
+  MODULE_UPDATED: "module.updated",
+  MODULE_DELETED: "module.deleted",
 };
 
 // Get access to the global SSE clients array
 declare global {
   // eslint-disable-next-line no-var
-  var sseClients: SseClient[];
+  var sseClients: SSEClient[];
+  // eslint-disable-next-line no-var
+  var sseCleanupInterval: NodeJS.Timeout | null;
 }
 
 // Initialize if not already done
@@ -58,53 +38,64 @@ if (typeof global !== "undefined" && !global.sseClients) {
   global.sseClients = [];
 }
 
-// Helper function to broadcast events to specific clients or all clients
+// Broadcast an event to connected clients
 export function broadcastEvent(
-  event: EventType,
+  eventType: string,
   data: EventData,
   targetIds?: string[]
-) {
-  if (
-    typeof global === "undefined" ||
-    !global.sseClients ||
-    global.sseClients.length === 0
-  )
-    return;
+): { sent: number; skipped: number } {
+  // Initialize metrics
+  const metrics = { sent: 0, skipped: 0 };
 
-  global.sseClients.forEach((client) => {
-    // Send to specific clients if targetIds is provided, otherwise send to all
-    if (!targetIds || targetIds.includes(client.id)) {
-      client.send({
-        type: event,
-        data,
-        timestamp: new Date().toISOString(),
-      });
+  if (!global.sseClients || global.sseClients.length === 0) {
+    return metrics;
+  }
+
+  // Send the event to appropriate clients
+  for (const client of global.sseClients) {
+    // Check if this client should receive the event
+    const shouldSend =
+      !targetIds || targetIds.length === 0 || targetIds.includes(client.id);
+
+    if (shouldSend) {
+      try {
+        client.send({
+          type: eventType,
+          data,
+          timestamp: new Date().toISOString(),
+        });
+        metrics.sent++;
+      } catch {
+        metrics.skipped++;
+      }
+    } else {
+      metrics.skipped++;
     }
-  });
+  }
+
+  return metrics;
 }
 
-// Helper to broadcast module events
-export function broadcastModuleCreated(
-  moduleData: ModuleEventData,
+// Specialized event broadcasters
+export function broadcastChatCreated(
+  chat: Omit<Chat, "messages" | "updatedAt" | "userId">,
   targetIds?: string[]
 ) {
-  broadcastEvent(EventType.MODULE_CREATED, moduleData, targetIds);
+  return broadcastEvent(EVENT_TYPES.CHAT_CREATED, chat, targetIds);
 }
 
-export function broadcastModuleUpdated(
-  moduleData: ModuleEventData,
-  targetIds?: string[]
-) {
-  broadcastEvent(EventType.MODULE_UPDATED, moduleData, targetIds);
+export function broadcastModuleCreated(module: Module, targetIds?: string[]) {
+  return broadcastEvent(EVENT_TYPES.MODULE_CREATED, module, targetIds);
+}
+
+export function broadcastModuleUpdated(module: Module, targetIds?: string[]) {
+  return broadcastEvent(EVENT_TYPES.MODULE_UPDATED, module, targetIds);
 }
 
 export function broadcastModuleDeleted(moduleId: string, targetIds?: string[]) {
-  broadcastEvent(EventType.MODULE_DELETED, { id: moduleId }, targetIds);
-}
-
-export function broadcastChatCreated(
-  chatData: ChatEventData,
-  targetIds?: string[]
-) {
-  broadcastEvent(EventType.CHAT_CREATED, chatData, targetIds);
+  return broadcastEvent(
+    EVENT_TYPES.MODULE_DELETED,
+    { id: moduleId },
+    targetIds
+  );
 }

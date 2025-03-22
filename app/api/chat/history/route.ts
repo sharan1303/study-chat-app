@@ -9,6 +9,8 @@ export async function GET() {
   }
 
   try {
+    console.log(`Fetching chat history for user: ${userId}`);
+
     // Find the user by Clerk ID
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -26,7 +28,17 @@ export async function GET() {
       orderBy: {
         updatedAt: "desc",
       },
+      include: {
+        module: {
+          select: {
+            name: true,
+            icon: true,
+          },
+        },
+      },
     });
+
+    console.log(`Found ${chats.length} chats for user ${userId}`);
 
     return Response.json(chats);
   } catch (error) {
@@ -34,3 +46,6 @@ export async function GET() {
     return new Response("Error fetching chat history", { status: 500 });
   }
 }
+
+// Ensure this route is always dynamic
+export const dynamic = "force-dynamic";

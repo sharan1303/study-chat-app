@@ -164,7 +164,10 @@ export async function POST(request: NextRequest) {
     console.log("Created module:", JSON.stringify(moduleData, null, 2));
 
     // Broadcast event for real-time updates
-    broadcastModuleCreated(moduleData, [userId || sessionId]);
+    const targetId = userId || sessionId;
+    if (targetId) {
+      broadcastModuleCreated(moduleData, [targetId]);
+    }
 
     return NextResponse.json(moduleData);
   } catch (error) {

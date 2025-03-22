@@ -21,11 +21,11 @@ export const swrConfig: SWRConfiguration = {
   // Don't revalidate on reconnect to reduce requests
   revalidateOnReconnect: false,
 
-  // Use stored data from cache when offline
-  revalidateIfStale: false,
+  // Changed to true to ensure stale data is updated
+  revalidateIfStale: true,
 
-  // Deduplicate requests within a 15-second window
-  dedupingInterval: 15000,
+  // Reduced to 5 seconds for more frequent updates
+  dedupingInterval: 5000,
 
   // Keep data fresh in cache for 1 minute
   // This helps prevent multiple refetches during navigations
