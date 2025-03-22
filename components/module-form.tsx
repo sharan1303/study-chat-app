@@ -57,14 +57,16 @@ interface ModuleFormProps {
     description?: string;
     icon: string;
   };
-  successEventName: string;
+  successEventName?: string;
   sessionId?: string | null;
+  onSuccess?: () => void;
 }
 
 export const ModuleForm = ({
   initialData,
   successEventName,
   sessionId: propSessionId,
+  onSuccess,
 }: ModuleFormProps) => {
   // Remove router since we're using direct window.location changes
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,8 +94,13 @@ export const ModuleForm = ({
 
   const triggerSuccess = () => {
     // Dispatch custom event that parent can listen for
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && successEventName) {
       window.dispatchEvent(new CustomEvent(successEventName));
+    }
+
+    // Call the onSuccess callback if provided
+    if (onSuccess) {
+      onSuccess();
     }
   };
 
