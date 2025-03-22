@@ -1,54 +1,35 @@
-import { v4 as uuidv4 } from "uuid";
+import { getSessionIdClient } from "./session";
 
 /**
- * Gets the current session ID from localStorage or creates a new one
+ * Gets the current session ID from cookies or creates a new one
+ * @deprecated Use getSessionIdClient from lib/session instead
  */
-export function getOrCreateSessionId(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  let sessionId = localStorage.getItem("anonymous_session_id");
-
-  if (!sessionId) {
-    sessionId = uuidv4();
-    localStorage.setItem("anonymous_session_id", sessionId);
-  }
-
-  return sessionId;
-}
+export const getOrCreateSessionId = getSessionIdClient;
 
 /**
- * Clears the anonymous session ID from localStorage
+ * Clears the anonymous session ID
+ * @deprecated Use document.cookie API directly
  */
 export function clearSessionId(): void {
-  if (typeof window === "undefined") {
-    return;
+  if (typeof document !== "undefined") {
+    document.cookie = `study_session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
   }
-
-  localStorage.removeItem("anonymous_session_id");
 }
 
 /**
  * Check if an anonymous session exists
+ * @deprecated Use getSessionIdClient from lib/session instead
  */
 export function hasSessionId(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return !!localStorage.getItem("anonymous_session_id");
+  return !!getSessionIdClient();
 }
 
 /**
  * Add session ID to API requests if available
+ * @deprecated Use the api client from lib/api instead
  */
 export function addSessionIdToRequest(url: string): string {
-  if (typeof window === "undefined") {
-    return url;
-  }
-
-  const sessionId = localStorage.getItem("anonymous_session_id");
+  const sessionId = getSessionIdClient();
   if (!sessionId) {
     return url;
   }

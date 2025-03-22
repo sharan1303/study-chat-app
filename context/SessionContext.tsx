@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { v4 as uuidv4 } from 'uuid';
+import { getOrCreateSessionIdClient, SESSION_COOKIE_NAME } from "@/lib/session";
 
 interface SessionContextType {
   sessionId: string | null;
@@ -20,24 +20,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Try to get sessionId from localStorage
-    const storedSessionId = localStorage.getItem('anonymous_session_id');
-    
-    if (storedSessionId) {
-      setSessionId(storedSessionId);
-    } else {
-      // Create a new sessionId and store it
-      const newSessionId = uuidv4();
-      localStorage.setItem('anonymous_session_id', newSessionId);
-      setSessionId(newSessionId);
-    }
-    
+    // Get session ID from our client-side function
+    const currentSessionId = getOrCreateSessionIdClient();
+    setSessionId(currentSessionId);
     setIsLoading(false);
   }, []);
 
   const clearSession = () => {
-    localStorage.removeItem('anonymous_session_id');
-    setSessionId(null);
+    if (typeof document !== "undefined") {
+      // Clear the cookie by setting its expiration date to the past
+      document.cookie = `${SESSION_COOKIE_NAME}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      setSessionId(null);
+    }
   };
 
   return (

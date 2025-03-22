@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { fetcher, swrConfig } from "@/lib/swr-config";
+import { api } from "@/lib/api";
 
 // Define module type
 export interface Module {
@@ -99,36 +100,7 @@ export default function ClientSidebar() {
         setError(null);
         console.log(`Fetching modules for sidebar`);
 
-        // Get sessionId for anonymous users
-        let url = "/api/modules?source=sidebar";
-        if (!isSignedIn) {
-          const sessionId = localStorage.getItem("anonymous_session_id");
-          if (sessionId) {
-            url = `/api/modules?source=sidebar&sessionId=${sessionId}`;
-          }
-        }
-
-        // Request modules
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Cache-Control": "no-cache",
-          },
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(
-            `Failed to fetch modules: ${response.status}`,
-            errorText
-          );
-          setError(`API Error (${response.status}): ${errorText}`);
-          throw new Error(
-            `Failed to fetch modules: ${response.status} - ${errorText}`
-          );
-        }
-
-        const data = await response.json();
+        const data = await api.getModules();
 
         if (data && data.modules && Array.isArray(data.modules)) {
           console.log(`Loaded ${data.modules.length} modules`);
@@ -150,12 +122,11 @@ export default function ClientSidebar() {
 
     fetchModules();
 
-    // Set up polling
-    let interval: NodeJS.Timeout | null = null;
-    interval = setInterval(fetchModules, 60000); // Poll every minute
+    // We don't need polling as the sidebar will update when modules are created/updated
+    // through the storage event listener below
 
     return () => {
-      if (interval) clearInterval(interval);
+      // Cleanup function if needed
     };
   }, [isLoaded, isSignedIn]);
 
