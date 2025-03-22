@@ -8,11 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "sync-users": "node -r @babel/register scripts/sync-clerk-users.js"
+    "sync-users": "node scripts/sync-clerk-users.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.1.20",
     "@ai-sdk/react": "^1.1.21",
+    "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/nextjs": "^6.12.2",
     "@google/generative-ai": "^0.24.0",
     "@hookform/resolvers": "^4.1.3",
@@ -62,6 +63,11 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
+    "@babel/preset-typescript": "^7.26.0",
+    "@babel/register": "^7.25.9",
     "@types/js-cookie": "^3.0.6",
     "@types/json-schema": "^7.0.15",
     "@types/json5": "^0.0.30",
