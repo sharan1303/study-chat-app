@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 
-export default function ModulePage({
-  params,
-}: {
-  params: { moduleName: string };
-}) {
+export default async function ModulePage(
+  props: {
+    params: Promise<{ moduleName: string }>;
+  }
+) {
+  const params = await props.params;
   // Redirect to the chat page for this module
   redirect(`/${params.moduleName}/chat`);
 }

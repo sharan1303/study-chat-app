@@ -49,13 +49,17 @@ export async function POST(request: Request) {
 
         if (!user) {
           console.error(`Failed to find or create user with ID: ${userId}`);
-          return new Response("User not found and could not be created", {
-            status: 500,
-          });
+          return Response.json(
+            { error: "User not found and could not be created" },
+            { status: 500 }
+          );
         }
       } catch (error) {
         console.error("Error finding/creating user:", error);
-        return new Response("Error processing user data", { status: 500 });
+        return Response.json(
+          { error: "Error processing user data" },
+          { status: 500 }
+        );
       }
     }
 
@@ -167,7 +171,7 @@ Format your responses using Markdown:
     try {
       // Use the streamText function from the AI SDK
       const result = await streamText({
-        model: google("models/gemini-2.0-flash"),
+        model: google("gemini-2.0-flash"),
         messages: formattedMessages,
         temperature: 0.7,
         topP: 0.95,
@@ -210,38 +214,29 @@ Format your responses using Markdown:
       // Return a new response with our custom headers
       return new Response(response.body, {
         headers: headers,
+        status: 200,
       });
     } catch (aiError) {
       console.error("Error with AI model:", aiError);
 
       // Fallback to a basic error message
-      return new Response(
-        JSON.stringify({
+      return Response.json(
+        {
           error:
             "Unable to generate a response. The AI service may be temporarily unavailable.",
           details: aiError instanceof Error ? aiError.message : String(aiError),
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        },
+        { status: 500 }
       );
     }
   } catch (error) {
     console.error("Error in chat route:", error);
-    return new Response(
-      JSON.stringify({
+    return Response.json(
+      {
         error: "Error processing your request",
         details: error instanceof Error ? error.message : String(error),
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+      },
+      { status: 500 }
     );
   }
 }

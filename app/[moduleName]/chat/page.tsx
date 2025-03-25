@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { generateId, decodeModuleSlug } from "@/lib/utils";
 import ClientChatPage from "@/app/ClientChatPage";
@@ -34,6 +34,7 @@ interface ModuleData {
 export default function NewModuleChat() {
   const { moduleName } = useParams() as { moduleName: string };
   const { isSignedIn, user } = useUser();
+  const router = useRouter();
   const [moduleData, setModuleData] = useState<ModuleData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Add a state to track if we've shown loading state at least once
@@ -44,6 +45,15 @@ export default function NewModuleChat() {
 
   // Generate a new chat ID - use useMemo to prevent regeneration on re-renders
   const chatId = useMemo(() => generateId(), []);
+
+  // Pre-emptively prepare the proper route to avoid 404s
+  useEffect(() => {
+    // Ensure the router knows about this chat ID
+    if (isSignedIn && moduleData && chatId) {
+      // Pre-fetch the chat route to ensure it's available
+      router.prefetch(`/${moduleName}/chat/${chatId}`);
+    }
+  }, [isSignedIn, moduleData, chatId, moduleName, router]);
 
   useEffect(() => {
     let isMounted = true; // Track component mount state

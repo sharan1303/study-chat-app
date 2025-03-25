@@ -3,10 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
 // GET /api/modules/[id] - Get a specific module by ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
     const moduleId = params.id;
@@ -62,10 +60,8 @@ export async function GET(
 }
 
 // PUT /api/modules/[id] - Update a module
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
     const searchParams = request.nextUrl.searchParams;
@@ -150,10 +146,8 @@ export async function PUT(
 }
 
 // DELETE /api/modules/[id] - Delete a module
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { userId } = await auth();
     const searchParams = request.nextUrl.searchParams;

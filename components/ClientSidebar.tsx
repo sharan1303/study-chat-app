@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Chat } from "./ChatHistory";
@@ -36,7 +36,22 @@ export interface Module {
   resourceCount?: number;
 }
 
-export default function ClientSidebar() {
+// Create a wrapper component for useSearchParams
+function SearchParamsWrapper({
+  children,
+}: {
+  children: (searchParams: URLSearchParams) => React.ReactNode;
+}) {
+  const searchParams = useSearchParams();
+  return <>{children(searchParams)}</>;
+}
+
+// Main sidebar component that accepts searchParams as a prop
+function ClientSidebarContent({
+  searchParams,
+}: {
+  searchParams: URLSearchParams;
+}) {
   const { isLoaded, isSignedIn, userId } = useAuth();
   const { state } = useSidebar();
   const [modules, setModules] = useState<Module[]>([]);
@@ -45,7 +60,6 @@ export default function ClientSidebar() {
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   // Fetch chat history using SWR with our optimized config
   const { data: chats, isLoading: isLoadingChats } = useSWR<Chat[]>(
@@ -261,5 +275,16 @@ export default function ClientSidebar() {
 
       <SidebarRail />
     </Sidebar>
+  );
+}
+
+// Export the ClientSidebar with Suspense wrapper
+export default function ClientSidebar() {
+  return (
+    <Suspense fallback={null}>
+      <SearchParamsWrapper>
+        {(searchParams) => <ClientSidebarContent searchParams={searchParams} />}
+      </SearchParamsWrapper>
+    </Suspense>
   );
 }

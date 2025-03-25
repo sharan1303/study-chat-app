@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
 import { Check, Edit, MessageSquare, Trash, X } from "lucide-react";
@@ -77,11 +77,12 @@ const icons = [
   "🎵",
 ];
 
-export default function ModuleDetailsPage({
-  params,
-}: {
-  params: { moduleName: string };
-}) {
+export default function ModuleDetailsPage(
+  props: {
+    params: Promise<{ moduleName: string }>;
+  }
+) {
+  const params = use(props.params);
   const router = useRouter();
   const [module, setModule] = useState<Module | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
