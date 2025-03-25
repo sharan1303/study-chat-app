@@ -21,23 +21,29 @@ type SidebarContext = {
   toggleSidebar: () => void;
 };
 
-// Create context
-const SidebarContext = React.createContext<SidebarContext | null>(null);
+// Create context with default values
+const SidebarContext = React.createContext<SidebarContext>({
+  state: "expanded",
+  open: true,
+  setOpen: () => {},
+  openMobile: false,
+  setOpenMobile: () => {},
+  isMobile: false,
+  toggleSidebar: () => {},
+});
 
-// Custom hook to use sidebar
+// Custom hook to use sidebar with type safety
 export function useSidebar() {
-  const context = React.useContext(SidebarContext);
-  if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider");
-  }
-  return context;
+  return React.useContext(SidebarContext);
 }
 
-// Mobile detection hook
+// Optimized mobile detection hook
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(
-    typeof window !== "undefined" && window.innerWidth < 768
-  );
+  // Initialize with a check for window only at runtime
+  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 768;
+  });
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -46,11 +52,29 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < 768);
     };
 
+    // Use a more performant approach with addEventListener
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return isMobile;
+}
+
+// Helper to get saved sidebar state from cookie
+function getSavedSidebarState(defaultOpen: boolean): boolean {
+  if (typeof document === "undefined") return defaultOpen;
+
+  const cookies = document.cookie.split(";");
+  const sidebarCookie = cookies.find((cookie) =>
+    cookie.trim().startsWith(`${SIDEBAR_COOKIE_NAME}=`)
+  );
+
+  if (sidebarCookie) {
+    const value = sidebarCookie.split("=")[1];
+    return value === "true";
+  }
+
+  return defaultOpen;
 }
 
 // Provider component
@@ -77,24 +101,14 @@ export const SidebarProvider = React.forwardRef<
     const [openMobile, setOpenMobile] = React.useState(false);
 
     // Get initial state from cookie when component mounts
-    const [_open, _setOpen] = React.useState(() => {
-      // Only run in browser environment
-      if (typeof document !== "undefined") {
-        const cookies = document.cookie.split(";");
-        const sidebarCookie = cookies.find((cookie) =>
-          cookie.trim().startsWith(`${SIDEBAR_COOKIE_NAME}=`)
-        );
-        if (sidebarCookie) {
-          const value = sidebarCookie.split("=")[1];
-          return value === "true";
-        }
-      }
-      return defaultOpen;
-    });
+    const [_open, _setOpen] = React.useState(() =>
+      getSavedSidebarState(defaultOpen)
+    );
 
     // This is the internal state of the sidebar.
     // Use openProp and setOpenProp for control from outside
     const open = openProp ?? _open;
+
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value;
@@ -105,7 +119,9 @@ export const SidebarProvider = React.forwardRef<
         }
 
         // Persist state in cookie
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        if (typeof document !== "undefined") {
+          document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        }
       },
       [setOpenProp, open]
     );
@@ -119,6 +135,8 @@ export const SidebarProvider = React.forwardRef<
 
     // Keyboard shortcut (Ctrl/Cmd + B)
     React.useEffect(() => {
+      if (typeof window === "undefined") return;
+
       const handleKeyDown = (event: KeyboardEvent) => {
         if (
           event.key === SIDEBAR_KEYBOARD_SHORTCUT &&

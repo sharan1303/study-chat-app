@@ -6,10 +6,8 @@ import prisma from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 // GET /api/resources/[id] - Get resource details
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { userId } = await auth();
   const sessionId = request.nextUrl.searchParams.get("sessionId");
   const resourceId = params.id;
@@ -78,10 +76,8 @@ export async function GET(
 }
 
 // PUT /api/resources/[id] - Update resource
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { userId } = await auth();
   const sessionId = request.nextUrl.searchParams.get("sessionId");
   const resourceId = params.id;
@@ -191,10 +187,8 @@ export async function PUT(
 }
 
 // DELETE /api/resources/[id] - Delete resource
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { userId } = await auth();
   const sessionId = request.nextUrl.searchParams.get("sessionId");
   const resourceId = params.id;
