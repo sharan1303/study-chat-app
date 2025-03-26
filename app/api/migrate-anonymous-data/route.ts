@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { broadcastDataMigrated } from "@/lib/events";
 
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
@@ -83,14 +84,38 @@ export async function POST(request: NextRequest) {
         migratedResources += directResources.length;
       }
 
-      return { migratedModules, migratedResources };
+      // 6. Find and migrate all chats associated with this sessionId
+      const chats = await prismaClient.chat.findMany({
+        where: { sessionId },
+      });
+
+      let migratedChats = 0;
+      if (chats.length > 0) {
+        await prismaClient.chat.updateMany({
+          where: { sessionId },
+          data: {
+            userId,
+            sessionId: "", // Empty string instead of null
+          },
+        });
+        migratedChats = chats.length;
+      }
+
+      return { migratedModules, migratedResources, migratedChats };
     });
+
+    // Broadcast a data migration event
+    broadcastDataMigrated({ userId, sessionId, id: userId }, [
+      userId,
+      sessionId,
+    ]);
 
     return NextResponse.json({
       success: true,
       migrated: {
         modules: result.migratedModules,
         resources: result.migratedResources,
+        chats: result.migratedChats,
       },
     });
   } catch (error) {

@@ -4,7 +4,12 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/module-form";
 
 interface ModuleOperationsProps {
@@ -39,6 +44,7 @@ export default function ModuleOperations({
         )}
       </DialogTrigger>
       <DialogContent>
+        <DialogTitle>Create Module</DialogTitle>
         <ModuleForm onSuccess={handleCreateSuccess} sessionId={sessionId} />
       </DialogContent>
     </Dialog>

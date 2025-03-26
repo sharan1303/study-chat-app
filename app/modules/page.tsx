@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import React, { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { Search, Edit, Trash } from "lucide-react";
@@ -47,8 +47,10 @@ import axios from "axios";
 import { encodeModuleSlug } from "@/lib/utils";
 import { ResourceUploadButton } from "@/components/ResourceUploadButton";
 import { useSession } from "@/context/SessionContext";
-import { useSearchParamsSafe } from "@/lib/use-safe-search-params";
 import { api } from "@/lib/api";
+
+// Import the dedicated search params component
+import { SearchParamsReader } from "./search-params";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -122,11 +124,14 @@ function ModulesLoading() {
   );
 }
 
-// Create a component that uses useSearchParams inside Suspense
-function ModulesPageContent() {
+// Create a component that receives searchParams as props
+function ModulesPageContent({
+  searchParams,
+}: {
+  searchParams: URLSearchParams;
+}) {
   const { isLoaded, isSignedIn } = useAuth();
   const { sessionId, isLoading: sessionLoading } = useSession();
-  const searchParams = useSearchParamsSafe();
   const [searchQuery, setSearchQuery] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
   const [filteredModules, setFilteredModules] = useState<Module[]>([]);
@@ -769,11 +774,15 @@ function ResourceRowWithContext({
   );
 }
 
-// Main component with Suspense boundary to prevent static rendering issues
+// Export modules page with proper suspense boundary
 export default function ModulesPage() {
   return (
     <Suspense fallback={<ModulesLoading />}>
-      <ModulesPageContent />
+      <Suspense fallback={<ModulesLoading />}>
+        <SearchParamsReader>
+          {(searchParams) => <ModulesPageContent searchParams={searchParams} />}
+        </SearchParamsReader>
+      </Suspense>
     </Suspense>
   );
 }

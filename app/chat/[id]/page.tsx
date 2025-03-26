@@ -5,7 +5,8 @@ import ClientChatPage from "@/app/ClientChatPage";
 import { ChatPageLoading } from "@/app/ClientChatPage";
 import prisma from "@/lib/prisma";
 
-export default async function ChatPage({ params }: { params: { id: string } }) {
+export default async function ChatPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await auth();
   const userId = session.userId;
   const isAuthenticated = !!userId;

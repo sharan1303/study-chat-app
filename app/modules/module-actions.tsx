@@ -70,10 +70,7 @@ export default function ModuleActions({
     setIsEditing(false);
     setModuleDetails(null);
     toast.success("Module updated");
-
-    // Use router.refresh() for less disruption
-    // If the edit involved a name change, the ModuleForm component will handle that separately
-    router.refresh();
+    // SSE will handle the update, no need for router.refresh()
   };
 
   // Handle module deletion
@@ -94,8 +91,9 @@ export default function ModuleActions({
 
       // Use setTimeout to ensure toast is visible before redirect
       setTimeout(() => {
-        // Force a full navigation to ensure all components refresh
-        window.location.href = "/modules";
+        // Use router.push instead of forced navigation to avoid full refresh
+        // The SSE event will take care of updating the sidebar
+        router.push("/modules");
       }, 600);
     } catch (error) {
       console.error("Error deleting module:", error);

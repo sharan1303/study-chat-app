@@ -62,10 +62,8 @@ type ResourceType = {
 };
 
 // GET /api/modules/[moduleId]/resources - Get all resources for a module
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { moduleId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ moduleId: string }> }) {
+  const params = await props.params;
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
 
@@ -131,10 +129,8 @@ export async function GET(
 }
 
 // POST /api/modules/[moduleId]/resources - Create a new resource
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { moduleId: string } }
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ moduleId: string }> }) {
+  const params = await props.params;
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
 

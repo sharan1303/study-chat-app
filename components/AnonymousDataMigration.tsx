@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
 
+// Key for tracking dialog dismissal in localStorage
+const MIGRATION_SKIPPED_KEY = "data_migration_skipped";
+
 export default function AnonymousDataMigration() {
   const { isSignedIn } = useUser();
   const { sessionId, clearSession } = useSession();
@@ -27,6 +30,14 @@ export default function AnonymousDataMigration() {
   // Check if there's anonymous data when user signs in
   useEffect(() => {
     if (!isSignedIn || !sessionId) return;
+
+    // Check if user has already skipped the migration dialog
+    if (
+      typeof window !== "undefined" &&
+      localStorage.getItem(`${MIGRATION_SKIPPED_KEY}_${sessionId}`)
+    ) {
+      return;
+    }
 
     const checkAnonymousData = async () => {
       try {
@@ -57,11 +68,17 @@ export default function AnonymousDataMigration() {
       });
 
       if (response.data.success) {
-        toast.success("Your data has been successfully migrated!");
+        toast.success(
+          "Your chats have been successfully migrated to your account!"
+        );
         // Clear the anonymous session
         clearSession();
         // Close the dialog
         setIsDialogOpen(false);
+        // Mark as handled in localStorage to prevent future prompts
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`${MIGRATION_SKIPPED_KEY}_${sessionId}`, "true");
+        }
       }
     } catch (error) {
       console.error("Error migrating data:", error);
@@ -73,6 +90,10 @@ export default function AnonymousDataMigration() {
 
   const handleSkip = () => {
     setIsDialogOpen(false);
+    // Mark as skipped in localStorage to prevent showing again on refresh
+    if (typeof window !== "undefined" && sessionId) {
+      localStorage.setItem(`${MIGRATION_SKIPPED_KEY}_${sessionId}`, "true");
+    }
   };
 
   if (!hasAnonymousData || !isDialogOpen) {
@@ -83,10 +104,10 @@ export default function AnonymousDataMigration() {
     <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Transfer Your Study Data</AlertDialogTitle>
+          <AlertDialogTitle>Transfer Your Data</AlertDialogTitle>
           <AlertDialogDescription>
-            We noticed you have modules and resources created while browsing
-            anonymously. Would you like to transfer them to your account?
+            We noticed you have been browsing anonymously. Would you like to
+            transfer your data to your account?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

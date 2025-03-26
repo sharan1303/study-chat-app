@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { notFound, useParams } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { generateId, decodeModuleSlug } from "@/lib/utils";
 import ClientChatPage from "@/app/ClientChatPage";
@@ -34,6 +34,7 @@ interface ModuleData {
 export default function NewModuleChat() {
   const { moduleName } = useParams() as { moduleName: string };
   const { isSignedIn, user } = useUser();
+  const router = useRouter();
   const [moduleData, setModuleData] = useState<ModuleData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Add a state to track if we've shown loading state at least once
@@ -44,6 +45,15 @@ export default function NewModuleChat() {
 
   // Generate a new chat ID - use useMemo to prevent regeneration on re-renders
   const chatId = useMemo(() => generateId(), []);
+
+  // Pre-emptively prepare the proper route to avoid 404s
+  useEffect(() => {
+    // Ensure the router knows about this chat ID
+    if (isSignedIn && moduleData && chatId) {
+      // Pre-fetch the chat route to ensure it's available
+      router.prefetch(`/${moduleName}/chat/${chatId}`);
+    }
+  }, [isSignedIn, moduleData, chatId, moduleName, router]);
 
   useEffect(() => {
     let isMounted = true; // Track component mount state
@@ -109,40 +119,90 @@ export default function NewModuleChat() {
         const userId = user?.id;
 
         if (userId) {
-          // Fetch the module
-          const response = await fetch(
-            `/api/modules?name=${decodedModuleName}`
-          );
+          // Fetch the module with more precise query
+          console.log(`Looking for module with name: "${decodedModuleName}"`);
 
-          if (response.ok) {
-            const data = await response.json();
-            const modules = data.modules || [];
+          try {
+            // First try an exact match query (case insensitive)
+            const exactMatchResponse = await fetch(
+              `/api/modules?name=${encodeURIComponent(
+                decodedModuleName
+              )}&exactMatch=true`
+            );
 
-            if (modules.length > 0 && isMounted) {
-              const formattedModule = {
-                ...modules[0],
-                resources: modules[0].resources || [],
-              };
-              setModuleData(formattedModule);
-              setIsLoading(false);
+            if (exactMatchResponse.ok) {
+              const data = await exactMatchResponse.json();
+              const modules = data.modules || [];
 
-              // Update lastStudied timestamp (silently) - don't await this
-              fetch(`/api/modules/${modules[0].id}`, {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  lastStudied: new Date().toISOString(),
-                }),
-              }).catch((e) => console.error("Error updating lastStudied:", e));
+              if (modules.length > 0 && isMounted) {
+                console.log(`Found exact match for module: ${modules[0].name}`);
+                const formattedModule = {
+                  ...modules[0],
+                  resources: modules[0].resources || [],
+                };
+                setModuleData(formattedModule);
+                setIsLoading(false);
+
+                // Update lastStudied timestamp (silently)
+                fetch(`/api/modules/${modules[0].id}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    lastStudied: new Date().toISOString(),
+                  }),
+                }).catch((e) =>
+                  console.error("Error updating lastStudied:", e)
+                );
+
+                return;
+              }
+            }
+
+            // If no exact match, try a fuzzy match query
+            const response = await fetch(
+              `/api/modules?name=${encodeURIComponent(decodedModuleName)}`
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              const modules = data.modules || [];
+
+              if (modules.length > 0 && isMounted) {
+                console.log(`Found fuzzy match for module: ${modules[0].name}`);
+                const formattedModule = {
+                  ...modules[0],
+                  resources: modules[0].resources || [],
+                };
+                setModuleData(formattedModule);
+                setIsLoading(false);
+
+                // Update lastStudied timestamp (silently)
+                fetch(`/api/modules/${modules[0].id}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    lastStudied: new Date().toISOString(),
+                  }),
+                }).catch((e) =>
+                  console.error("Error updating lastStudied:", e)
+                );
+              } else if (isMounted) {
+                // No module found
+                notFound();
+              }
             } else if (isMounted) {
-              // No module found
+              // Error fetching module
               notFound();
             }
-          } else if (isMounted) {
-            // Error fetching module
-            notFound();
+          } catch (error) {
+            console.error("Error loading module:", error);
+            if (isMounted) {
+              notFound();
+            }
           }
         }
       } catch (error) {

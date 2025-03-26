@@ -1,7 +1,7 @@
 import React from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import ClientSidebar from "@/components/ClientSidebar";
 import { Providers as AppProviders } from "@/lib/providers";
@@ -20,13 +20,18 @@ export const metadata: Metadata = {
   description: "AI-powered study assistant for university modules",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#ffffff",
+};
+
 // Clerk appearance config
 const clerkAppearance = {
   elements: {
     formButtonPrimary:
       "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded",
     footerActionLink: "text-blue-600 hover:text-blue-800 font-semibold",
-    card: "shadow-lg",
   },
 };
 
@@ -38,7 +43,6 @@ export default function RootLayout({
   return (
     <ClerkProvider appearance={clerkAppearance}>
       <html lang="en" suppressHydrationWarning>
-        <head />
         <body className={`${inter.className} overflow-hidden flex`}>
           <SessionProvider>
             <AppProviders>

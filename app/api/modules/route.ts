@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { SESSION_ID_KEY } from "@/lib/session";
+import { broadcastModuleCreated } from "@/lib/events";
 
 // Define a type for the module with count
 type ModuleWithCount = {
@@ -22,7 +23,8 @@ type ModuleWithCount = {
 async function processModulesRequest(
   userId: string | null,
   sessionId: string | null,
-  name?: string
+  name?: string,
+  exactMatch?: boolean
 ) {
   try {
     // Either userId or sessionId must be provided
@@ -46,17 +48,27 @@ async function processModulesRequest(
 
     // Add name filtering if provided
     if (name) {
-      // @ts-expect-error - Dynamic property assignment
-      where.name = {
-        contains: name,
-        mode: "insensitive" as const,
-      };
+      if (exactMatch) {
+        // Use equals with case insensitivity for exact match
+        // @ts-expect-error - Dynamic property assignment
+        where.name = {
+          equals: name,
+          mode: "insensitive" as const,
+        };
+      } else {
+        // Use contains with case insensitivity for fuzzy match
+        // @ts-expect-error - Dynamic property assignment
+        where.name = {
+          contains: name,
+          mode: "insensitive" as const,
+        };
+      }
     }
 
     // Fetch modules with the constructed where clause
     const modules = await prisma.module.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
+      orderBy: { createdAt: "desc" },
       include: {
         _count: {
           select: { resources: true },
@@ -90,6 +102,7 @@ export async function GET(request: NextRequest) {
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
   const name = searchParams.get("name") || undefined;
+  const exactMatch = searchParams.get("exactMatch") === "true";
 
   // Get sessionId from URL - try both parameter names for compatibility
   const sessionIdFromParam = searchParams.get("sessionId");
@@ -104,7 +117,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return processModulesRequest(userId || null, sessionId || null, name);
+  return processModulesRequest(
+    userId || null,
+    sessionId || null,
+    name,
+    exactMatch
+  );
 }
 
 // POST /api/modules - Create a new module
@@ -161,6 +179,18 @@ export async function POST(request: NextRequest) {
     // Create the module with Prisma
     const moduleData = await prisma.module.create({ data });
     console.log("Created module:", JSON.stringify(moduleData, null, 2));
+
+    // Broadcast event for real-time updates
+    const targetId = userId || sessionId;
+    if (targetId) {
+      console.log(`Broadcasting module creation event to client ${targetId}`);
+      const broadcastResult = broadcastModuleCreated(moduleData, [targetId]);
+      console.log("Broadcast result:", broadcastResult);
+    } else {
+      console.log(
+        "No target ID available for broadcasting module creation event"
+      );
+    }
 
     return NextResponse.json(moduleData);
   } catch (error) {

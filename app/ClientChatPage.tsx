@@ -80,6 +80,27 @@ export default function ClientChatPage({
   // Get the session ID from local storage for anonymous users
   const [sessionId, setSessionId] = React.useState<string | null>(null);
 
+  // Get access to the sidebar's addOptimisticChat function
+  // This allows us to update the chat history immediately when sending a message
+  const sidebarChatUpdater = React.useRef<
+    ((title: string, moduleId: string | null) => string) | null
+  >(null);
+
+  // Connect to the optimistic chat updater if available in the global window object
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const win = window as unknown as {
+        __sidebarChatUpdater?: (
+          title: string,
+          moduleId: string | null
+        ) => string;
+      };
+      if (win.__sidebarChatUpdater) {
+        sidebarChatUpdater.current = win.__sidebarChatUpdater;
+      }
+    }
+  }, []);
+
   // Load sessionId from localStorage on component mount (client-side only)
   React.useEffect(() => {
     if (typeof window !== "undefined" && !isAuthenticated) {
@@ -128,18 +149,20 @@ export default function ClientChatPage({
 
           if (currentPath === "/chat" && !activeModule) {
             // Only update URL if we're on the main chat page and not in a module
-            window.history.replaceState({}, "", `/chat/${chatId}`);
+            router.replace(`/chat/${chatId}`, { scroll: false });
           } else if (activeModule && moduleDetails) {
             // For module chats, update URL to the proper format
             const encodedName = encodeModuleSlug(moduleDetails.name);
 
-            // Check if we're on a module path without chat ID
-            if (currentPath === `/${encodedName}/chat`) {
-              window.history.replaceState(
-                {},
-                "",
-                `/${encodedName}/chat/${chatId}`
-              );
+            // More flexible path handling for module chats
+            // This will work for both initial module chat pages and existing chat pages
+            if (currentPath.includes(`/${encodedName}/chat`)) {
+              // Check if we need to update the URL (if it doesn't already contain the chat ID)
+              if (!currentPath.endsWith(`/${chatId}`)) {
+                const newPath = `/${encodedName}/chat/${chatId}`;
+                console.log(`Updating URL to: ${newPath}`);
+                router.replace(newPath, { scroll: false });
+              }
             }
           }
         }
@@ -155,6 +178,7 @@ export default function ClientChatPage({
       isAuthenticated,
       moduleDetails,
       sessionId,
+      router,
     ]
   );
 
@@ -170,21 +194,202 @@ export default function ClientChatPage({
     null
   );
   // Default model name - we'll try to retrieve it dynamically if possible
-  const [modelName, setModelName] = React.useState<string>("Gemini 2.0 Flash");
+  const [modelName, setModelName] = React.useState<string>("Gemini Flash");
 
-  const copyToClipboard = (text: string, messageId: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedMessageId(messageId);
-      setTimeout(() => setCopiedMessageId(null), 2000);
-    });
-  };
+  const copyToClipboard = React.useCallback(
+    (text: string, messageId: string) => {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedMessageId(messageId);
+        setTimeout(() => setCopiedMessageId(null), 2000);
+      });
+    },
+    []
+  );
 
-  const navigateToModuleDetails = () => {
+  const navigateToModuleDetails = React.useCallback(() => {
     if (moduleDetails) {
       const encodedName = encodeModuleSlug(moduleDetails.name);
       router.push(`/modules/${encodedName}`);
     }
-  };
+  }, [moduleDetails, router]);
+
+  // Optimize message rendering with useMemo
+  const renderedMessages = React.useMemo(() => {
+    return messages.reduce(
+      (result: React.ReactNode[], message: Message, index: number) => {
+        if (message.role === "user") {
+          // For user messages, we check if the next message is from AI
+          const nextMessage = messages[index + 1];
+          const hasAIResponse = nextMessage && nextMessage.role === "assistant";
+
+          // Add the user message with its styling
+          result.push(
+            <div key={`user-${message.id}`} className="flex justify-end">
+              <div className="flex items-center gap-2 max-w-full flex-row-reverse">
+                <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground break-words">
+                  <div className="whitespace-pre-wrap">{message.content}</div>
+                </div>
+              </div>
+            </div>
+          );
+
+          // If there's an AI response to this message, add it directly below
+          if (hasAIResponse) {
+            result.push(
+              <div
+                key={`ai-${nextMessage.id}`}
+                className="mt-4 text-gray-800 dark:text-gray-200 group relative"
+              >
+                <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                  <ReactMarkdown key={`md-${nextMessage.id}`}>
+                    {nextMessage.content}
+                  </ReactMarkdown>
+                </div>
+                <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
+                  <button
+                    key={`btn-${nextMessage.id}`}
+                    onClick={() =>
+                      copyToClipboard(nextMessage.content, nextMessage.id)
+                    }
+                    className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                    aria-label="Copy response"
+                  >
+                    {copiedMessageId === nextMessage.id ? (
+                      <span
+                        key={`copied-${nextMessage.id}`}
+                        className="flex items-center gap-1"
+                      >
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span>Copied!</span>
+                      </span>
+                    ) : (
+                      <span
+                        key={`copy-${nextMessage.id}`}
+                        className="flex items-center gap-1"
+                      >
+                        <Copy className="h-4 w-4" />
+                        <span>Copy Response</span>
+                      </span>
+                    )}
+                  </button>
+                  <div
+                    key={`model-${nextMessage.id}`}
+                    className="text-xs text-muted-foreground"
+                  >
+                    Generated with {modelName}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+        } else if (index === 0 && message.role === "assistant") {
+          // Handle case where the first message is from the assistant
+          result.push(
+            <div
+              key={`assistant-${message.id}`}
+              className="text-gray-800 dark:text-gray-200 group relative"
+            >
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                <ReactMarkdown key={`md-assistant-${message.id}`}>
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+              <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
+                <button
+                  key={`btn-assistant-${message.id}`}
+                  onClick={() => copyToClipboard(message.content, message.id)}
+                  className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                  aria-label="Copy response"
+                >
+                  {copiedMessageId === message.id ? (
+                    <span
+                      key={`copied-assistant-${message.id}`}
+                      className="flex items-center gap-1"
+                    >
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>Copied!</span>
+                    </span>
+                  ) : (
+                    <span
+                      key={`copy-assistant-${message.id}`}
+                      className="flex items-center gap-1"
+                    >
+                      <Copy className="h-4 w-4" />
+                      <span>Copy Response</span>
+                    </span>
+                  )}
+                </button>
+                <div
+                  key={`model-assistant-${message.id}`}
+                  className="text-xs text-muted-foreground"
+                >
+                  Generated with {modelName}
+                </div>
+              </div>
+            </div>
+          );
+        }
+        // We skip AI messages as they're handled alongside their corresponding user messages
+        return result;
+      },
+      []
+    );
+  }, [messages, copiedMessageId, copyToClipboard, modelName]);
+
+  // Add a callback for when the first message is sent
+  const handleFirstMessageSent = React.useCallback(
+    (message: string) => {
+      // Update the chat history optimistically when the first message is sent
+      if (sidebarChatUpdater.current && messages.length === 0) {
+        // Create a chat title from the first message
+        const chatTitle =
+          message.substring(0, 30) + (message.length > 30 ? "..." : "");
+        sidebarChatUpdater.current(chatTitle, activeModule);
+
+        // Log for anonymous users
+        if (!isAuthenticated && sessionId) {
+          console.log(
+            `Creating optimistic chat for anonymous user with sessionId: ${sessionId}`
+          );
+        }
+      }
+    },
+    [messages.length, isAuthenticated, activeModule, sessionId]
+  );
+
+  // Handle form submission with optimized event handler
+  const handleFormSubmit = React.useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (input.trim() && !chatLoading) {
+        // Track if this is the first message for the optimistic UI update
+        const isFirstMessage = messages.length === 0;
+
+        // Submit the form
+        handleSubmit(e);
+
+        // If this is the first message, trigger the optimistic UI update
+        if (isFirstMessage) {
+          handleFirstMessageSent(input.trim());
+        }
+      }
+    },
+    [input, chatLoading, handleSubmit, messages.length, handleFirstMessageSent]
+  );
+
+  // Handle keyboard event
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (input.trim() && !chatLoading) {
+          const form = e.currentTarget.form;
+          if (form) form.requestSubmit();
+        }
+      }
+    },
+    [input, chatLoading]
+  );
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -233,115 +438,7 @@ export default function ClientChatPage({
                 </div>
               ) : (
                 <div className="flex flex-col space-y-8 pt-4 pb-8 pl-8 pr-6">
-                  {messages.reduce(
-                    (
-                      result: React.ReactNode[],
-                      message: Message,
-                      index: number
-                    ) => {
-                      if (message.role === "user") {
-                        // For user messages, we check if the next message is from AI
-                        const nextMessage = messages[index + 1];
-                        const hasAIResponse =
-                          nextMessage && nextMessage.role === "assistant";
-
-                        // Add the user message with its styling
-                        result.push(
-                          <div key={message.id} className="flex justify-end">
-                            <div className="flex items-center gap-2 max-w-full flex-row-reverse">
-                              <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground break-words">
-                                <div className="whitespace-pre-wrap">
-                                  {message.content}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-
-                        // If there's an AI response to this message, add it directly below
-                        if (hasAIResponse) {
-                          result.push(
-                            <div
-                              key={nextMessage.id}
-                              className="mt-4 text-gray-800 dark:text-gray-200 group relative"
-                            >
-                              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                                <ReactMarkdown>
-                                  {nextMessage.content}
-                                </ReactMarkdown>
-                              </div>
-                              <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
-                                <button
-                                  onClick={() =>
-                                    copyToClipboard(
-                                      nextMessage.content,
-                                      nextMessage.id
-                                    )
-                                  }
-                                  className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-                                  aria-label="Copy response"
-                                >
-                                  {copiedMessageId === nextMessage.id ? (
-                                    <span className="flex items-center gap-1">
-                                      <Check className="h-4 w-4 text-green-500" />
-                                      <span>Copied!</span>
-                                    </span>
-                                  ) : (
-                                    <span className="flex items-center gap-1">
-                                      <Copy className="h-4 w-4" />
-                                      <span>Copy Response</span>
-                                    </span>
-                                  )}
-                                </button>
-                                <div className="text-xs text-muted-foreground">
-                                  Generated with {modelName}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-                      } else if (index === 0 && message.role === "assistant") {
-                        // Handle case where the first message is from the assistant
-                        result.push(
-                          <div
-                            key={message.id}
-                            className="text-gray-800 dark:text-gray-200 group relative"
-                          >
-                            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                              <ReactMarkdown>{message.content}</ReactMarkdown>
-                            </div>
-                            <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
-                              <button
-                                onClick={() =>
-                                  copyToClipboard(message.content, message.id)
-                                }
-                                className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-                                aria-label="Copy response"
-                              >
-                                {copiedMessageId === message.id ? (
-                                  <span className="flex items-center gap-1">
-                                    <Check className="h-4 w-4 text-green-500" />
-                                    <span>Copied!</span>
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1">
-                                    <Copy className="h-4 w-4" />
-                                    <span>Copy Response</span>
-                                  </span>
-                                )}
-                              </button>
-                              <div className="text-xs text-muted-foreground">
-                                Generated with {modelName}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      // We skip AI messages as they're handled alongside their corresponding user messages
-                      return result;
-                    },
-                    []
-                  )}
+                  {renderedMessages}
                 </div>
               )}
               {chatLoading && (
@@ -356,7 +453,7 @@ export default function ClientChatPage({
         {/* Input form - Now inside the scrollable area but fixed at bottom */}
         <div className="sticky bottom-0 bg-transparent">
           <div className="max-w-3xl mx-auto pl-8 pr-6">
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleFormSubmit}>
               <div className="relative">
                 <Textarea
                   placeholder="Type your message here..."
@@ -364,15 +461,7 @@ export default function ClientChatPage({
                   onChange={handleInputChange}
                   className="flex-1 min-h-[100px] max-h-[120px] border-2 rounded-t-lg rounded-b-none resize-none pr-14 w-full border-b-0"
                   rows={2}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      if (input.trim() && !chatLoading) {
-                        const form = e.currentTarget.form;
-                        if (form) form.requestSubmit();
-                      }
-                    }
-                  }}
+                  onKeyDown={handleKeyDown}
                 />
                 <Button
                   type="submit"

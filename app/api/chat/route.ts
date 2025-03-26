@@ -5,11 +5,14 @@ import { getModuleContext } from "@/lib/modules";
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
+import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
+import { SESSION_ID_KEY } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { messages, chatId, moduleId } = body;
+    const sessionId = body.sessionId || null;
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -19,6 +22,14 @@ export async function POST(request: Request) {
 
     // Ensure we have a valid chatId - generate one if not provided
     const requestedChatId = chatId || generateId();
+
+    // Both userId and sessionId can't be null if we want to save history
+    if (shouldSaveHistory && !userId && !sessionId) {
+      return Response.json(
+        { error: "Session ID or authentication required to save chat history" },
+        { status: 401 }
+      );
+    }
 
     let user = null;
 
@@ -32,7 +43,6 @@ export async function POST(request: Request) {
 
         // If user doesn't exist, create a new one using Clerk data
         if (!user && currentUserObj) {
-          console.log(`Creating new user for Clerk ID: ${userId}`);
           user = await prisma.user.create({
             data: {
               id: userId,
@@ -44,18 +54,21 @@ export async function POST(request: Request) {
                 : "Anonymous User",
             },
           });
-          console.log(`User created: ${user.id}`);
         }
 
         if (!user) {
           console.error(`Failed to find or create user with ID: ${userId}`);
-          return new Response("User not found and could not be created", {
-            status: 500,
-          });
+          return Response.json(
+            { error: "User not found and could not be created" },
+            { status: 500 }
+          );
         }
       } catch (error) {
         console.error("Error finding/creating user:", error);
-        return new Response("Error processing user data", { status: 500 });
+        return Response.json(
+          { error: "Error processing user data" },
+          { status: 500 }
+        );
       }
     }
 
@@ -167,16 +180,37 @@ Format your responses using Markdown:
     try {
       // Use the streamText function from the AI SDK
       const result = await streamText({
-        model: google("models/gemini-2.0-flash"),
+        model: google("gemini-2.0-flash"),
         messages: formattedMessages,
         temperature: 0.7,
         topP: 0.95,
         maxTokens: 2048,
         onFinish: async ({ text }) => {
-          // Save chat history for authenticated users only
-          if (shouldSaveHistory && userId) {
+          // Save chat history for authenticated users or anonymous users with sessionId
+          if (shouldSaveHistory && (userId || sessionId)) {
             try {
-              await prisma.chat.upsert({
+              const isNewChat = !chatId; // No chatId means it's a new chat
+
+              // Create data for upsert
+              const chatData = {
+                id: requestedChatId,
+                title: chatTitle,
+                messages: messages.concat([
+                  { role: "assistant", content: text },
+                ]),
+                moduleId: isModuleMode ? moduleId : null,
+              };
+
+              // Add either userId or sessionId based on authentication state
+              if (userId) {
+                // @ts-expect-error - Known property
+                chatData.userId = userId;
+              } else if (sessionId) {
+                // @ts-expect-error - Known property
+                chatData.sessionId = sessionId;
+              }
+
+              const savedChat = await prisma.chat.upsert({
                 where: { id: requestedChatId },
                 update: {
                   messages: messages.concat([
@@ -184,17 +218,58 @@ Format your responses using Markdown:
                   ]),
                   updatedAt: new Date(),
                 },
-                create: {
-                  id: requestedChatId,
-                  title: chatTitle,
-                  messages: messages.concat([
-                    { role: "assistant", content: text },
-                  ]),
-                  userId: userId,
-                  moduleId: isModuleMode ? moduleId : null,
-                },
+                create: chatData,
               });
-              console.log(`Chat history saved for user: ${userId}`);
+
+              // Only broadcast for new chats
+              if (isNewChat) {
+                // Create single chat creation event
+                const chatEventData = {
+                  id: savedChat.id,
+                  title: savedChat.title,
+                  moduleId: savedChat.moduleId,
+                  createdAt: savedChat.createdAt,
+                  updatedAt: savedChat.updatedAt,
+                  sessionId: sessionId,
+                };
+
+                // Determine target ID for broadcast
+                const targetId = userId || sessionId;
+
+                if (targetId) {
+                  console.log(
+                    `Broadcasting chat creation to ${
+                      userId ? "user " + userId : "session " + sessionId
+                    }`
+                  );
+                  broadcastChatCreated(chatEventData, [targetId]);
+                }
+              } else {
+                // For existing chats, broadcast message created event
+                try {
+                  const messageData = {
+                    id: generateId(),
+                    chatId: savedChat.id,
+                    chatTitle: savedChat.title,
+                    updatedAt: savedChat.updatedAt.toISOString(),
+                  };
+
+                  const targetId = userId || sessionId;
+
+                  if (targetId) {
+                    console.log(
+                      `Broadcasting message creation for chat ${
+                        savedChat.id
+                      } to ${
+                        userId ? "user " + userId : "session " + sessionId
+                      }`
+                    );
+                    broadcastMessageCreated(messageData, [targetId]);
+                  }
+                } catch (error) {
+                  console.error("Error broadcasting message creation:", error);
+                }
+              }
             } catch (error) {
               console.error("Error saving chat history:", error);
             }
@@ -210,38 +285,29 @@ Format your responses using Markdown:
       // Return a new response with our custom headers
       return new Response(response.body, {
         headers: headers,
+        status: 200,
       });
     } catch (aiError) {
       console.error("Error with AI model:", aiError);
 
       // Fallback to a basic error message
-      return new Response(
-        JSON.stringify({
+      return Response.json(
+        {
           error:
             "Unable to generate a response. The AI service may be temporarily unavailable.",
           details: aiError instanceof Error ? aiError.message : String(aiError),
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        },
+        { status: 500 }
       );
     }
   } catch (error) {
     console.error("Error in chat route:", error);
-    return new Response(
-      JSON.stringify({
+    return Response.json(
+      {
         error: "Error processing your request",
         details: error instanceof Error ? error.message : String(error),
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
+      },
+      { status: 500 }
     );
   }
 }
