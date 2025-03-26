@@ -49,25 +49,64 @@ export const api = {
     const sessionId = getOrCreateSessionIdClient();
     console.log("Client: Using session ID for createModule:", sessionId);
 
-    const queryString = sessionId ? `?sessionId=${sessionId}` : "";
-    console.log(`Client: Making request to /api/modules${queryString}`);
-
-    const response = await fetch(`/api/modules${queryString}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.error || `Failed to create module: ${response.statusText}`
-      );
+    // Add retry logic for session ID
+    let retryCount = 0;
+    while (!sessionId && retryCount < 3) {
+      console.log(`Retrying to get session ID (attempt ${retryCount + 1})`);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const newSessionId = getOrCreateSessionIdClient();
+      if (newSessionId) {
+        console.log("Successfully got session ID after retry");
+        break;
+      }
+      retryCount++;
     }
 
-    return response.json();
+    // Ensure we have a valid session ID
+    if (!sessionId) {
+      console.error(
+        "No session ID available for module creation after retries"
+      );
+      throw new Error("Failed to get session ID");
+    }
+
+    const queryString = `?sessionId=${sessionId}`;
+    console.log(`Client: Making request to /api/modules${queryString}`);
+
+    try {
+      const response = await fetch(`/api/modules${queryString}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "same-origin", // Add this to ensure cookies are sent
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error response from createModule:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          sessionId,
+        });
+        throw new Error(
+          errorData.error || `Failed to create module: ${response.statusText}`
+        );
+      }
+
+      const responseData = await response.json();
+      console.log("Module created successfully:", responseData);
+      return responseData;
+    } catch (error) {
+      console.error("Exception in createModule:", {
+        error,
+        sessionId,
+        data,
+      });
+      throw error;
+    }
   },
 
   /**

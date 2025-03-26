@@ -75,7 +75,7 @@ function ClientSidebarContent({
 
   // Fetch modules function - memoized with useCallback
   const fetchModules = useCallback(async () => {
-    if (!isLoaded || !isSignedIn) return { modules: [] };
+    if (!isLoaded) return { modules: [] };
 
     try {
       console.log(`Fetching modules for sidebar`);
@@ -85,17 +85,34 @@ function ClientSidebarContent({
       console.error("Error fetching modules:", error);
       return { modules: [] };
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded]);
 
   // Fetch chat history function - memoized with useCallback
   const fetchChats = useCallback(async () => {
-    if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded) return;
 
     console.log("Fetching chats...");
     try {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
-      const url = `/api/chat/history?t=${timestamp}`;
+      let url = `/api/chat/history?t=${timestamp}`;
+
+      // For anonymous users, add the sessionId
+      if (!isSignedIn) {
+        const sessionId = localStorage.getItem("anonymous_session_id");
+        if (sessionId) {
+          url += `&sessionId=${sessionId}`;
+          console.log(
+            `Requesting chats for anonymous user with sessionId: ${sessionId}`
+          );
+        } else {
+          console.log(
+            "No session ID found for anonymous user, returning empty chats"
+          );
+          return [];
+        }
+      }
+
       console.log(`Requesting chats from: ${url}`);
 
       const response = await fetch(url, {
@@ -164,8 +181,18 @@ function ClientSidebarContent({
     if (!isLoaded) return;
 
     let url = `/api/events`;
+
+    // Add either userId for authenticated users or get sessionId for anonymous users
     if (userId) {
       url += `?userId=${userId}`;
+    } else {
+      // For anonymous users, get the session ID from localStorage
+      const sessionId = localStorage.getItem("anonymous_session_id");
+      if (sessionId) {
+        url += `?sessionId=${sessionId}`;
+      } else {
+        console.warn("SSE: No sessionId found for anonymous user");
+      }
     }
 
     let es: EventSource | null = null;
@@ -202,11 +229,39 @@ function ClientSidebarContent({
       es.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log("SSE event received:", data.type);
+          console.log("SSE event received:", data);
 
           // Handle different event types
           if (data.type === "CONNECTION_ACK") {
             // Connection confirmed by server
+            console.log("SSE connection acknowledged");
+          } else if (data.type === EVENT_TYPES.MODULE_CREATED) {
+            // Module created event
+            console.log("SSE: Module created event received, data:", data);
+            fetchModules().then((data) => {
+              if (data.modules) {
+                console.log("SSE: Updating modules list with:", data.modules);
+                setModules(data.modules);
+              }
+            });
+          } else if (data.type === EVENT_TYPES.MODULE_UPDATED) {
+            // Module updated event
+            console.log("SSE: Module updated event received, data:", data);
+            // Only refresh modules if this is not part of a data migration
+            if (!data.isDataMigration) {
+              fetchModules().then((data) => {
+                if (data.modules) {
+                  console.log("SSE: Updating modules list with:", data.modules);
+                  setModules(data.modules);
+                }
+              });
+            }
+          } else if (data.type === EVENT_TYPES.MODULE_DELETED) {
+            // Remove the deleted module from the list
+            console.log("SSE: Module deleted event received, data:", data);
+            setModules((prevModules) =>
+              prevModules.filter((module) => module.id !== data.data.id)
+            );
           } else if (data.type === "HEARTBEAT") {
             // Server heartbeat received
           } else if (data.type === "chat.created") {
@@ -291,20 +346,24 @@ function ClientSidebarContent({
               refreshChatHistory();
             }
           } else if (
-            data.type === EVENT_TYPES.MODULE_CREATED ||
-            data.type === EVENT_TYPES.MODULE_UPDATED
+            data.type === EVENT_TYPES.DATA_MIGRATED ||
+            data.type === "data.migrated"
           ) {
-            // Fetch updated modules list
+            // Data migration event occurred, refresh both modules and chats
+            console.log("SSE: Data migration event received, refreshing data");
+
+            // Refresh modules
             fetchModules().then((data) => {
               if (data.modules) {
+                console.log(
+                  `SSE: Updated modules list with ${data.modules.length} modules after migration`
+                );
                 setModules(data.modules);
               }
             });
-          } else if (data.type === EVENT_TYPES.MODULE_DELETED) {
-            // Remove the deleted module from the list
-            setModules((prevModules) =>
-              prevModules.filter((module) => module.id !== data.data.id)
-            );
+
+            // Refresh chat history
+            refreshChatHistory();
           } else {
             // Unknown event type
             console.log("Unknown event type received:", data.type);
@@ -321,7 +380,14 @@ function ClientSidebarContent({
       if (es && es.readyState === EventSource.OPEN) {
         try {
           // Send a ping to keep the connection alive
-          fetch("/api/events/ping").catch(() => {
+          let pingUrl = "/api/events/ping";
+          if (!userId) {
+            const sessionId = localStorage.getItem("anonymous_session_id");
+            if (sessionId) {
+              pingUrl += `?sessionId=${sessionId}`;
+            }
+          }
+          fetch(pingUrl).catch(() => {
             // If ping fails, close and reconnect
             if (es) {
               es.close();
@@ -367,7 +433,7 @@ function ClientSidebarContent({
 
     // Fetch initial chat history
     refreshChatHistory();
-  }, [isLoaded, isSignedIn, fetchModules, refreshChatHistory]);
+  }, [isLoaded, fetchModules, refreshChatHistory]);
 
   // Get header height for positioning expand button
   const headerRef = useRef<HTMLDivElement>(null);

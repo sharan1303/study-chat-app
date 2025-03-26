@@ -132,12 +132,10 @@ export const ModuleForm = ({
         // For navigation if name changed
         if (values.name !== initialData.name) {
           // If name changed, navigate to new URL using router
-          setTimeout(() => {
-            const formattedName = encodeModuleSlug(values.name);
-            router.push(`/modules/${formattedName}`);
-          }, 600);
+          const formattedName = encodeModuleSlug(values.name);
+          router.push(`/modules/${formattedName}`);
         }
-        // No need for else clause with page reload - SSE will handle it
+        // SSE will handle the update, no need for additional refreshes
       } else {
         // Create new module
         console.log("Creating new module");
