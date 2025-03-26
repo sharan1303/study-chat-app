@@ -427,6 +427,28 @@ function ClientSidebarContent({
     };
   }, [isLoaded, userId, pathname, router, fetchModules, refreshChatHistory]);
 
+  // Listen for custom chat deletion events
+  useEffect(() => {
+    const handleChatDeleted = (event: CustomEvent<{ chatId: string }>) => {
+      const { chatId } = event.detail;
+      console.log(`Custom chat-deleted event received for chat: ${chatId}`);
+
+      // Update the chat list by filtering out the deleted chat
+      setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
+    };
+
+    // Add event listener
+    window.addEventListener("chat-deleted", handleChatDeleted as EventListener);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener(
+        "chat-deleted",
+        handleChatDeleted as EventListener
+      );
+    };
+  }, []);
+
   // Initial data fetching
   useEffect(() => {
     if (!isLoaded) return;

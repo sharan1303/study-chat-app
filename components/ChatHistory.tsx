@@ -45,11 +45,22 @@ export default function ChatHistory({
   const router = useRouter();
   const pathname = usePathname();
   const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
+  const [sessionId, setSessionId] = React.useState<string | null>(null);
 
   // Debug: Log when chat data changes
   React.useEffect(() => {
     console.log("ChatHistory received updated chats:", chats.length);
   }, [chats]);
+
+  // Load sessionId from localStorage on component mount (client-side only)
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedSessionId = localStorage.getItem("anonymous_session_id");
+      if (storedSessionId) {
+        setSessionId(storedSessionId);
+      }
+    }
+  }, []);
 
   const isActiveChat = (chat: Chat) => {
     if (pathname === `/chat/${chat.id}`) {
@@ -66,15 +77,34 @@ export default function ChatHistory({
 
   const handleDeleteChat = async (chat: Chat) => {
     try {
-      const response = await fetch(`/api/chat/${chat.id}`, {
+      // Build URL with sessionId for anonymous users
+      let url = `/api/chat/${chat.id}`;
+      if (sessionId) {
+        url += `?sessionId=${sessionId}`;
+      }
+
+      console.log(`Deleting chat with ID: ${chat.id}, URL: ${url}`);
+
+      const response = await fetch(url, {
         method: "DELETE",
       });
 
+      console.log(`Delete response status: ${response.status}`);
+
       if (!response.ok) {
-        throw new Error("Failed to delete chat");
+        const errorText = await response.text();
+        console.error(`Error deleting chat: ${errorText}`);
+        throw new Error(`Failed to delete chat: ${errorText}`);
       }
 
       toast.success("Chat deleted successfully");
+
+      // Remove deleted chat from UI immediately
+      window.dispatchEvent(
+        new CustomEvent("chat-deleted", {
+          detail: { chatId: chat.id },
+        })
+      );
 
       // If we're on the deleted chat's page, redirect to /chat
       if (isActiveChat(chat)) {
