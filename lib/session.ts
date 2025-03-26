@@ -37,8 +37,26 @@ export function getOrCreateSessionIdClient(): string {
       }
     }
 
-    // Also store in a cookie as backup
-    document.cookie = `${SESSION_COOKIE_NAME}=${sessionId}; path=/; max-age=31536000`; // 1 year
+    // Set cookie attributes for cross-environment compatibility
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+
+    // Determine appropriate cookie settings based on environment
+    const secure = !isLocalhost; // Only use Secure in production
+    const sameSite = "Lax"; // Good default for most applications
+
+    // Also store in a cookie as backup with proper security settings
+    document.cookie = `${SESSION_COOKIE_NAME}=${sessionId}; path=/; max-age=31536000; ${
+      secure ? "Secure;" : ""
+    } SameSite=${sameSite}`; // 1 year
+
+    console.log(
+      `Session ID set: ${sessionId.substring(
+        0,
+        8
+      )}... (secure: ${secure}, sameSite: ${sameSite})`
+    );
 
     return sessionId;
   } catch (error) {

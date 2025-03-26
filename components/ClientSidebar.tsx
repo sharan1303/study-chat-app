@@ -262,6 +262,19 @@ function ClientSidebarContent({
             setModules((prevModules) =>
               prevModules.filter((module) => module.id !== data.data.id)
             );
+          } else if (data.type === EVENT_TYPES.CHAT_DELETED) {
+            // Handle chat deletion event
+            const chatData = data.data;
+            console.log("Chat deleted event received:", chatData);
+
+            if (chatData && chatData.id) {
+              // Remove the deleted chat from the list
+              setChats((prevChats) =>
+                prevChats.filter((chat) => chat.id !== chatData.id)
+              );
+            } else {
+              console.error("Invalid chat deletion data in event:", data);
+            }
           } else if (data.type === "HEARTBEAT") {
             // Server heartbeat received
           } else if (data.type === "chat.created") {
@@ -413,6 +426,28 @@ function ClientSidebarContent({
       }
     };
   }, [isLoaded, userId, pathname, router, fetchModules, refreshChatHistory]);
+
+  // Listen for custom chat deletion events
+  useEffect(() => {
+    const handleChatDeleted = (event: CustomEvent<{ chatId: string }>) => {
+      const { chatId } = event.detail;
+      console.log(`Custom chat-deleted event received for chat: ${chatId}`);
+
+      // Update the chat list by filtering out the deleted chat
+      setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
+    };
+
+    // Add event listener
+    window.addEventListener("chat-deleted", handleChatDeleted as EventListener);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener(
+        "chat-deleted",
+        handleChatDeleted as EventListener
+      );
+    };
+  }, []);
 
   // Initial data fetching
   useEffect(() => {

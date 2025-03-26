@@ -3,6 +3,17 @@
 import { Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -11,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bot, ArrowLeft, Info } from "lucide-react";
+import { Bot, ArrowLeft, Info, Trash } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -29,11 +40,16 @@ import { UserProfile } from "@clerk/nextjs";
 import SettingsLoading from "./loading";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import React from "react";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
   const { isLoaded, user } = useUser();
   const { signOut } = useAuth();
+  const router = useRouter();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
   // AI models available in the application
   const aiModels = [
@@ -56,6 +72,25 @@ function SettingsContent() {
       status: "Coming soon",
     },
   ] as const;
+
+  const handleDeleteAllChats = async () => {
+    try {
+      const response = await fetch("/api/chat/clear", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete chat history");
+      }
+
+      toast.success("Chat history deleted successfully");
+      setIsDeleteDialogOpen(false);
+      router.refresh();
+    } catch (error) {
+      console.error("Error deleting chat history:", error);
+      toast.error("Failed to delete chat history");
+    }
+  };
 
   if (!isLoaded) {
     return <SettingsLoading />;
@@ -250,12 +285,52 @@ function SettingsContent() {
                         <Switch defaultChecked />
                       </div>
 
-                      <Separator />
+                      <Separator className="my-6" />
 
-                      <div>
-                        <Button variant="outline">
-                          Clear All Chat History
-                        </Button>
+                      <div className="rounded-lg border border-destructive/50 bg-destructive/2 p-6">
+                        <h3 className="text-lg font-semibold text-destructive mb-2">
+                          Danger Zone
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Permanently delete your history from both your local
+                          device and our servers.*
+                        </p>
+                        <AlertDialog
+                          open={isDeleteDialogOpen}
+                          onOpenChange={setIsDeleteDialogOpen}
+                        >
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              className="w-full sm:w-auto"
+                            >
+                              <Trash className="w-4 h-4 mr-2" />
+                              Delete Chat History
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Are you absolutely sure?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will
+                                permanently delete all your chat history from
+                                our servers and remove all chat data from your
+                                local device.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleDeleteAllChats}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete All Chats
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </CardContent>
