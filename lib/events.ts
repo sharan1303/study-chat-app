@@ -23,6 +23,7 @@ export const EVENT_TYPES = {
   MODULE_CREATED: "module.created",
   MODULE_UPDATED: "module.updated",
   MODULE_DELETED: "module.deleted",
+  MESSAGE_CREATED: "message.created",
 };
 
 // Get access to the global SSE clients array
@@ -82,6 +83,18 @@ export function broadcastChatCreated(
   targetIds?: string[]
 ) {
   return broadcastEvent(EVENT_TYPES.CHAT_CREATED, chat, targetIds);
+}
+
+export function broadcastMessageCreated(
+  messageData: {
+    id: string;
+    chatId: string;
+    chatTitle: string;
+    updatedAt: string;
+  },
+  targetIds?: string[]
+) {
+  return broadcastEvent(EVENT_TYPES.MESSAGE_CREATED, messageData, targetIds);
 }
 
 export function broadcastModuleCreated(module: Module, targetIds?: string[]) {

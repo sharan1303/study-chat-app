@@ -113,11 +113,17 @@ function ClientSidebarContent({
       }
 
       const data = await response.json();
-      console.log(
-        `Fetch successful, received ${data.length} chats with data:`,
-        data
-      );
-      return data;
+      console.log(`Fetch successful, received ${data.length} chats`);
+
+      // Sort chats by updatedAt date (newest first)
+      const sortedChats = [...data].sort((a, b) => {
+        return (
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
+      });
+
+      console.log("Chats sorted by most recent first");
+      return sortedChats;
     } catch (error) {
       console.error("Error fetching chats:", error);
       return [];
@@ -211,7 +217,7 @@ function ClientSidebarContent({
             if (chatData && chatData.id) {
               console.log("Chat created event received with ID:", chatData.id);
 
-              // Refresh chat list when a new chat is created
+              // Immediately fetch the full chat list instead of trying to manipulate the state
               refreshChatHistory();
 
               // Only redirect if we're on the main chat page (new chat)
@@ -229,11 +235,9 @@ function ClientSidebarContent({
             if (messageData && messageData.chatId) {
               console.log("Message created for chat ID:", messageData.chatId);
 
-              // Refresh chat list to update chat titles and timestamps
-              console.log("Triggering chat history refresh due to new message");
-              setTimeout(() => {
-                refreshChatHistory();
-              }, 500); // Small delay to ensure DB has updated
+              // Immediately fetch the full chat list for all message updates
+              // This ensures we have the most up-to-date list without duplication issues
+              refreshChatHistory();
             } else {
               console.error("Invalid message data in event:", data);
             }
@@ -293,7 +297,7 @@ function ClientSidebarContent({
         }
       }
     };
-  }, [isLoaded, userId, pathname, router, refreshChatHistory]);
+  }, [isLoaded, userId, pathname, router, fetchModules, refreshChatHistory]);
 
   // Initial data fetching
   useEffect(() => {
@@ -430,42 +434,6 @@ function ClientSidebarContent({
 
       {state === "expanded" && (
         <SidebarFooter className="p-0">
-          {/* {process.env.NODE_ENV === "development" && (
-            <div className="px-4 py-2 border-t space-y-2">
-              <p className="text-xs font-semibold">Debug Tools</p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={() => refreshChatHistory()}
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Refresh Chats
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(
-                        `/api/events/ping?broadcast=true${
-                          userId ? `&userId=${userId}` : ""
-                        }`
-                      );
-                      const data = await response.json();
-                      console.log("Test event sent:", data);
-                    } catch (error) {
-                      console.error("Error sending test event:", error);
-                    }
-                  }}
-                >
-                  Test Event
-                </Button>
-              </div>
-            </div>
-          )} */}
           <UserSection />
         </SidebarFooter>
       )}

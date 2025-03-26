@@ -5,7 +5,7 @@ import { getModuleContext } from "@/lib/modules";
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
-import { broadcastChatCreated } from "@/lib/events";
+import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
 
 export async function POST(request: Request) {
   try {
@@ -202,7 +202,7 @@ Format your responses using Markdown:
 
               // Only broadcast for new chats
               if (isNewChat) {
-                // Broadcast chat creation event for real-time updates
+                // Create single chat creation event
                 const chatData = {
                   id: savedChat.id,
                   title: savedChat.title,
@@ -212,29 +212,29 @@ Format your responses using Markdown:
                   updatedAt: savedChat.updatedAt,
                 };
 
-                // Attempt immediate and delayed broadcasts
+                // Simple one-time broadcast with no retries or duplicates
                 try {
-                  // Direct targeted broadcast
-                  console.log(
-                    `Broadcasting chat creation to user ${userId}`,
-                    chatData
-                  );
-                  const result = broadcastChatCreated(chatData, [userId]);
-                  console.log(`Broadcast result:`, result);
+                  console.log(`Broadcasting chat creation to user ${userId}`);
+                  broadcastChatCreated(chatData, [userId]);
+                } catch (error) {
+                  console.error("Error broadcasting chat creation:", error);
+                }
+              } else {
+                // For existing chats, broadcast message created event
+                try {
+                  const messageData = {
+                    id: generateId(),
+                    chatId: savedChat.id,
+                    chatTitle: savedChat.title,
+                    updatedAt: savedChat.updatedAt.toISOString(),
+                  };
 
-                  // Try a delayed broadcast to catch reconnections
-                  setTimeout(() => {
-                    // Try both targeted and fallback broadcasts
-                    console.log(`Delayed broadcast for user ${userId}`);
-                    broadcastChatCreated(chatData, [userId]);
-                    console.log("Fallback broadcast to all clients");
-                    broadcastChatCreated(chatData);
-                  }, 1000);
-                } catch (broadcastError) {
-                  console.error(
-                    "Error broadcasting chat creation:",
-                    broadcastError
+                  console.log(
+                    `Broadcasting message creation for chat ${savedChat.id}`
                   );
+                  broadcastMessageCreated(messageData, [userId]);
+                } catch (error) {
+                  console.error("Error broadcasting message creation:", error);
                 }
               }
             } catch (error) {
