@@ -75,7 +75,7 @@ function ClientSidebarContent({
 
   // Fetch modules function - memoized with useCallback
   const fetchModules = useCallback(async () => {
-    if (!isLoaded || !isSignedIn) return { modules: [] };
+    if (!isLoaded) return { modules: [] };
 
     try {
       console.log(`Fetching modules for sidebar`);
@@ -85,7 +85,7 @@ function ClientSidebarContent({
       console.error("Error fetching modules:", error);
       return { modules: [] };
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded]);
 
   // Fetch chat history function - memoized with useCallback
   const fetchChats = useCallback(async () => {
@@ -164,8 +164,16 @@ function ClientSidebarContent({
     if (!isLoaded) return;
 
     let url = `/api/events`;
+
+    // Add either userId for authenticated users or get sessionId for anonymous users
     if (userId) {
       url += `?userId=${userId}`;
+    } else {
+      // For anonymous users, get the session ID from localStorage
+      const sessionId = localStorage.getItem("anonymous_session_id");
+      if (sessionId) {
+        url += `?sessionId=${sessionId}`;
+      }
     }
 
     let es: EventSource | null = null;
@@ -292,11 +300,19 @@ function ClientSidebarContent({
             }
           } else if (
             data.type === EVENT_TYPES.MODULE_CREATED ||
-            data.type === EVENT_TYPES.MODULE_UPDATED
+            data.type === EVENT_TYPES.MODULE_UPDATED ||
+            data.type === "module.created" ||
+            data.type === "module.updated"
           ) {
             // Fetch updated modules list
+            console.log(
+              "SSE: Module created/updated event received, refreshing modules"
+            );
             fetchModules().then((data) => {
               if (data.modules) {
+                console.log(
+                  `SSE: Updated modules list with ${data.modules.length} modules`
+                );
                 setModules(data.modules);
               }
             });
@@ -321,7 +337,14 @@ function ClientSidebarContent({
       if (es && es.readyState === EventSource.OPEN) {
         try {
           // Send a ping to keep the connection alive
-          fetch("/api/events/ping").catch(() => {
+          let pingUrl = "/api/events/ping";
+          if (!userId) {
+            const sessionId = localStorage.getItem("anonymous_session_id");
+            if (sessionId) {
+              pingUrl += `?sessionId=${sessionId}`;
+            }
+          }
+          fetch(pingUrl).catch(() => {
             // If ping fails, close and reconnect
             if (es) {
               es.close();
@@ -367,7 +390,7 @@ function ClientSidebarContent({
 
     // Fetch initial chat history
     refreshChatHistory();
-  }, [isLoaded, isSignedIn, fetchModules, refreshChatHistory]);
+  }, [isLoaded, fetchModules, refreshChatHistory]);
 
   // Get header height for positioning expand button
   const headerRef = useRef<HTMLDivElement>(null);
