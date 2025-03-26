@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/chat(.*)", // Allow chat API for unauthenticated users
   "/api/modules(.*)", // Allow modules API for anonymous users
   "/api/check-anonymous-data(.*)", // Allow checking anonymous data
+  "/api/events(.*)", // Allow SSE events API for anonymous users
+  "/api/events/ping(.*)", // Allow event ping endpoint for anonymous users
   "/modules(.*)", // Allow modules pages for anonymous users
   "/chat(.*)", // Allow chat pages for anonymous users
   // Add other public routes as needed

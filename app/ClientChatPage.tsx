@@ -340,18 +340,21 @@ export default function ClientChatPage({
   const handleFirstMessageSent = React.useCallback(
     (message: string) => {
       // Update the chat history optimistically when the first message is sent
-      if (
-        isAuthenticated &&
-        sidebarChatUpdater.current &&
-        messages.length === 0
-      ) {
+      if (sidebarChatUpdater.current && messages.length === 0) {
         // Create a chat title from the first message
         const chatTitle =
           message.substring(0, 30) + (message.length > 30 ? "..." : "");
         sidebarChatUpdater.current(chatTitle, activeModule);
+
+        // Log for anonymous users
+        if (!isAuthenticated && sessionId) {
+          console.log(
+            `Creating optimistic chat for anonymous user with sessionId: ${sessionId}`
+          );
+        }
       }
     },
-    [messages.length, isAuthenticated, activeModule]
+    [messages.length, isAuthenticated, activeModule, sessionId]
   );
 
   // Handle form submission with optimized event handler

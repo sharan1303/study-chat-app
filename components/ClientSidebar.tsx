@@ -89,13 +89,30 @@ function ClientSidebarContent({
 
   // Fetch chat history function - memoized with useCallback
   const fetchChats = useCallback(async () => {
-    if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded) return;
 
     console.log("Fetching chats...");
     try {
       // Add timestamp to prevent caching
       const timestamp = new Date().getTime();
-      const url = `/api/chat/history?t=${timestamp}`;
+      let url = `/api/chat/history?t=${timestamp}`;
+
+      // For anonymous users, add the sessionId
+      if (!isSignedIn) {
+        const sessionId = localStorage.getItem("anonymous_session_id");
+        if (sessionId) {
+          url += `&sessionId=${sessionId}`;
+          console.log(
+            `Requesting chats for anonymous user with sessionId: ${sessionId}`
+          );
+        } else {
+          console.log(
+            "No session ID found for anonymous user, returning empty chats"
+          );
+          return [];
+        }
+      }
+
       console.log(`Requesting chats from: ${url}`);
 
       const response = await fetch(url, {

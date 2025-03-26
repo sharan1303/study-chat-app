@@ -6,11 +6,13 @@ import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
 import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
+import { SESSION_ID_KEY } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { messages, chatId, moduleId } = body;
+    const sessionId = body.sessionId || null;
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -20,6 +22,14 @@ export async function POST(request: Request) {
 
     // Ensure we have a valid chatId - generate one if not provided
     const requestedChatId = chatId || generateId();
+
+    // Both userId and sessionId can't be null if we want to save history
+    if (shouldSaveHistory && !userId && !sessionId) {
+      return Response.json(
+        { error: "Session ID or authentication required to save chat history" },
+        { status: 401 }
+      );
+    }
 
     let user = null;
 
@@ -176,10 +186,29 @@ Format your responses using Markdown:
         topP: 0.95,
         maxTokens: 2048,
         onFinish: async ({ text }) => {
-          // Save chat history for authenticated users only
-          if (shouldSaveHistory && userId) {
+          // Save chat history for authenticated users or anonymous users with sessionId
+          if (shouldSaveHistory && (userId || sessionId)) {
             try {
               const isNewChat = !chatId; // No chatId means it's a new chat
+
+              // Create data for upsert
+              const chatData = {
+                id: requestedChatId,
+                title: chatTitle,
+                messages: messages.concat([
+                  { role: "assistant", content: text },
+                ]),
+                moduleId: isModuleMode ? moduleId : null,
+              };
+
+              // Add either userId or sessionId based on authentication state
+              if (userId) {
+                // @ts-expect-error - Known property
+                chatData.userId = userId;
+              } else if (sessionId) {
+                // @ts-expect-error - Known property
+                chatData.sessionId = sessionId;
+              }
 
               const savedChat = await prisma.chat.upsert({
                 where: { id: requestedChatId },
@@ -189,35 +218,31 @@ Format your responses using Markdown:
                   ]),
                   updatedAt: new Date(),
                 },
-                create: {
-                  id: requestedChatId,
-                  title: chatTitle,
-                  messages: messages.concat([
-                    { role: "assistant", content: text },
-                  ]),
-                  userId: userId,
-                  moduleId: isModuleMode ? moduleId : null,
-                },
+                create: chatData,
               });
 
               // Only broadcast for new chats
               if (isNewChat) {
                 // Create single chat creation event
-                const chatData = {
+                const chatEventData = {
                   id: savedChat.id,
                   title: savedChat.title,
                   moduleId: savedChat.moduleId,
                   createdAt: savedChat.createdAt,
-                  sessionId: null,
                   updatedAt: savedChat.updatedAt,
+                  sessionId: sessionId,
                 };
 
-                // Simple one-time broadcast with no retries or duplicates
-                try {
-                  console.log(`Broadcasting chat creation to user ${userId}`);
-                  broadcastChatCreated(chatData, [userId]);
-                } catch (error) {
-                  console.error("Error broadcasting chat creation:", error);
+                // Determine target ID for broadcast
+                const targetId = userId || sessionId;
+
+                if (targetId) {
+                  console.log(
+                    `Broadcasting chat creation to ${
+                      userId ? "user " + userId : "session " + sessionId
+                    }`
+                  );
+                  broadcastChatCreated(chatEventData, [targetId]);
                 }
               } else {
                 // For existing chats, broadcast message created event
@@ -229,10 +254,18 @@ Format your responses using Markdown:
                     updatedAt: savedChat.updatedAt.toISOString(),
                   };
 
-                  console.log(
-                    `Broadcasting message creation for chat ${savedChat.id}`
-                  );
-                  broadcastMessageCreated(messageData, [userId]);
+                  const targetId = userId || sessionId;
+
+                  if (targetId) {
+                    console.log(
+                      `Broadcasting message creation for chat ${
+                        savedChat.id
+                      } to ${
+                        userId ? "user " + userId : "session " + sessionId
+                      }`
+                    );
+                    broadcastMessageCreated(messageData, [targetId]);
+                  }
                 } catch (error) {
                   console.error("Error broadcasting message creation:", error);
                 }
