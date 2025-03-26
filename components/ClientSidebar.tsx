@@ -190,6 +190,8 @@ function ClientSidebarContent({
       const sessionId = localStorage.getItem("anonymous_session_id");
       if (sessionId) {
         url += `?sessionId=${sessionId}`;
+      } else {
+        console.warn("SSE: No sessionId found for anonymous user");
       }
     }
 
@@ -327,9 +329,6 @@ function ClientSidebarContent({
             );
             fetchModules().then((data) => {
               if (data.modules) {
-                console.log(
-                  `SSE: Updated modules list with ${data.modules.length} modules`
-                );
                 setModules(data.modules);
               }
             });
@@ -338,6 +337,25 @@ function ClientSidebarContent({
             setModules((prevModules) =>
               prevModules.filter((module) => module.id !== data.data.id)
             );
+          } else if (
+            data.type === EVENT_TYPES.DATA_MIGRATED ||
+            data.type === "data.migrated"
+          ) {
+            // Data migration event occurred, refresh both modules and chats
+            console.log("SSE: Data migration event received, refreshing data");
+
+            // Refresh modules
+            fetchModules().then((data) => {
+              if (data.modules) {
+                console.log(
+                  `SSE: Updated modules list with ${data.modules.length} modules after migration`
+                );
+                setModules(data.modules);
+              }
+            });
+
+            // Refresh chat history
+            refreshChatHistory();
           } else {
             // Unknown event type
             console.log("Unknown event type received:", data.type);

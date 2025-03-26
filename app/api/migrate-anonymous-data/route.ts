@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { broadcastDataMigrated } from "@/lib/events";
 
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
@@ -102,6 +103,12 @@ export async function POST(request: NextRequest) {
 
       return { migratedModules, migratedResources, migratedChats };
     });
+
+    // Broadcast a data migration event
+    broadcastDataMigrated({ userId, sessionId, id: userId }, [
+      userId,
+      sessionId,
+    ]);
 
     return NextResponse.json({
       success: true,

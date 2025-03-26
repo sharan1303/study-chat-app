@@ -102,6 +102,17 @@ export async function GET(request: NextRequest) {
       };
 
       // Add to global clients list
+      // Check if there's an existing client with same ID - remove it first
+      if (global.sseClients) {
+        const existingClientIndex = global.sseClients.findIndex(
+          (c) => c.id === clientId
+        );
+        if (existingClientIndex !== -1) {
+          console.log(`Removing existing client with ID ${clientId}`);
+          global.sseClients.splice(existingClientIndex, 1);
+        }
+      }
+
       global.sseClients.push(client);
       console.log(
         `SSE client added. Total clients: ${global.sseClients.length}. Client ID: ${client.id}`

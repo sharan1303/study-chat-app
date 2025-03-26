@@ -24,6 +24,7 @@ export const EVENT_TYPES = {
   MODULE_UPDATED: "module.updated",
   MODULE_DELETED: "module.deleted",
   MESSAGE_CREATED: "message.created",
+  DATA_MIGRATED: "data.migrated",
 };
 
 // Get access to the global SSE clients array
@@ -111,4 +112,11 @@ export function broadcastModuleDeleted(moduleId: string, targetIds?: string[]) {
     { id: moduleId },
     targetIds
   );
+}
+
+export function broadcastDataMigrated(
+  migrationData: { userId: string; sessionId: string; id: string },
+  targetIds?: string[]
+) {
+  return broadcastEvent(EVENT_TYPES.DATA_MIGRATED, migrationData, targetIds);
 }

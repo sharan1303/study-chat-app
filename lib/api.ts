@@ -52,22 +52,30 @@ export const api = {
     const queryString = sessionId ? `?sessionId=${sessionId}` : "";
     console.log(`Client: Making request to /api/modules${queryString}`);
 
-    const response = await fetch(`/api/modules${queryString}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+    try {
+      const response = await fetch(`/api/modules${queryString}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.error || `Failed to create module: ${response.statusText}`
-      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error response from createModule:", errorData);
+        throw new Error(
+          errorData.error || `Failed to create module: ${response.statusText}`
+        );
+      }
+
+      const responseData = await response.json();
+      console.log("Module created successfully:", responseData);
+      return responseData;
+    } catch (error) {
+      console.error("Exception in createModule:", error);
+      throw error;
     }
-
-    return response.json();
   },
 
   /**
