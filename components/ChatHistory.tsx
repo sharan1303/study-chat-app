@@ -20,6 +20,7 @@ export interface Chat {
     icon: string;
     id: string;
   } | null;
+  _isOptimistic?: boolean; // Optional flag for optimistic UI updates
 }
 
 export default function ChatHistory({
