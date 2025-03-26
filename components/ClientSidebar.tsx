@@ -530,11 +530,7 @@ function ClientSidebarContent({
         {/* Chat History Section */}
         {state === "expanded" && (
           <div className="h-2/3 min-h-[200px]">
-            <ChatHistory
-              chats={chats}
-              loading={loadingChats}
-              onRefresh={refreshChatHistory}
-            />
+            <ChatHistory chats={chats} loading={loadingChats} />
           </div>
         )}
       </SidebarContent>
