@@ -20,6 +20,7 @@ export interface SSEClient {
 // Event types
 export const EVENT_TYPES = {
   CHAT_CREATED: "chat.created",
+  CHAT_DELETED: "chat.deleted",
   MODULE_CREATED: "module.created",
   MODULE_UPDATED: "module.updated",
   MODULE_DELETED: "module.deleted",
@@ -127,4 +128,11 @@ export function broadcastDataMigrated(
   targetIds?: string[]
 ) {
   return broadcastEvent(EVENT_TYPES.DATA_MIGRATED, migrationData, targetIds);
+}
+
+export function broadcastChatDeleted(
+  chatData: { id: string },
+  targetIds?: string[]
+) {
+  return broadcastEvent(EVENT_TYPES.CHAT_DELETED, chatData, targetIds);
 }

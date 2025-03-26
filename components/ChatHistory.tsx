@@ -2,11 +2,24 @@
 
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, X } from "lucide-react";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export interface Chat {
   id: string;
@@ -31,6 +44,7 @@ export default function ChatHistory({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
 
   // Debug: Log when chat data changes
   React.useEffect(() => {
@@ -48,6 +62,28 @@ export default function ChatHistory({
     }
 
     return false;
+  };
+
+  const handleDeleteChat = async (chat: Chat) => {
+    try {
+      const response = await fetch(`/api/chat/${chat.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete chat");
+      }
+
+      toast.success("Chat deleted successfully");
+
+      // If we're on the deleted chat's page, redirect to /chat
+      if (isActiveChat(chat)) {
+        router.push("/chat");
+      }
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      toast.error("Failed to delete chat");
+    }
   };
 
   return (
@@ -79,33 +115,75 @@ export default function ChatHistory({
             <div className="space-y-1 p-2">
               {chats.map((chat) => (
                 <div key={chat.id} className="group/chat max-w-[240px]">
-                  <button
+                  <div
                     className={cn(
                       "w-full max-w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
                       isActiveChat(chat)
                         ? "bg-accent text-accent-foreground font-medium"
                         : ""
                     )}
-                    onClick={() => {
-                      if (chat.moduleId && chat.module) {
-                        const encodedName = encodeModuleSlug(chat.module.name);
-                        router.push(`/${encodedName}/chat/${chat.id}`);
-                      } else {
-                        router.push(`/chat/${chat.id}`);
-                      }
-                    }}
                   >
-                    <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-80px)]">
-                      <MessageSquare
-                        size={14}
-                        className="mr-2 mt-0.5 flex-shrink-0"
-                      />
-                      <span className="truncate">{chat.title}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground hidden group-hover/chat:inline whitespace-nowrap pr-1">
-                      {formatDate(chat.updatedAt)}
-                    </span>
-                  </button>
+                    <button
+                      className="flex-1 flex items-center justify-between truncate"
+                      onClick={() => {
+                        if (chat.moduleId && chat.module) {
+                          const encodedName = encodeModuleSlug(
+                            chat.module.name
+                          );
+                          router.push(`/${encodedName}/chat/${chat.id}`);
+                        } else {
+                          router.push(`/chat/${chat.id}`);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-70px)]">
+                        <MessageSquare
+                          size={14}
+                          className="mr-2 mt-0.5 flex-shrink-0"
+                        />
+                        <span className="truncate">{chat.title}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground hidden group-hover/chat:inline whitespace-nowrap pr-1">
+                        {formatDate(chat.updatedAt)}
+                      </span>
+                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0 opacity-0 group-hover/chat:opacity-100 hover:bg-red-500 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setChatToDelete(chat);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Thread</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete &quot;{chat.title}
+                            &quot;? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => {
+                              if (chatToDelete) {
+                                handleDeleteChat(chatToDelete);
+                              }
+                            }}
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               ))}
             </div>
