@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { broadcastChatDeleted } from "@/lib/events";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
+import { SESSION_COOKIE_NAME } from "@/lib/session";
 
 export async function GET(
   request: Request,
@@ -62,11 +63,32 @@ export async function DELETE(
     console.log(`DELETE request for chat ID: ${params.id}`);
 
     const { userId } = await auth();
-    const sessionId = request.nextUrl.searchParams.get("sessionId");
+
+    // First try to get sessionId from query parameters
+    let sessionId = request.nextUrl.searchParams.get("sessionId");
+
+    // If not found in query params, try to get from cookies
+    if (!sessionId) {
+      // Get cookie value if present
+      const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+      if (cookieValue) {
+        sessionId = cookieValue;
+        console.log(
+          `Found sessionId in cookies: ${sessionId.substring(0, 8)}...`
+        );
+      }
+    }
+
+    // Get all cookies from the request for debugging
+    const allCookies = request.cookies.getAll();
+    console.log(
+      `All cookies:`,
+      allCookies.map((c) => `${c.name}=${c.value.substring(0, 5)}...`)
+    );
 
     console.log(
       `Auth info - userId: ${userId || "none"}, sessionId: ${
-        sessionId || "none"
+        sessionId ? `${sessionId.substring(0, 8)}...` : "none"
       }`
     );
 

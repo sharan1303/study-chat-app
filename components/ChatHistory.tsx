@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getOrCreateSessionIdClient } from "@/lib/session";
 
 export interface Chat {
   id: string;
@@ -55,7 +56,11 @@ export default function ChatHistory({
   // Load sessionId from localStorage on component mount (client-side only)
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedSessionId = localStorage.getItem("anonymous_session_id");
+      const storedSessionId = getOrCreateSessionIdClient();
+      console.log(
+        "[ChatHistory] Retrieved sessionId:",
+        storedSessionId?.substring(0, 8) + "..."
+      );
       if (storedSessionId) {
         setSessionId(storedSessionId);
       }
@@ -81,12 +86,25 @@ export default function ChatHistory({
       let url = `/api/chat/${chat.id}`;
       if (sessionId) {
         url += `?sessionId=${sessionId}`;
+        console.log(
+          `[ChatHistory] Deleting chat using sessionId: ${sessionId.substring(
+            0,
+            8
+          )}...`
+        );
+      } else {
+        console.log(
+          `[ChatHistory] Warning: Attempting to delete chat without sessionId`
+        );
       }
 
-      console.log(`Deleting chat with ID: ${chat.id}, URL: ${url}`);
+      console.log(
+        `[ChatHistory] Deleting chat with ID: ${chat.id}, URL: ${url}`
+      );
 
       const response = await fetch(url, {
         method: "DELETE",
+        credentials: "include", // This ensures cookies are sent with the request
       });
 
       console.log(`Delete response status: ${response.status}`);
@@ -182,7 +200,7 @@ export default function ChatHistory({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 p-0 opacity-0 group-hover/chat:opacity-100 hover:bg-red-500 transition-opacity"
+                          className="h-6 w-6 ml-1 opacity-0 group-hover/chat:opacity-100 hover:bg-red-500 hover:text-white transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             setChatToDelete(chat);
