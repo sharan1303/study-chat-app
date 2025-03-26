@@ -49,10 +49,25 @@ export const api = {
     const sessionId = getOrCreateSessionIdClient();
     console.log("Client: Using session ID for createModule:", sessionId);
 
+    // Add retry logic for session ID
+    let retryCount = 0;
+    while (!sessionId && retryCount < 3) {
+      console.log(`Retrying to get session ID (attempt ${retryCount + 1})`);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const newSessionId = getOrCreateSessionIdClient();
+      if (newSessionId) {
+        console.log("Successfully got session ID after retry");
+        break;
+      }
+      retryCount++;
+    }
+
     // Ensure we have a valid session ID
     if (!sessionId) {
-      console.error("No session ID available for module creation");
-      throw new Error("No session ID available");
+      console.error(
+        "No session ID available for module creation after retries"
+      );
+      throw new Error("Failed to get session ID");
     }
 
     const queryString = `?sessionId=${sessionId}`;
@@ -65,11 +80,17 @@ export const api = {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
+        credentials: "same-origin", // Add this to ensure cookies are sent
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Error response from createModule:", errorData);
+        console.error("Error response from createModule:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          sessionId,
+        });
         throw new Error(
           errorData.error || `Failed to create module: ${response.statusText}`
         );
@@ -79,7 +100,11 @@ export const api = {
       console.log("Module created successfully:", responseData);
       return responseData;
     } catch (error) {
-      console.error("Exception in createModule:", error);
+      console.error("Exception in createModule:", {
+        error,
+        sessionId,
+        data,
+      });
       throw error;
     }
   },
