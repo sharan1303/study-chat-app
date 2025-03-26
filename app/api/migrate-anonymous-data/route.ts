@@ -83,7 +83,24 @@ export async function POST(request: NextRequest) {
         migratedResources += directResources.length;
       }
 
-      return { migratedModules, migratedResources };
+      // 6. Find and migrate all chats associated with this sessionId
+      const chats = await prismaClient.chat.findMany({
+        where: { sessionId },
+      });
+
+      let migratedChats = 0;
+      if (chats.length > 0) {
+        await prismaClient.chat.updateMany({
+          where: { sessionId },
+          data: {
+            userId,
+            sessionId: "", // Empty string instead of null
+          },
+        });
+        migratedChats = chats.length;
+      }
+
+      return { migratedModules, migratedResources, migratedChats };
     });
 
     return NextResponse.json({
@@ -91,6 +108,7 @@ export async function POST(request: NextRequest) {
       migrated: {
         modules: result.migratedModules,
         resources: result.migratedResources,
+        chats: result.migratedChats,
       },
     });
   } catch (error) {

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Check for any modules or resources associated with this session ID
+    // Check for any modules, resources, or chats associated with this session ID
     const moduleCount = await prisma.module.count({
       where: { sessionId },
     });
@@ -33,13 +33,18 @@ export async function GET(request: NextRequest) {
       where: { sessionId },
     });
 
-    const hasData = moduleCount > 0 || resourceCount > 0;
+    const chatCount = await prisma.chat.count({
+      where: { sessionId },
+    });
+
+    const hasData = moduleCount > 0 || resourceCount > 0 || chatCount > 0;
 
     return NextResponse.json({
       hasData,
       counts: {
         modules: moduleCount,
         resources: resourceCount,
+        chats: chatCount,
       },
     });
   } catch (error) {

@@ -57,7 +57,9 @@ export default function AnonymousDataMigration() {
       });
 
       if (response.data.success) {
-        toast.success("Your data has been successfully migrated!");
+        toast.success(
+          "Your chats have been successfully migrated to your account!"
+        );
         // Clear the anonymous session
         clearSession();
         // Close the dialog
@@ -83,10 +85,10 @@ export default function AnonymousDataMigration() {
     <AlertDialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Transfer Your Study Data</AlertDialogTitle>
+          <AlertDialogTitle>Transfer Your Data</AlertDialogTitle>
           <AlertDialogDescription>
-            We noticed you have modules and resources created while browsing
-            anonymously. Would you like to transfer them to your account?
+            We noticed you have been browsing anonymously. Would you like to
+            transfer your data to your account?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
