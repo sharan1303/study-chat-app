@@ -35,14 +35,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useUser, useAuth, SignedIn } from "@clerk/nextjs";
-import Image from "next/image";
-import { UserProfile } from "@clerk/nextjs";
 import SettingsLoading from "./loading";
-import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import React from "react";
+import CustomUserProfile from "@/components/CustomUserProfile";
+import EditableProfileImage from "@/components/EditableProfileImage";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -98,7 +97,6 @@ function SettingsContent() {
 
   const fullName = user?.fullName || user?.firstName || "User";
   const email = user?.primaryEmailAddress?.emailAddress || "";
-  const imageUrl = user?.imageUrl || "/profile-circle.256x256.png";
 
   return (
     <div className="h-full flex flex-col py-2.5">
@@ -131,16 +129,8 @@ function SettingsContent() {
           {/* Left sidebar with user info */}
           <div className="w-full md:w-1/3">
             <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-32 h-32 rounded-full overflow-hidden mb-4 border-4 border-background shadow-lg">
-                <Image
-                  src={imageUrl}
-                  alt={fullName}
-                  width={128}
-                  height={128}
-                  className={cn("w-full h-full object-cover")}
-                />
-              </div>
-              <h2 className="text-2xl font-bold">{fullName}</h2>
+              <EditableProfileImage size={128} />
+              <h2 className="text-2xl font-bold mt-4">{fullName}</h2>
               <p className="text-muted-foreground">{email}</p>
               <Badge variant="secondary" className="mt-2">
                 Free Plan
@@ -206,25 +196,7 @@ function SettingsContent() {
 
               {/* Account Tab */}
               <TabsContent value="account">
-                <Card>
-                  <CardContent>
-                    <div className="w-9">
-                      <SignedIn>
-                        <UserProfile
-                          routing="hash"
-                          appearance={{
-                            elements: {
-                              rootBox: {
-                                boxShadow: "none",
-                                width: "10%",
-                              },
-                            },
-                          }}
-                        />
-                      </SignedIn>
-                    </div>
-                  </CardContent>
-                </Card>
+                <CustomUserProfile />
               </TabsContent>
 
               {/* Customization Tab */}
