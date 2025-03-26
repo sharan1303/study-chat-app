@@ -5,6 +5,7 @@ import { getModuleContext } from "@/lib/modules";
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
+import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
 
 export async function POST(request: Request) {
   try {
@@ -32,7 +33,6 @@ export async function POST(request: Request) {
 
         // If user doesn't exist, create a new one using Clerk data
         if (!user && currentUserObj) {
-          console.log(`Creating new user for Clerk ID: ${userId}`);
           user = await prisma.user.create({
             data: {
               id: userId,
@@ -44,7 +44,6 @@ export async function POST(request: Request) {
                 : "Anonymous User",
             },
           });
-          console.log(`User created: ${user.id}`);
         }
 
         if (!user) {
@@ -180,7 +179,9 @@ Format your responses using Markdown:
           // Save chat history for authenticated users only
           if (shouldSaveHistory && userId) {
             try {
-              await prisma.chat.upsert({
+              const isNewChat = !chatId; // No chatId means it's a new chat
+
+              const savedChat = await prisma.chat.upsert({
                 where: { id: requestedChatId },
                 update: {
                   messages: messages.concat([
@@ -198,7 +199,44 @@ Format your responses using Markdown:
                   moduleId: isModuleMode ? moduleId : null,
                 },
               });
-              console.log(`Chat history saved for user: ${userId}`);
+
+              // Only broadcast for new chats
+              if (isNewChat) {
+                // Create single chat creation event
+                const chatData = {
+                  id: savedChat.id,
+                  title: savedChat.title,
+                  moduleId: savedChat.moduleId,
+                  createdAt: savedChat.createdAt,
+                  sessionId: null,
+                  updatedAt: savedChat.updatedAt,
+                };
+
+                // Simple one-time broadcast with no retries or duplicates
+                try {
+                  console.log(`Broadcasting chat creation to user ${userId}`);
+                  broadcastChatCreated(chatData, [userId]);
+                } catch (error) {
+                  console.error("Error broadcasting chat creation:", error);
+                }
+              } else {
+                // For existing chats, broadcast message created event
+                try {
+                  const messageData = {
+                    id: generateId(),
+                    chatId: savedChat.id,
+                    chatTitle: savedChat.title,
+                    updatedAt: savedChat.updatedAt.toISOString(),
+                  };
+
+                  console.log(
+                    `Broadcasting message creation for chat ${savedChat.id}`
+                  );
+                  broadcastMessageCreated(messageData, [userId]);
+                } catch (error) {
+                  console.error("Error broadcasting message creation:", error);
+                }
+              }
             } catch (error) {
               console.error("Error saving chat history:", error);
             }

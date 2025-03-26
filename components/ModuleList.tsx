@@ -8,6 +8,7 @@ import { cn, encodeModuleSlug } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/module-form";
+import { Plus } from "lucide-react";
 
 // Define the Module type here instead of importing from Sidebar
 export interface Module {
@@ -90,14 +91,25 @@ export default function ModuleList({
   return (
     <div className="flex flex-col h-full">
       {!collapsed && (
-        <div className="px-2 py-3 flex items-center">
+        <div className="px-2 py-2 flex items-center justify-between">
           <Button
             variant={pathname?.startsWith("/modules") ? "secondary" : "ghost"}
-            className="justify-start w-full pl-2 text-left"
+            className="justify-start w-40 pl-2 pb-2 text-left"
             asChild
           >
-            <Link href="/modules">Your Modules</Link>
+            <Link href="/modules">Chat Categories</Link>
           </Button>
+
+          <Dialog open={isCreating} onOpenChange={setIsCreating}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 mr-3">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <ModuleForm successEventName="module-create-success" />
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
@@ -133,7 +145,7 @@ export default function ModuleList({
                   key={module.id}
                   onClick={() => onModuleClick(module.id, module.name)}
                   className={cn(
-                    "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground w-full text-left",
+                    "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground max-w-[240px] text-left",
                     collapsed && "justify-center p-1",
                     (currentModule === module.id ||
                       checkIsActive(module.name)) &&

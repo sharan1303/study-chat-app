@@ -8,7 +8,7 @@ export const api = {
   /**
    * Get all modules
    */
-  async getModules(name?: string) {
+  async getModules(name?: string, exactMatch?: boolean) {
     // Always ensure we have a session ID by using getOrCreate
     const sessionId = getOrCreateSessionIdClient();
 
@@ -20,6 +20,10 @@ export const api = {
 
     if (name) {
       params.append("name", name);
+    }
+
+    if (exactMatch) {
+      params.append("exactMatch", "true");
     }
 
     const queryString = params.toString() ? `?${params.toString()}` : "";
@@ -79,15 +83,25 @@ export const api = {
       `Client: Making request to /api/modules/${moduleId}/resources${queryString}`
     );
 
-    const response = await fetch(
-      `/api/modules/${moduleId}/resources${queryString}`
-    );
+    try {
+      const response = await fetch(
+        `/api/modules/${moduleId}/resources${queryString}`
+      );
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch resources: ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch resources: ${response.statusText}`);
+      }
+
+      // Parse the JSON response
+      const data = await response.json();
+
+      // If the response has a resources property, return that
+      // Otherwise, return the data directly (for backwards compatibility)
+      return data.resources ? data : { resources: [] };
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      return { resources: [] };
     }
-
-    return response.json();
   },
 
   /**

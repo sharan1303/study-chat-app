@@ -94,8 +94,9 @@ export default function ModuleActions({
 
       // Use setTimeout to ensure toast is visible before redirect
       setTimeout(() => {
-        // Force a full navigation to ensure all components refresh
-        window.location.href = "/modules";
+        // Use router.push instead of forced navigation to avoid full refresh
+        // The SSE event will take care of updating the sidebar
+        router.push("/modules");
       }, 600);
     } catch (error) {
       console.error("Error deleting module:", error);

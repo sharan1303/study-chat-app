@@ -80,6 +80,27 @@ export default function ClientChatPage({
   // Get the session ID from local storage for anonymous users
   const [sessionId, setSessionId] = React.useState<string | null>(null);
 
+  // Get access to the sidebar's addOptimisticChat function
+  // This allows us to update the chat history immediately when sending a message
+  const sidebarChatUpdater = React.useRef<
+    ((title: string, moduleId: string | null) => string) | null
+  >(null);
+
+  // Connect to the optimistic chat updater if available in the global window object
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const win = window as unknown as {
+        __sidebarChatUpdater?: (
+          title: string,
+          moduleId: string | null
+        ) => string;
+      };
+      if (win.__sidebarChatUpdater) {
+        sidebarChatUpdater.current = win.__sidebarChatUpdater;
+      }
+    }
+  }, []);
+
   // Load sessionId from localStorage on component mount (client-side only)
   React.useEffect(() => {
     if (typeof window !== "undefined" && !isAuthenticated) {
@@ -315,15 +336,42 @@ export default function ClientChatPage({
     );
   }, [messages, copiedMessageId, copyToClipboard, modelName]);
 
+  // Add a callback for when the first message is sent
+  const handleFirstMessageSent = React.useCallback(
+    (message: string) => {
+      // Update the chat history optimistically when the first message is sent
+      if (
+        isAuthenticated &&
+        sidebarChatUpdater.current &&
+        messages.length === 0
+      ) {
+        // Create a chat title from the first message
+        const chatTitle =
+          message.substring(0, 30) + (message.length > 30 ? "..." : "");
+        sidebarChatUpdater.current(chatTitle, activeModule);
+      }
+    },
+    [messages.length, isAuthenticated, activeModule]
+  );
+
   // Handle form submission with optimized event handler
   const handleFormSubmit = React.useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
       if (input.trim() && !chatLoading) {
+        // Track if this is the first message for the optimistic UI update
+        const isFirstMessage = messages.length === 0;
+
+        // Submit the form
         handleSubmit(e);
+
+        // If this is the first message, trigger the optimistic UI update
+        if (isFirstMessage) {
+          handleFirstMessageSent(input.trim());
+        }
       }
     },
-    [input, chatLoading, handleSubmit]
+    [input, chatLoading, handleSubmit, messages.length, handleFirstMessageSent]
   );
 
   // Handle keyboard event
