@@ -102,8 +102,16 @@ export function broadcastModuleCreated(module: Module, targetIds?: string[]) {
   return broadcastEvent(EVENT_TYPES.MODULE_CREATED, module, targetIds);
 }
 
-export function broadcastModuleUpdated(module: Module, targetIds?: string[]) {
-  return broadcastEvent(EVENT_TYPES.MODULE_UPDATED, module, targetIds);
+export function broadcastModuleUpdated(
+  module: Module,
+  targetIds?: string[],
+  isDataMigration?: boolean
+) {
+  return broadcastEvent(
+    EVENT_TYPES.MODULE_UPDATED,
+    { ...module, isDataMigration: !!isDataMigration },
+    targetIds
+  );
 }
 
 export function broadcastModuleDeleted(moduleId: string, targetIds?: string[]) {

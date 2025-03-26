@@ -49,7 +49,13 @@ export const api = {
     const sessionId = getOrCreateSessionIdClient();
     console.log("Client: Using session ID for createModule:", sessionId);
 
-    const queryString = sessionId ? `?sessionId=${sessionId}` : "";
+    // Ensure we have a valid session ID
+    if (!sessionId) {
+      console.error("No session ID available for module creation");
+      throw new Error("No session ID available");
+    }
+
+    const queryString = `?sessionId=${sessionId}`;
     console.log(`Client: Making request to /api/modules${queryString}`);
 
     try {

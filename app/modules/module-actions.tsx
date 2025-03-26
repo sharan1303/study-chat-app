@@ -70,10 +70,7 @@ export default function ModuleActions({
     setIsEditing(false);
     setModuleDetails(null);
     toast.success("Module updated");
-
-    // Use router.refresh() for less disruption
-    // If the edit involved a name change, the ModuleForm component will handle that separately
-    router.refresh();
+    // SSE will handle the update, no need for router.refresh()
   };
 
   // Handle module deletion

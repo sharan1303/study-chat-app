@@ -183,7 +183,13 @@ export async function POST(request: NextRequest) {
     // Broadcast event for real-time updates
     const targetId = userId || sessionId;
     if (targetId) {
-      broadcastModuleCreated(moduleData, [targetId]);
+      console.log(`Broadcasting module creation event to client ${targetId}`);
+      const broadcastResult = broadcastModuleCreated(moduleData, [targetId]);
+      console.log("Broadcast result:", broadcastResult);
+    } else {
+      console.log(
+        "No target ID available for broadcasting module creation event"
+      );
     }
 
     return NextResponse.json(moduleData);

@@ -229,11 +229,39 @@ function ClientSidebarContent({
       es.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log("SSE event received:", data.type);
+          console.log("SSE event received:", data);
 
           // Handle different event types
           if (data.type === "CONNECTION_ACK") {
             // Connection confirmed by server
+            console.log("SSE connection acknowledged");
+          } else if (data.type === EVENT_TYPES.MODULE_CREATED) {
+            // Module created event
+            console.log("SSE: Module created event received, data:", data);
+            fetchModules().then((data) => {
+              if (data.modules) {
+                console.log("SSE: Updating modules list with:", data.modules);
+                setModules(data.modules);
+              }
+            });
+          } else if (data.type === EVENT_TYPES.MODULE_UPDATED) {
+            // Module updated event
+            console.log("SSE: Module updated event received, data:", data);
+            // Only refresh modules if this is not part of a data migration
+            if (!data.isDataMigration) {
+              fetchModules().then((data) => {
+                if (data.modules) {
+                  console.log("SSE: Updating modules list with:", data.modules);
+                  setModules(data.modules);
+                }
+              });
+            }
+          } else if (data.type === EVENT_TYPES.MODULE_DELETED) {
+            // Remove the deleted module from the list
+            console.log("SSE: Module deleted event received, data:", data);
+            setModules((prevModules) =>
+              prevModules.filter((module) => module.id !== data.data.id)
+            );
           } else if (data.type === "HEARTBEAT") {
             // Server heartbeat received
           } else if (data.type === "chat.created") {
@@ -317,26 +345,6 @@ function ClientSidebarContent({
               // Fall back to refresh if data is incomplete
               refreshChatHistory();
             }
-          } else if (
-            data.type === EVENT_TYPES.MODULE_CREATED ||
-            data.type === EVENT_TYPES.MODULE_UPDATED ||
-            data.type === "module.created" ||
-            data.type === "module.updated"
-          ) {
-            // Fetch updated modules list
-            console.log(
-              "SSE: Module created/updated event received, refreshing modules"
-            );
-            fetchModules().then((data) => {
-              if (data.modules) {
-                setModules(data.modules);
-              }
-            });
-          } else if (data.type === EVENT_TYPES.MODULE_DELETED) {
-            // Remove the deleted module from the list
-            setModules((prevModules) =>
-              prevModules.filter((module) => module.id !== data.data.id)
-            );
           } else if (
             data.type === EVENT_TYPES.DATA_MIGRATED ||
             data.type === "data.migrated"
