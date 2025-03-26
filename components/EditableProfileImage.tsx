@@ -15,7 +15,7 @@ interface EditableProfileImageProps {
 
 export default function EditableProfileImage({
   className,
-  size = 128,
+  size,
 }: EditableProfileImageProps) {
   const { isLoaded, user } = useUser();
   const [imageFile, setImageFile] = useState<File | null>(null);

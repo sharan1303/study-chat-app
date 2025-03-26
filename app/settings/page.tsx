@@ -128,7 +128,7 @@ function SettingsContent() {
         <div className="flex flex-col md:flex-row gap-8 max-w-6xl mx-auto">
           {/* Left sidebar with user info */}
           <div className="w-full md:w-1/3">
-            <div className="flex flex-col items-center text-center mb-6">
+            <div className="flex flex-col items-center text-center mb-6 mt-10">
               <EditableProfileImage size={128} />
               <h2 className="text-2xl font-bold mt-4">{fullName}</h2>
               <p className="text-muted-foreground">{email}</p>
@@ -177,7 +177,14 @@ function SettingsContent() {
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">N</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">O</kbd>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Toggle Sidebar</span>
+                  <div className="flex gap-1">
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">B</kbd>
                   </div>
                 </div>
               </CardContent>
