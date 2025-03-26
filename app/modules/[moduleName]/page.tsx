@@ -77,11 +77,9 @@ const icons = [
   "🎵",
 ];
 
-export default function ModuleDetailsPage(
-  props: {
-    params: Promise<{ moduleName: string }>;
-  }
-) {
+export default function ModuleDetailsPage(props: {
+  params: Promise<{ moduleName: string }>;
+}) {
   const params = use(props.params);
   const router = useRouter();
   const [module, setModule] = useState<Module | null>(null);
@@ -90,6 +88,7 @@ export default function ModuleDetailsPage(
     { id: string; name: string; icon: string }[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -104,6 +103,24 @@ export default function ModuleDetailsPage(
         setIsLoading(true);
         // Decode the module name from URL parameters
         const decodedModuleName = decodeModuleSlug(params.moduleName);
+        console.log(`Looking for module with name: "${decodedModuleName}"`);
+
+        // First try an exact match query
+        const exactMatchData = await api.getModules(decodedModuleName, true);
+        const exactModules = exactMatchData.modules || [];
+
+        if (exactModules.length > 0) {
+          console.log(`Found exact match for module: ${exactModules[0].name}`);
+          setModule(exactModules[0]);
+
+          // Fetch resources for this module
+          const resourcesData = await api.getResources(exactModules[0].id);
+          setResources(resourcesData.resources || []);
+          return;
+        }
+
+        // If no exact match, proceed with the original logic
+        console.log("No exact match found, trying fuzzy match");
 
         // Fetch all modules
         const allModulesData = await api.getModules();
@@ -161,6 +178,7 @@ export default function ModuleDetailsPage(
         setResources(resourcesData.resources || []);
       } catch (error) {
         console.error("Error fetching module details:", error);
+        setError("Failed to load module details");
       } finally {
         setIsLoading(false);
       }

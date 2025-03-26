@@ -119,40 +119,90 @@ export default function NewModuleChat() {
         const userId = user?.id;
 
         if (userId) {
-          // Fetch the module
-          const response = await fetch(
-            `/api/modules?name=${decodedModuleName}`
-          );
+          // Fetch the module with more precise query
+          console.log(`Looking for module with name: "${decodedModuleName}"`);
 
-          if (response.ok) {
-            const data = await response.json();
-            const modules = data.modules || [];
+          try {
+            // First try an exact match query (case insensitive)
+            const exactMatchResponse = await fetch(
+              `/api/modules?name=${encodeURIComponent(
+                decodedModuleName
+              )}&exactMatch=true`
+            );
 
-            if (modules.length > 0 && isMounted) {
-              const formattedModule = {
-                ...modules[0],
-                resources: modules[0].resources || [],
-              };
-              setModuleData(formattedModule);
-              setIsLoading(false);
+            if (exactMatchResponse.ok) {
+              const data = await exactMatchResponse.json();
+              const modules = data.modules || [];
 
-              // Update lastStudied timestamp (silently) - don't await this
-              fetch(`/api/modules/${modules[0].id}`, {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  lastStudied: new Date().toISOString(),
-                }),
-              }).catch((e) => console.error("Error updating lastStudied:", e));
+              if (modules.length > 0 && isMounted) {
+                console.log(`Found exact match for module: ${modules[0].name}`);
+                const formattedModule = {
+                  ...modules[0],
+                  resources: modules[0].resources || [],
+                };
+                setModuleData(formattedModule);
+                setIsLoading(false);
+
+                // Update lastStudied timestamp (silently)
+                fetch(`/api/modules/${modules[0].id}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    lastStudied: new Date().toISOString(),
+                  }),
+                }).catch((e) =>
+                  console.error("Error updating lastStudied:", e)
+                );
+
+                return;
+              }
+            }
+
+            // If no exact match, try a fuzzy match query
+            const response = await fetch(
+              `/api/modules?name=${encodeURIComponent(decodedModuleName)}`
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              const modules = data.modules || [];
+
+              if (modules.length > 0 && isMounted) {
+                console.log(`Found fuzzy match for module: ${modules[0].name}`);
+                const formattedModule = {
+                  ...modules[0],
+                  resources: modules[0].resources || [],
+                };
+                setModuleData(formattedModule);
+                setIsLoading(false);
+
+                // Update lastStudied timestamp (silently)
+                fetch(`/api/modules/${modules[0].id}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    lastStudied: new Date().toISOString(),
+                  }),
+                }).catch((e) =>
+                  console.error("Error updating lastStudied:", e)
+                );
+              } else if (isMounted) {
+                // No module found
+                notFound();
+              }
             } else if (isMounted) {
-              // No module found
+              // Error fetching module
               notFound();
             }
-          } else if (isMounted) {
-            // Error fetching module
-            notFound();
+          } catch (error) {
+            console.error("Error loading module:", error);
+            if (isMounted) {
+              notFound();
+            }
           }
         }
       } catch (error) {

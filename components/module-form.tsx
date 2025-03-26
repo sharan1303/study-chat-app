@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "@/context/SessionContext";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 import {
   Form,
@@ -68,11 +69,11 @@ export const ModuleForm = ({
   sessionId: propSessionId,
   onSuccess,
 }: ModuleFormProps) => {
-  // Remove router since we're using direct window.location changes
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const { sessionId: contextSessionId } = useSession();
   const { isSignedIn } = useUser();
+  const router = useRouter();
 
   // Use sessionId from props if provided, otherwise use from context
   const sessionId = propSessionId ?? contextSessionId;
@@ -130,10 +131,10 @@ export const ModuleForm = ({
 
         // For navigation if name changed
         if (values.name !== initialData.name) {
-          // If name changed, navigate to new URL
+          // If name changed, navigate to new URL using router
           setTimeout(() => {
             const formattedName = encodeModuleSlug(values.name);
-            window.location.href = `/modules/${formattedName}`;
+            router.push(`/modules/${formattedName}`);
           }, 600);
         }
         // No need for else clause with page reload - SSE will handle it

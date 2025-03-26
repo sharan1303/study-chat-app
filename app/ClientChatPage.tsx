@@ -387,9 +387,8 @@ export default function ClientChatPage({
                 </div>
               ) : (
                 <div className="flex flex-col space-y-8 pt-4 pb-8 pl-8 pr-6">
-<<<<<<< HEAD
                   {renderedMessages}
-=======
+
                   {messages.reduce(
                     (
                       result: React.ReactNode[],
@@ -514,7 +513,6 @@ export default function ClientChatPage({
                     },
                     []
                   )}
->>>>>>> 1642ec3 (Refactor chat response button labels and improve type safety in event broadcasting)
                 </div>
               )}
               {chatLoading && (

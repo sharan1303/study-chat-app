@@ -2,11 +2,12 @@
 
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, RefreshCw } from "lucide-react";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export interface Chat {
   id: string;
@@ -17,18 +18,26 @@ export interface Chat {
   module?: {
     name: string;
     icon: string;
+    id: string;
   } | null;
 }
 
 export default function ChatHistory({
   chats,
   loading,
+  onRefresh,
 }: {
   chats: Chat[];
   loading: boolean;
+  onRefresh?: () => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Debug: Log when chat data changes
+  React.useEffect(() => {
+    console.log("ChatHistory received updated chats:", chats.length);
+  }, [chats]);
 
   const isActiveChat = (chat: Chat) => {
     if (pathname === `/chat/${chat.id}`) {
@@ -45,8 +54,20 @@ export default function ChatHistory({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center px-4 pt-4 pb-2 border-t">
+      <div className="flex items-center justify-between px-4 pt-4 pb-2 border-t">
         <h3 className="text-sm font-medium">Chat History</h3>
+        {onRefresh && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            title="Refresh chat history"
+            onClick={onRefresh}
+          >
+            <RefreshCw size={14} />
+            <span className="sr-only">Refresh</span>
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 overflow-hidden">

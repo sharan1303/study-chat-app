@@ -23,7 +23,8 @@ type ModuleWithCount = {
 async function processModulesRequest(
   userId: string | null,
   sessionId: string | null,
-  name?: string
+  name?: string,
+  exactMatch?: boolean
 ) {
   try {
     // Either userId or sessionId must be provided
@@ -47,11 +48,21 @@ async function processModulesRequest(
 
     // Add name filtering if provided
     if (name) {
-      // @ts-expect-error - Dynamic property assignment
-      where.name = {
-        contains: name,
-        mode: "insensitive" as const,
-      };
+      if (exactMatch) {
+        // Use equals with case insensitivity for exact match
+        // @ts-expect-error - Dynamic property assignment
+        where.name = {
+          equals: name,
+          mode: "insensitive" as const,
+        };
+      } else {
+        // Use contains with case insensitivity for fuzzy match
+        // @ts-expect-error - Dynamic property assignment
+        where.name = {
+          contains: name,
+          mode: "insensitive" as const,
+        };
+      }
     }
 
     // Fetch modules with the constructed where clause
@@ -91,6 +102,7 @@ export async function GET(request: NextRequest) {
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
   const name = searchParams.get("name") || undefined;
+  const exactMatch = searchParams.get("exactMatch") === "true";
 
   // Get sessionId from URL - try both parameter names for compatibility
   const sessionIdFromParam = searchParams.get("sessionId");
@@ -105,7 +117,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return processModulesRequest(userId || null, sessionId || null, name);
+  return processModulesRequest(
+    userId || null,
+    sessionId || null,
+    name,
+    exactMatch
+  );
 }
 
 // POST /api/modules - Create a new module
