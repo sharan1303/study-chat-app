@@ -145,7 +145,7 @@ export default function ModuleList({
                   key={module.id}
                   onClick={() => onModuleClick(module.id, module.name)}
                   className={cn(
-                    "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground w-full text-left",
+                    "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground max-w-[240px] text-left",
                     collapsed && "justify-center p-1",
                     (currentModule === module.id ||
                       checkIsActive(module.name)) &&
