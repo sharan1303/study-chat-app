@@ -1,32 +1,33 @@
-# Study Chat - AI-Powered Study Assistant
+# Study Chat - AI-Powered Personal Study Assistant
 
-This is an AI-powered study assistant application built with Next.js that helps students learn and understand their university modules through interactive chat conversations.
+AI-powered study assistant application built with Next.js and Vercel AI SDK helping students learn and understand their university subjects through organised and interactive chat conversations.
 
 ## Project Overview
 
 Study Chat provides an intelligent chat interface where students can:
 
-- Ask questions about their course materials
-- Get explanations for complex concepts
 - Study with AI assistants specialized for different modules
-- Access their study modules and resources in one place
-- Track chat history across different modules
+- Upload lecture notes and study materials
+- Ask questions about specific selected documents
+- Search the internet for additional resources
+- Filter sources for academic papers
+- Categorise conversations and documents into modules to reflect their curriculum
 
-The application uses the Vercel AI SDK to power conversations with AI models and provides a clean, modern UI built with shadcn/ui components.
+Using Vercel AI SDK to power conversations with AI models, it provides a good selection of models to use with a clean, modern UI built with shadcn/ui components.
 
-[Production deployment can be found here at Study Chat](https://study-chat-app.vercel.app/)
+[Production deployment can be found here at Study Chat App](https://study-chat-app.vercel.app/)
 
 ## Features
 
-- **Module Management**: Create, edit, and organize study modules with custom icons
-- **AI Chat Interface**: Engage in natural conversations with AI about your study materials
-- **Resource Library**: Browse and access study resources organized by module
-- **User Authentication**: Secure sign-in with Clerk authentication
-- **Dynamic Rendering**: Fast, responsive interface with server-side rendering support
-- **Chat History**: Save and browse previous conversations for easy reference
-- **Collapsible Sidebar**: Improved UI with collapsible sidebar for better screen utilization
-- **Profile Management**: Integrated Clerk user profile management
-- **Responsive Design**: Optimized for both desktop and mobile devices
+**Module Management**: Create, edit, and organise your chats into categories called modules with custom icons\
+**AI Chat Interface**: Engage in natural conversations with AI about your study materials\
+**Resource Library**: Browse and access study resources organised in categories\
+**User Authentication**: Secure sign-in with Clerk authentication\
+**Dynamic Rendering**: Fast, responsive interface with server-side rendering support\
+**Chat History**: Save and browse previous conversations for easy reference\
+**Collapsible Sidebar**: Improved UI with collapsible sidebar for better screen utilization\
+**Profile Management**: Integrated Clerk user profile management\
+**Responsive Design**: Optimized for both desktop and mobile devices
 
 ## Getting Started
 
@@ -42,16 +43,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router), React 19
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS
 - **Authentication**: Clerk
 - **AI Integration**: Vercel AI SDK
-- **Database**: Prisma with Supabase
+- **Database**: Prisma ORM with Supabase
 - **AI Models**:
   - Primary: Gemini 2.0 Flash
   - Search: Perplexity API
-- **State Management**: React Context API
+- **State Management**: React Context API and Server-sent events (SSE)
 
 ## Environment Variables
 
@@ -82,23 +83,29 @@ NEXT_PRIVATE_STANDALONE=1
   - `chat/` - General chat interface
   - `modules/` - Module management UI
   - `settings/` - User settings and preferences
+  - `ClientChatPage` - Client-side chat page interface
 - `components/` - Reusable UI components
   - `ui/` - Shadcn UI components
   - User interface elements (Sidebar, Chat, etc.)
 - `lib/` - Utility functions and shared code
+  - Server-sent events (SSE) for real-time updates
   - Context providers
   - Helper functions
+  - Session management
 - `prisma/` - Database schema and migrations
 - `public/` - Static assets
 
 ## Recent Updates
 
-- **Sidebar Improvements**: Enhanced sidebar with collapsible functionality and animations
-- **State Management**: Implemented context-based state management for sidebar
-- **Chat History**: Added chat history display in the sidebar
-- **User Settings**: Integrated Clerk user profile management in settings page
-- **Header Alignment**: Fixed alignment issues across different pages
-- **UI Enhancements**: Improved styling and layout consistency
+**Real-time Updates**: Implemented Server-Sent Events for real-time UI updates without page refreshes\
+**Chat Management**: Added ability to delete individual chats and clear chat history\
+**Anonymous Users Support**: Enhanced session management for both authenticated and anonymous users\
+**Data Migration**: Added seamless migration of anonymous user data with event broadcasting\
+**Session Persistence**: Improved session ID storage with localStorage and cookies for better reliability\
+**UI Enhancements**: Updated confirmation dialogs and improved styling consistency\
+**Error Handling**: Enhanced error handling and logging throughout the application
+
+For a detailed list of recent commits merged from the dev branch to main, please see [UPDATES.md](./UPDATES.md).
 
 ## Learn More
 
@@ -118,7 +125,7 @@ The application is configured for dynamic rendering, which is essential for feat
 1. Ensure the environment variables for dynamic rendering are set
 2. The build process uses the `next.config.mjs` configuration for standalone output
 3. All pages using `useSearchParams()` are wrapped in Suspense boundaries
-4. For local development, use `bun dev` which doesn't require static generation
+4. For local development, use `npm run dev` which doesn't require static generation
 
 ## Database Schema
 
