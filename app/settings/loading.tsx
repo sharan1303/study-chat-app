@@ -31,8 +31,8 @@ export default function SettingsLoading() {
         <div className="flex flex-col p-6 md:flex-row gap-8 max-w-6xl mx-auto">
           {/* Left sidebar with user info */}
           <div className="w-full md:w-1/3">
-            <div className="flex flex-col items-center text-center mb-6">
-              <Skeleton className="w-32 h-32 rounded-full mb-4" />
+            <div className="flex flex-col items-center text-center mb-6 mt-10">
+              <Skeleton className="w-32 h-32 rounded-full mb-8 mt-1 " />
               <Skeleton className="h-6 w-60 mb-2" />
               <Skeleton className="h-5 w-60 mb-2" />
               <Badge variant="secondary" className="pt-1 opacity-50">
@@ -47,7 +47,7 @@ export default function SettingsLoading() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {[1, 2].map((i) => (
+                {[1, 2, 3].map((i) => (
                   <div key={i} className="flex justify-between items-center">
                     <Skeleton className="h-4 w-20" />
                     <div className="flex gap-1">
@@ -63,10 +63,10 @@ export default function SettingsLoading() {
           {/* Right side with settings tabs */}
           <div className="flex-1">
             <Tabs defaultValue="account" className="w-full">
-              <TabsList className="grid grid-cols-4 mb-6">
+              <TabsList className="grid grid-cols-4 mb-6 mt-0.5">
                 {[
                   "Account",
-                  "Customization",
+                  "Modules",
                   "History & Sync",
                   "Models"
                 ].map((tab) => (

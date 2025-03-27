@@ -25,8 +25,7 @@ export default function EditableProfileImage({
   if (!isLoaded) {
     return (
       <div className={cn("relative flex flex-col items-center", className)}>
-        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-background shadow-lg bg-muted flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <div className="w-32 h-32 rounded-full overflow-hidden border-4   border-background shadow-lg bg-muted flex items-center justify-center">
         </div>
         <div className="h-0 opacity-0" />
       </div>
