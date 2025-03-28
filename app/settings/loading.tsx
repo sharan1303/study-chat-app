@@ -34,7 +34,7 @@ export default function SettingsLoading() {
             <div className="flex flex-col items-center text-center mb-6 mt-10">
               <Skeleton className="w-32 h-32 rounded-full mb-8 mt-1 " />
               <Skeleton className="h-6 w-60 mb-2" />
-              <Skeleton className="h-5 w-60 mb-2" />
+              <Skeleton className="h-4 w-60 mb-2.5" />
               <Badge variant="secondary" className="pt-1 opacity-50">
                 Free Plan
               </Badge>

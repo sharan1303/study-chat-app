@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bot, ArrowLeft, Info, Trash, Settings, Upload } from "lucide-react";
+import { Bot, ArrowLeft, Info, Trash, Upload } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -234,7 +234,7 @@ function SettingsContent() {
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">O</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">J</kbd>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
@@ -289,7 +289,7 @@ function SettingsContent() {
                         />
                         <Button onClick={handleImportClick} className="w-full">
                           <Upload className="h-4 w-4 mr-2" />
-                          Import Modules from JSON
+                          Import Modules from JSON (Coming Soon)
                         </Button>
                       </div>
                     </div>
@@ -310,12 +310,13 @@ function SettingsContent() {
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() =>
-                                toast.success("Module Analytics opened")
-                              }
+                              // onClick={() =>
+                              //   toast.success("Module Analytics opened")
+                              // }
                             >
-                              <Settings className="h-5 w-5" />
-                              See Usage
+                              {/* <Settings className="h-5 w-5" />
+                              See Usage */}
+                              Coming Soon
                             </Button>
                           </div>
                         </div>
