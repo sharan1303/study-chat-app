@@ -1,5 +1,6 @@
 import React from "react";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from '@clerk/themes'
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
@@ -26,14 +27,23 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+
 // Clerk appearance config
 const clerkAppearance = {
+  baseTheme: [dark],
+  variables: {
+    colorInputBackground: "#ffffff",
+    colorInputText: "#000000",
+  },
   elements: {
+    modalCloseButton: "absolute right-4 top-4",
+    card: "rounded-lg shadow-md",    
     formButtonPrimary:
       "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded",
     footerActionLink: "text-blue-600 hover:text-blue-800 font-semibold",
   },
 };
+
 
 export default function RootLayout({
   children,
