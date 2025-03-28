@@ -181,19 +181,30 @@ export function ResourceUploadDialog({
         formData.append("description", values.description);
       }
 
-      if (values.url) {
+      // Use URL field for external resources only if no file is uploaded
+      if (values.url && !selectedFile) {
         formData.append("url", values.url);
       }
 
+      // Handle file uploads with the new endpoint
       if (selectedFile) {
+        // Add the file to form data
         formData.append("file", selectedFile);
-      }
 
-      await axios.post("/api/resources", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+        // Use the new file upload endpoint
+        await axios.post("/api/resources/upload", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        // For non-file resources (links, etc.), use the standard endpoint
+        await axios.post("/api/resources", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
 
       toast.success("Resource created successfully");
 

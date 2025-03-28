@@ -260,34 +260,46 @@ function ModulesPageContent({
             }))
           );
 
-          // Fetch resources - note these require authentication
-          // so we don't need to add sessionId here (it won't work for anon users)
-          const resourcesResponse = await fetch("/api/resources");
-          if (!resourcesResponse.ok) {
-            throw new Error("Failed to fetch resources");
-          }
+          // Only attempt to fetch resources if user is signed in
+          if (isSignedIn) {
+            // Fetch resources - these require authentication
+            const resourcesResponse = await fetch("/api/resources");
 
-          const resourcesData = await resourcesResponse.json();
+            if (resourcesResponse.status === 401) {
+              // Handle unauthorized gracefully - user is not logged in
+              console.log("User is not authenticated for resources");
+              setFilteredResources([]);
+            } else if (!resourcesResponse.ok) {
+              throw new Error(
+                `Failed to fetch resources: ${resourcesResponse.statusText}`
+              );
+            } else {
+              const resourcesData = await resourcesResponse.json();
 
-          // Initialize filtered resources
-          if (!searchQuery) {
-            setFilteredResources(resourcesData);
+              // Initialize filtered resources
+              if (!searchQuery) {
+                setFilteredResources(resourcesData);
+              } else {
+                const filtered = resourcesData.filter(
+                  (resource: Resource) =>
+                    resource.title
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    (resource.description &&
+                      resource.description
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())) ||
+                    (resource.moduleName &&
+                      resource.moduleName
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()))
+                );
+                setFilteredResources(filtered);
+              }
+            }
           } else {
-            const filtered = resourcesData.filter(
-              (resource: Resource) =>
-                resource.title
-                  .toLowerCase()
-                  .includes(searchQuery.toLowerCase()) ||
-                (resource.description &&
-                  resource.description
-                    .toLowerCase()
-                    .includes(searchQuery.toLowerCase())) ||
-                (resource.moduleName &&
-                  resource.moduleName
-                    .toLowerCase()
-                    .includes(searchQuery.toLowerCase()))
-            );
-            setFilteredResources(filtered);
+            // User is not signed in, don't try to fetch resources
+            setFilteredResources([]);
           }
         } catch (error) {
           console.error("Error fetching data:", error);

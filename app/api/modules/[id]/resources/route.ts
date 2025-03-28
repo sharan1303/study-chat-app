@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
-import { SESSION_ID_KEY } from "@/lib/session";
 
 // Helper function to validate module access
-async function validateModuleAccess(
-  moduleId: string,
-  userId: string | null,
-  sessionId: string | null
-) {
-  // Require authentication via userId or sessionId
-  if (!userId && !sessionId) {
+async function validateModuleAccess(moduleId: string, userId: string | null) {
+  // Require authentication with userId
+  if (!userId) {
     return {
       error: "Authentication required",
       status: 401,
@@ -21,11 +16,10 @@ async function validateModuleAccess(
     // Build the query to find the module
     const whereCondition = {
       id: moduleId,
-      ...(userId ? { userId } : {}),
-      ...(sessionId ? { sessionId } : {}),
+      userId,
     };
 
-    // Check if the module exists and belongs to the user/session
+    // Check if the module exists and belongs to the user
     const moduleExists = await prisma.module.findFirst({
       where: whereCondition,
     });
@@ -59,23 +53,23 @@ type ResourceType = {
   sessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  module?: {
+    name: string;
+  };
 };
 
 // GET /api/modules/[moduleId]/resources - Get all resources for a module
-export async function GET(request: NextRequest, props: { params: Promise<{ moduleId: string }> }) {
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ moduleId: string }> }
+) {
   const params = await props.params;
   const { userId } = await auth();
-  const searchParams = request.nextUrl.searchParams;
 
-  // Get sessionId from URL - try both parameter names for compatibility
-  const sessionIdFromParam = searchParams.get("sessionId");
-  const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
-  const sessionId = sessionIdFromParam || sessionIdFromKey;
-
-  // For anonymous users, require a session ID
-  if (!userId && !sessionId) {
+  // Require authentication with userId
+  if (!userId) {
     return NextResponse.json(
-      { error: "Session ID or authentication required" },
+      { error: "Authentication required" },
       { status: 401 }
     );
   }
@@ -83,11 +77,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
   const { moduleId } = params;
 
   // Validate module access
-  const accessCheck = await validateModuleAccess(
-    moduleId,
-    userId || null,
-    sessionId
-  );
+  const accessCheck = await validateModuleAccess(moduleId, userId);
   if (!accessCheck.success) {
     return NextResponse.json(
       { error: accessCheck.error },
@@ -100,9 +90,17 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
     const resources = await prisma.resource.findMany({
       where: {
         moduleId,
+        userId, // Only fetch resources created by this user
       },
       orderBy: {
         createdAt: "desc",
+      },
+      include: {
+        module: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -111,9 +109,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
       id: resource.id,
       url: resource.fileUrl, // Map fileUrl from DB to url in API response
       title: resource.title,
+      description: resource.content, // Map content to description for consistency
       content: resource.content,
       type: resource.type,
       moduleId: resource.moduleId,
+      moduleName: resource.module?.name || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     }));
@@ -129,20 +129,17 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
 }
 
 // POST /api/modules/[moduleId]/resources - Create a new resource
-export async function POST(request: NextRequest, props: { params: Promise<{ moduleId: string }> }) {
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ moduleId: string }> }
+) {
   const params = await props.params;
   const { userId } = await auth();
-  const searchParams = request.nextUrl.searchParams;
 
-  // Get sessionId from URL - try both parameter names for compatibility
-  const sessionIdFromParam = searchParams.get("sessionId");
-  const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
-  const sessionId = sessionIdFromParam || sessionIdFromKey;
-
-  // For anonymous users, require a session ID
-  if (!userId && !sessionId) {
+  // Require authentication with userId
+  if (!userId) {
     return NextResponse.json(
-      { error: "Session ID or authentication required" },
+      { error: "Authentication required" },
       { status: 401 }
     );
   }
@@ -150,11 +147,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ modu
   const { moduleId } = params;
 
   // Validate module access
-  const accessCheck = await validateModuleAccess(
-    moduleId,
-    userId || null,
-    sessionId
-  );
+  const accessCheck = await validateModuleAccess(moduleId, userId);
   if (!accessCheck.success) {
     return NextResponse.json(
       { error: accessCheck.error },
@@ -189,9 +182,15 @@ export async function POST(request: NextRequest, props: { params: Promise<{ modu
         content: content || null,
         type: type || "note",
         moduleId,
-        userId: userId || null,
-        sessionId: userId ? null : sessionId,
+        userId, // Always set userId, never use sessionId
+        sessionId: null, // No sessionId for resources
       },
+    });
+
+    // Get the module name
+    const moduleInfo = await prisma.module.findUnique({
+      where: { id: moduleId },
+      select: { name: true },
     });
 
     // Map database resource to API response (add url field for backwards compatibility)
@@ -200,8 +199,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ modu
       url: resource.fileUrl, // Map 'fileUrl' from DB to 'url' in API
       title: resource.title,
       content: resource.content,
+      description: resource.content, // Add description for consistency
       type: resource.type,
       moduleId: resource.moduleId,
+      moduleName: moduleInfo?.name || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     });

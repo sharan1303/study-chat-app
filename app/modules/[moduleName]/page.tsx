@@ -6,6 +6,7 @@ import axios from "axios";
 import { Check, Edit, MessageSquare, Trash, X } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useAuth } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,13 +83,13 @@ export default function ModuleDetailsPage(props: {
 }) {
   const params = use(props.params);
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [module, setModule] = useState<Module | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [allModules, setAllModules] = useState<
     { id: string; name: string; icon: string }[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -113,9 +114,42 @@ export default function ModuleDetailsPage(props: {
           console.log(`Found exact match for module: ${exactModules[0].name}`);
           setModule(exactModules[0]);
 
-          // Fetch resources for this module
-          const resourcesData = await api.getResources(exactModules[0].id);
-          setResources(resourcesData.resources || []);
+          // Get all modules for selector
+          const allModulesData = await api.getModules();
+          const modulesData = allModulesData.modules || [];
+          setAllModules(
+            modulesData.map((m: Module) => ({
+              id: m.id,
+              name: m.name,
+              icon: m.icon,
+            }))
+          );
+
+          // Fetch resources only for authenticated users
+          if (isSignedIn) {
+            const resourcesResponse = await fetch("/api/resources");
+            if (resourcesResponse.status === 401) {
+              // Handle unauthorized gracefully - user is not authenticated
+              console.log("User is not authenticated for resources");
+              setResources([]);
+            } else if (resourcesResponse.ok) {
+              const allResources = await resourcesResponse.json();
+              // Filter resources for the current module
+              const moduleResources = allResources.filter(
+                (resource: Resource) => resource.moduleId === exactModules[0].id
+              );
+              setResources(moduleResources);
+            } else {
+              console.error(
+                "Failed to fetch resources:",
+                resourcesResponse.statusText
+              );
+              setResources([]);
+            }
+          } else {
+            // No resources for anonymous users
+            setResources([]);
+          }
           return;
         }
 
@@ -173,12 +207,33 @@ export default function ModuleDetailsPage(props: {
 
         setModule(moduleData);
 
-        // Fetch resources for this module
-        const resourcesData = await api.getResources(moduleData.id);
-        setResources(resourcesData.resources || []);
+        // Fetch resources only for authenticated users
+        if (isSignedIn) {
+          const resourcesResponse = await fetch("/api/resources");
+          if (resourcesResponse.status === 401) {
+            // Handle unauthorized gracefully - user is not authenticated
+            console.log("User is not authenticated for resources");
+            setResources([]);
+          } else if (resourcesResponse.ok) {
+            const allResources = await resourcesResponse.json();
+            // Filter resources for the current module
+            const moduleResources = allResources.filter(
+              (resource: Resource) => resource.moduleId === moduleData.id
+            );
+            setResources(moduleResources);
+          } else {
+            console.error(
+              "Failed to fetch resources:",
+              resourcesResponse.statusText
+            );
+            setResources([]);
+          }
+        } else {
+          // No resources for anonymous users
+          setResources([]);
+        }
       } catch (error) {
         console.error("Error fetching module details:", error);
-        setError("Failed to load module details");
       } finally {
         setIsLoading(false);
       }
@@ -188,7 +243,7 @@ export default function ModuleDetailsPage(props: {
     if (typeof window !== "undefined") {
       fetchModuleDetails();
     }
-  }, [params.moduleName]);
+  }, [params.moduleName, isSignedIn]);
 
   // Set initial edit values when module data loads
   useEffect(() => {
@@ -515,10 +570,21 @@ export default function ModuleDetailsPage(props: {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Resources</h2>
-              <ResourceUploadButton variant="outline" moduleId={module.id} />
+              {isSignedIn && (
+                <ResourceUploadButton variant="outline" moduleId={module.id} />
+              )}
             </div>
 
-            {resources.length === 0 ? (
+            {!isSignedIn ? (
+              <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+                <h3 className="text-xl font-medium">
+                  Sign in to view resources
+                </h3>
+                <p className="text-muted-foreground">
+                  You need to be signed in to view and manage resources
+                </p>
+              </div>
+            ) : resources.length === 0 ? (
               <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
                 <h3 className="text-xl font-medium">No resources found</h3>
                 <p className="text-muted-foreground">
