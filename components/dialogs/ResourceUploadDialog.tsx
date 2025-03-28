@@ -4,7 +4,7 @@ import axios from "axios";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Upload, Plus, X } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 
@@ -83,6 +83,7 @@ export function ResourceUploadDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [moduleLoadError, setModuleLoadError] = useState<string | null>(null);
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -116,37 +117,37 @@ export function ResourceUploadDialog({
       if (!open) return;
       try {
         setIsLoading(true);
+        setModuleLoadError(null);
+        console.log("Fetching modules...");
         const response = await axios.get("/api/modules");
+        console.log("Modules API response:", response.data);
 
-        // Make sure we're handling the response data correctly
-        if (response.data && Array.isArray(response.data)) {
-          setModules(response.data);
-        } else if (
+        // Handle the response data format - API returns { modules: [...] }
+        if (
           response.data &&
-          typeof response.data === "object" &&
           response.data.modules &&
           Array.isArray(response.data.modules)
         ) {
-          // Handle case where API returns { modules: [...] }
+          console.log(
+            "Setting modules from response.data.modules:",
+            response.data.modules
+          );
           setModules(response.data.modules);
-        } else if (
-          response.data &&
-          typeof response.data === "object" &&
-          response.data.data &&
-          Array.isArray(response.data.data)
-        ) {
-          // Handle case where API returns { data: [...] }
-          setModules(response.data.data);
+        } else if (response.data && Array.isArray(response.data)) {
+          console.log("Setting modules from response.data:", response.data);
+          setModules(response.data);
         } else {
           // Set modules to empty array if data is not in expected format
           console.error("Unexpected API response format:", response.data);
           setModules([]);
+          setModuleLoadError("Unexpected data format from server");
           toast.error("Failed to load modules: unexpected data format");
         }
       } catch (error) {
         console.error("Error fetching modules:", error);
+        setModules([]);
+        setModuleLoadError("Failed to load your modules");
         toast.error("Failed to load modules");
-        setModules([]); // Ensure modules is an array even after error
       } finally {
         setIsLoading(false);
       }
@@ -287,7 +288,7 @@ export function ResourceUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto z-[100]">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Upload Resource</DialogTitle>
@@ -360,7 +361,31 @@ export function ResourceUploadDialog({
         {/* Form fields */}
         <div className="mt-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+              onKeyDown={(e) => {
+                // Submit form when Enter is pressed in an input field
+                if (e.key === "Enter" && !e.shiftKey) {
+                  // Skip if in textarea or submitting is in progress
+                  if (e.target instanceof HTMLTextAreaElement || isSubmitting) {
+                    return;
+                  }
+
+                  // Skip if in select elements
+                  if (
+                    e.target instanceof HTMLElement &&
+                    (e.target.tagName === "SELECT" ||
+                      e.target.closest('[role="combobox"]'))
+                  ) {
+                    return;
+                  }
+
+                  e.preventDefault();
+                  form.handleSubmit(onSubmit)();
+                }
+              }}
+            >
               <FormField
                 control={form.control}
                 name="title"
@@ -386,7 +411,13 @@ export function ResourceUploadDialog({
                         placeholder="Enter resource description"
                         {...field}
                         value={field.value || ""}
-                        h-1
+                        className="h-1"
+                        onKeyDown={(e) => {
+                          if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                            e.preventDefault();
+                            form.handleSubmit(onSubmit)();
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -406,11 +437,15 @@ export function ResourceUploadDialog({
                         value={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select resource type" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent
+                          position="popper"
+                          sideOffset={4}
+                          className="z-[200]"
+                        >
                           {resourceTypes.map((type) => (
                             <SelectItem key={type.value} value={type.value}>
                               {type.label}
@@ -431,21 +466,32 @@ export function ResourceUploadDialog({
                       <FormLabel>Module</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value}
+                        value={field.value || undefined}
                         disabled={!!preselectedModuleId || isLoading}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select a module" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent
+                          position="popper"
+                          sideOffset={4}
+                          className="z-[200]"
+                        >
                           {isLoading ? (
                             <div className="p-2 flex items-center justify-center">
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                               <span>Loading modules...</span>
                             </div>
-                          ) : Array.isArray(modules) && modules.length > 0 ? (
+                          ) : moduleLoadError ? (
+                            <div className="p-2 text-center text-destructive">
+                              {moduleLoadError}
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Try refreshing the dialog
+                              </div>
+                            </div>
+                          ) : modules.length > 0 ? (
                             modules.map((moduleItem) => (
                               <SelectItem
                                 key={moduleItem.id}
@@ -458,9 +504,12 @@ export function ResourceUploadDialog({
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="no-modules">
-                              No modules available
-                            </SelectItem>
+                            <div className="p-2 text-center text-muted-foreground">
+                              No modules available.
+                              <div className="mt-1 text-xs">
+                                You need to create a module first.
+                              </div>
+                            </div>
                           )}
                         </SelectContent>
                       </Select>
@@ -491,28 +540,30 @@ export function ResourceUploadDialog({
                 )}
               />
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Resource
-                    </>
-                  )}
-                </Button>
+              <div className="flex justify-between items-center gap-2 pt-4">
+                <div className="text-xs text-muted-foreground">
+                  Press Enter to upload or Ctrl+Enter in description
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>Upload</>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

@@ -3,7 +3,7 @@
 import React, { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { Search, Edit, Trash } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,36 +18,11 @@ import { Input } from "@/components/ui/input";
 import { SignInButton } from "@clerk/nextjs";
 import { formatDate } from "@/lib/utils";
 import { useEffect } from "react";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import axios from "axios";
 import { encodeModuleSlug } from "@/lib/utils";
 import { ResourceUploadButton } from "@/components/ResourceUploadButton";
 import { useSession } from "@/context/SessionContext";
 import { api } from "@/lib/api";
+import { ResourceTable } from "@/components/ResourceTable";
 
 // Import the dedicated search params component
 import { SearchParamsReader } from "./search-params";
@@ -313,26 +288,23 @@ function ModulesPageContent({
       fetchData();
     }, [searchQuery, isSignedIn, sessionId]);
 
-    if (resourcesLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center space-y-4 py-8">
-          <p className="text-muted-foreground text-sm">Loading resources...</p>
-        </div>
-      );
-    }
-
-    if (filteredResources.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-          <h3 className="text-xl font-medium">No resources found</h3>
-          <p className="text-muted-foreground">
-            {searchQuery
-              ? "Try a different search term"
-              : "Create your first resource to get started"}
-          </p>
-        </div>
-      );
-    }
+    const handleResourceUpdate = (updatedResource: Resource) => {
+      if (updatedResource._deleted) {
+        // If resource was deleted, mark as deleted in the UI
+        setFilteredResources((resources) =>
+          resources.map((r) =>
+            r.id === updatedResource.id ? { ...r, _deleted: true } : r
+          )
+        );
+      } else {
+        // Regular update
+        setFilteredResources((resources) =>
+          resources.map((r) =>
+            r.id === updatedResource.id ? updatedResource : r
+          )
+        );
+      }
+    };
 
     return (
       <div className="mt-6">
@@ -344,50 +316,14 @@ function ModulesPageContent({
           )}
         </div>
 
-        <div className="overflow-x-auto border rounded-md">
-          <table className="w-full min-w-full table-fixed">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 font-medium w-1/5">Title</th>
-                <th className="text-left p-3 font-medium w-1/4">Description</th>
-                <th className="text-left p-3 font-medium w-1/12">Type</th>
-                <th className="text-left p-3 font-medium w-1/5">Module</th>
-                <th className="text-left p-3 font-medium w-1/7">Added</th>
-                <th className="text-right p-3 font-medium w-1/8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredResources
-                .filter((resource) => !resource._deleted)
-                .map((resource) => (
-                  <ResourceRowWithContext
-                    key={resource.id}
-                    resource={resource}
-                    modules={modules}
-                    onUpdate={(updatedResource) => {
-                      if (updatedResource._deleted) {
-                        // If resource was deleted, mark as deleted in the UI
-                        setFilteredResources((resources) =>
-                          resources.map((r) =>
-                            r.id === updatedResource.id
-                              ? { ...r, _deleted: true }
-                              : r
-                          )
-                        );
-                      } else {
-                        // Regular update
-                        setFilteredResources((resources) =>
-                          resources.map((r) =>
-                            r.id === updatedResource.id ? updatedResource : r
-                          )
-                        );
-                      }
-                    }}
-                  />
-                ))}
-            </tbody>
-          </table>
-        </div>
+        {/* Use the new ResourceTable component */}
+        <ResourceTable
+          resources={filteredResources}
+          modules={modules}
+          onUpdate={handleResourceUpdate}
+          showModuleColumn={true}
+          isLoading={resourcesLoading}
+        />
       </div>
     );
   }
@@ -508,281 +444,6 @@ function ModulesPageContent({
         </Tabs>
       </div>
     </div>
-  );
-}
-
-// Resource row component with context menu for all resources page
-function ResourceRowWithContext({
-  resource,
-  modules,
-  onUpdate,
-}: {
-  resource: Resource;
-  modules: { id: string; name: string; icon: string }[];
-  onUpdate: (updatedResource: Resource) => void;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(resource.title);
-  const [editDescription, setEditDescription] = useState(
-    resource.description || ""
-  );
-  const [selectedModuleId, setSelectedModuleId] = useState(resource.moduleId);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  const [showModuleChangeAlert, setShowModuleChangeAlert] = useState(false);
-
-  // Start editing
-  const handleEdit = () => {
-    setEditTitle(resource.title);
-    setEditDescription(resource.description || "");
-    setSelectedModuleId(resource.moduleId);
-    setIsEditing(true);
-  };
-
-  // Cancel editing
-  const handleCancel = () => {
-    setIsEditing(false);
-  };
-
-  // Save resource update
-  const saveResourceUpdate = async (updates: {
-    title?: string;
-    description?: string;
-    moduleId?: string;
-  }) => {
-    try {
-      setIsSaving(true);
-      await axios.put(`/api/resources/${resource.id}`, updates);
-
-      // Update local state
-      const updatedResource = {
-        ...resource,
-        ...updates,
-        // If moduleId was updated, update the moduleName too
-        ...(updates.moduleId && {
-          moduleName:
-            modules.find((m) => m.id === updates.moduleId)?.name ||
-            resource.moduleName,
-        }),
-      };
-
-      onUpdate(updatedResource);
-      toast.success("Resource updated");
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating resource:", error);
-      toast.error("Failed to update resource");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Handle save
-  const handleSave = () => {
-    if (editTitle.trim().length < 2) {
-      toast.error("Title must be at least 2 characters");
-      return;
-    }
-
-    const updates: { title?: string; description?: string; moduleId?: string } =
-      {};
-
-    if (editTitle !== resource.title) {
-      updates.title = editTitle;
-    }
-
-    if (editDescription !== resource.description) {
-      updates.description = editDescription;
-    }
-
-    if (selectedModuleId !== resource.moduleId) {
-      setShowModuleChangeAlert(true);
-      return;
-    }
-
-    if (Object.keys(updates).length > 0) {
-      saveResourceUpdate(updates);
-    } else {
-      setIsEditing(false);
-    }
-  };
-
-  // Handle module change confirmation
-  const handleModuleChangeConfirm = () => {
-    // Create an update with just the moduleId
-    const updates = { moduleId: selectedModuleId };
-    saveResourceUpdate(updates);
-    setShowModuleChangeAlert(false);
-  };
-
-  // Handle delete resource
-  const handleDelete = async () => {
-    try {
-      setIsSaving(true);
-      await axios.delete(`/api/resources/${resource.id}`);
-      toast.success("Resource deleted");
-      // Mark as deleted for UI
-      onUpdate({ ...resource, _deleted: true });
-    } catch (error) {
-      console.error("Error deleting resource:", error);
-      toast.error("Failed to delete resource");
-    } finally {
-      setIsSaving(false);
-      setShowDeleteAlert(false);
-    }
-  };
-
-  return (
-    <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <tr className="border-b hover:bg-muted/50 cursor-context-menu">
-            <td className="p-3">
-              {isEditing ? (
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="h-9 min-w-[200px]"
-                  autoFocus
-                />
-              ) : (
-                <div className="font-medium">{resource.title}</div>
-              )}
-            </td>
-            <td className="p-3">
-              {isEditing ? (
-                <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="text-sm min-h-[10px] resize-none"
-                  placeholder="Add a description..."
-                />
-              ) : (
-                <div className="line-clamp-2 text-sm text-muted-foreground">
-                  {resource.description || "No description provided"}
-                </div>
-              )}
-            </td>
-            <td className="p-3 text-sm">{resource.type}</td>
-            <td className="p-3 text-sm">
-              {isEditing ? (
-                <Select
-                  value={selectedModuleId}
-                  onValueChange={setSelectedModuleId}
-                >
-                  <SelectTrigger className="w-[180px] h-9">
-                    <SelectValue placeholder="Select a module" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {modules.map((module) => (
-                      <SelectItem key={module.id} value={module.id}>
-                        <span className="flex items-center gap-2">
-                          <span>{module.icon}</span>
-                          <span>{module.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span>{resource.moduleName || "No module"}</span>
-              )}
-            </td>
-            <td className="p-3 text-sm text-muted-foreground">
-              {new Date(resource.createdAt).toLocaleDateString()}
-            </td>
-            <td className="p-3 text-right">
-              {isEditing ? (
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancel}
-                    disabled={isSaving}
-                  >
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                resource.url && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (resource.url) window.open(resource.url, "_blank");
-                    }}
-                  >
-                    View
-                  </Button>
-                )
-              )}
-            </td>
-          </tr>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            onClick={handleEdit}
-            disabled={isEditing}
-            className="cursor-pointer"
-          >
-            <Edit className="mr-2 h-4 w-4" /> Edit
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() => setShowDeleteAlert(true)}
-            disabled={isEditing}
-            className="cursor-pointer text-destructive focus:text-destructive"
-          >
-            <Trash className="mr-2 h-4 w-4" /> Delete
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete &quot;{resource.title}&quot; and
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Module Change Confirmation Dialog */}
-      <AlertDialog
-        open={showModuleChangeAlert}
-        onOpenChange={setShowModuleChangeAlert}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Change module?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will move the resource to a different module.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleModuleChangeConfirm}>
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
   );
 }
 

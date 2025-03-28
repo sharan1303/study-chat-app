@@ -19,7 +19,7 @@ This guide will help you set up Supabase storage for your application.
 
 For secure access control, add the following Row Level Security (RLS) policies to your `resources` bucket:
 
-### Allow users to select their own files:
+### Allow users to select their own files
 
 ```sql
 CREATE POLICY "Users can view their own resources"
@@ -27,7 +27,7 @@ ON storage.objects FOR SELECT
 USING (auth.uid()::text = (storage.foldername(name))[1]);
 ```
 
-### Allow users to insert their own files:
+### Allow users to insert their own files
 
 ```sql
 CREATE POLICY "Users can upload resources"
@@ -35,7 +35,7 @@ ON storage.objects FOR INSERT
 WITH CHECK (auth.uid()::text = (storage.foldername(name))[1]);
 ```
 
-### Allow users to update their own files:
+### Allow users to update their own files
 
 ```sql
 CREATE POLICY "Users can update their own resources"
@@ -43,7 +43,7 @@ ON storage.objects FOR UPDATE
 USING (auth.uid()::text = (storage.foldername(name))[1]);
 ```
 
-### Allow users to delete their own files:
+### Allow users to delete their own files
 
 ```sql
 CREATE POLICY "Users can delete their own resources"

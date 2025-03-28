@@ -11,44 +11,58 @@ export const supabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
 
-// Server-side Supabase client with service role (full admin access)
-// Only use this in server-side contexts (API routes, Server Components)
-export const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_KEY || "",
-  {
+// Initialize the Supabase client with admin privileges
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error("Missing Supabase environment variables");
+}
+
+// Ensure a fresh client is created for each request
+export function getSupabaseAdmin() {
+  return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
-      autoRefreshToken: false,
+      autoRefreshToken: true,
       persistSession: false,
     },
-  }
-);
+  });
+}
+
+// For backwards compatibility
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: false,
+  },
+});
 
 // Upload a file to Supabase Storage
 export async function uploadFile(
   bucket: string,
-  filePath: string,
-  file: File | Blob,
+  path: string,
+  file: File,
   userId: string,
-  options?: { contentType?: string }
+  options = {}
 ) {
+  // Get a fresh client for each upload
+  const client = getSupabaseAdmin();
+
   try {
-    const { data, error } = await supabaseAdmin.storage
-      .from(bucket)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true,
-        contentType: options?.contentType,
-      });
+    const { error } = await client.storage.from(bucket).upload(path, file, {
+      upsert: true,
+      ...options,
+    });
 
     if (error) {
-      throw error;
+      console.error("Supabase upload error:", error);
+      return false;
     }
 
-    return data;
+    return true;
   } catch (error) {
-    console.error("Error uploading file:", error);
-    throw error;
+    console.error("File upload error:", error);
+    return false;
   }
 }
 
@@ -56,38 +70,44 @@ export async function uploadFile(
 export async function getSignedUrl(
   bucket: string,
   path: string,
-  expiresIn = 60 // seconds
+  expiresIn = 60 * 60 * 24 * 7 // 7 days
 ) {
+  // Get a fresh client for each operation
+  const client = getSupabaseAdmin();
+
   try {
-    const { data, error } = await supabaseAdmin.storage
+    const { data, error } = await client.storage
       .from(bucket)
       .createSignedUrl(path, expiresIn);
 
     if (error) {
-      throw error;
+      console.error("Error creating signed URL:", error);
+      return null;
     }
 
     return data;
   } catch (error) {
     console.error("Error getting signed URL:", error);
-    throw error;
+    return null;
   }
 }
 
 // Delete a file from Supabase Storage
 export async function deleteFile(bucket: string, path: string) {
+  // Get a fresh client for each operation
+  const client = getSupabaseAdmin();
+
   try {
-    const { data, error } = await supabaseAdmin.storage
-      .from(bucket)
-      .remove([path]);
+    const { data, error } = await client.storage.from(bucket).remove([path]);
 
     if (error) {
-      throw error;
+      console.error("Error removing file:", error);
+      return null;
     }
 
     return data;
   } catch (error) {
     console.error("Error deleting file:", error);
-    throw error;
+    return null;
   }
 }

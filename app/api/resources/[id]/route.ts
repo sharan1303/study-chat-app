@@ -213,9 +213,9 @@ export async function DELETE(
         const pathname = fileUrl.pathname;
 
         // Extract the path from the URL that matches Supabase storage pattern
-        // /storage/v1/object/public/resources/{userId}/{moduleId}/filename.ext
+        // /storage/v1/object/sign/resources/{userId}/{moduleId}/filename.ext
         const pathMatch = pathname.match(
-          /\/storage\/v1\/object\/public\/resources\/(.*)/
+          /\/storage\/v1\/object\/sign\/resources\/(.*)/
         );
 
         if (pathMatch && pathMatch[1]) {

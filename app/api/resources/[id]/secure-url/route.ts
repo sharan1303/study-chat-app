@@ -47,14 +47,16 @@ export async function GET(
       );
     }
 
-    // Check if URL matches Supabase storage path pattern
+    // Check if URL matches Supabase storage path pattern (handle both public and sign paths)
     const fileUrl = new URL(resource.fileUrl);
     const pathname = fileUrl.pathname;
+
+    // Match either /public/ or /sign/ in the Supabase URL
     const pathMatch = pathname.match(
-      /\/storage\/v1\/object\/public\/resources\/(.*)/
+      /\/storage\/v1\/object\/(public|sign)\/resources\/(.*)/
     );
 
-    if (!pathMatch || !pathMatch[1]) {
+    if (!pathMatch || !pathMatch[2]) {
       // If not a Supabase storage URL, just return the original URL
       return NextResponse.json({
         signedUrl: resource.fileUrl,
@@ -63,7 +65,7 @@ export async function GET(
     }
 
     // Generate a signed URL with short expiry (5 minutes)
-    const storagePath = pathMatch[1];
+    const storagePath = pathMatch[2];
     const signedUrlData = await getSignedUrl("resources", storagePath, 300); // 5 minutes
 
     if (!signedUrlData?.signedUrl) {

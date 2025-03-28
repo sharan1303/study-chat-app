@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { supabaseAdmin, uploadFile } from "@/lib/supabase";
+import { getSupabaseAdmin, uploadFile } from "@/lib/supabase";
 import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 
@@ -84,12 +84,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the public URL
-    const { data: publicUrlData } = await supabaseAdmin.storage
-      .from("resources")
-      .getPublicUrl(filePath);
+    // Get a fresh client for the signed URL
+    const supabase = getSupabaseAdmin();
 
-    const fileUrl = publicUrlData.publicUrl;
+    // Get the signed URL - make sure to use the 'sign' path format
+    const { data: signedUrlData, error: signUrlError } = await supabase.storage
+      .from("resources")
+      .createSignedUrl(filePath, 60 * 60 * 24); // 7 days for initial URL
+
+    if (signUrlError) {
+      console.error("Error creating signed URL:", signUrlError);
+      return NextResponse.json(
+        { error: "Failed to create signed URL" },
+        { status: 500 }
+      );
+    }
+
+    const fileUrl = signedUrlData?.signedUrl || "";
+
+    // Ensure the stored URL uses the /sign/ path format, not /public/
+    let normalizedFileUrl = fileUrl;
+    if (normalizedFileUrl.includes("/object/public/")) {
+      normalizedFileUrl = normalizedFileUrl.replace(
+        "/object/public/",
+        "/object/sign/"
+      );
+    }
 
     // Create the resource record in the database
     const resource = await prisma.resource.create({
@@ -97,7 +117,7 @@ export async function POST(request: NextRequest) {
         title,
         content: description || "",
         type,
-        fileUrl,
+        fileUrl: normalizedFileUrl,
         moduleId,
         userId,
         // You might want to store additional metadata
