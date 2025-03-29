@@ -2,7 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
-// Helper function to validate module access
+/**
+ * Validates if the specified module exists and is accessible by the given user.
+ *
+ * This function ensures that a valid user ID is provided and verifies that the module with the given
+ * moduleId belongs to that user by querying the database. It returns an object indicating success if
+ * access is confirmed, or an error object with the appropriate HTTP status code if authentication fails,
+ * the module doesn't exist, or an internal error occurs.
+ *
+ * @param moduleId - The identifier of the module.
+ * @param userId - The authenticated user's identifier. If null, authentication is considered missing.
+ *
+ * @returns An object with:
+ * - { success: true } if the module exists and the user is authorized,
+ * - or an error message with a status code:
+ *   - 401 if the user is not authenticated,
+ *   - 404 if the module is not found or access is denied,
+ *   - 500 if a database error occurs.
+ */
 async function validateModuleAccess(moduleId: string, userId: string | null) {
   // Require authentication with userId
   if (!userId) {
@@ -57,7 +74,20 @@ type ResourceType = {
   };
 };
 
-// GET /api/modules/[moduleId]/resources - Get all resources for a module
+/**
+ * Retrieves all resources associated with a specific module.
+ *
+ * This handler authenticates the user and validates that they have access to the requested module. If authentication fails,
+ * it returns a 401 error. If the access check fails, an error response with the corresponding status code is returned.
+ * When successful, it fetches the resources belonging to the authenticated user for the given module, formats the data,
+ * and responds with the list of resources including details such as id, url, title, type, module information, file size,
+ * and timestamps in ISO format.
+ *
+ * @param props - An object whose `params` promise resolves to an object containing:
+ *   - moduleId: The identifier for the module whose resources are being retrieved.
+ *
+ * @returns A JSON response containing an array of formatted resource objects or an error message with an appropriate status code.
+ */
 export async function GET(
   request: NextRequest,
   props: { params: Promise<{ moduleId: string }> }
@@ -126,7 +156,21 @@ export async function GET(
   }
 }
 
-// POST /api/modules/[moduleId]/resources - Create a new resource
+/**
+ * Creates a new resource for a specified module.
+ *
+ * This endpoint authenticates the user and verifies that they have access to the module before creating a resource. It parses the request body for resource details—requiring either a URL or content and ensuring a title of at least 2 characters—and then stores the resource in the database. On success, it returns a JSON payload with the resource details, including the mapped URL, file size, and module name.
+ *
+ * The response may include:
+ * - A 401 status if the user is not authenticated.
+ * - A 400 status if validation fails (missing URL/content or an invalid title).
+ * - A 500 status if an error occurs during resource creation.
+ *
+ * @param request - The HTTP request containing the resource data in its JSON body.
+ * @param props - An object containing route parameters, including a promise that resolves to an object with the moduleId.
+ *
+ * @returns A JSON response with either the created resource data or an error message.
+ */
 export async function POST(
   request: NextRequest,
   props: { params: Promise<{ moduleId: string }> }

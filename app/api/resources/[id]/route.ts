@@ -6,7 +6,17 @@ import { deleteFile } from "@/lib/supabase";
 // Add this export to tell Next.js that this route should be treated as dynamic
 export const dynamic = "force-dynamic";
 
-// GET /api/resources/[id] - Get resource details
+/**
+ * Retrieves the details of a resource by its id.
+ *
+ * This endpoint requires authentication. It checks for a valid user identifier, then fetches the resource from the database,
+ * ensuring the resource belongs to the authenticated user through its associated module. On success, it returns a JSON response
+ * with the resource's formatted details, including file size. If authentication fails, it returns a 401 response; if the resource
+ * is not found or access is denied, a 404 response is returned; and in case of an error during the operation, a 500 response is provided.
+ *
+ * @param request - The incoming HTTP request.
+ * @param props - An object containing a promise that resolves to URL parameters, including the resource id.
+ */
 export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -71,7 +81,16 @@ export async function GET(
   }
 }
 
-// PUT /api/resources/[id] - Update resource
+/**
+ * Updates an existing resource for the authenticated user.
+ *
+ * This endpoint checks that the resource exists and is owned by the current user. If a new module is specified via the request payload, it validates that the user has access to that module. Upon a successful update, the endpoint returns a JSON response with the updated resource details, including metadata such as the creation and update timestamps and the file size.
+ *
+ * @param request - The incoming HTTP request containing the update payload as JSON.
+ * @param props - An object containing route parameters, including the resource's id.
+ *
+ * @returns A JSON response with the updated resource details.
+ */
 export async function PUT(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -170,7 +189,25 @@ export async function PUT(
   }
 }
 
-// DELETE /api/resources/[id] - Delete resource
+/**
+ * Deletes a resource owned by the authenticated user.
+ *
+ * The function authenticates the user and verifies that the specified resource exists and belongs to the user.
+ * If the resource has an associated file URL, it attempts to delete the corresponding file from Supabase storage
+ * before removing the resource from the database.
+ *
+ * Returns a JSON response indicating success on deletion or an error message with an appropriate HTTP status:
+ * - 401 if authentication fails.
+ * - 404 if the resource is not found or access is denied.
+ * - 500 if an unexpected error occurs during deletion.
+ *
+ * @param request - The incoming HTTP request.
+ * @param props - An object containing a promise that resolves to the route parameters, including the resource ID.
+ *
+ * @returns A JSON response with a success flag or an error message.
+ *
+ * @remark If file deletion from storage fails, the error is logged without interrupting the resource deletion process.
+ */
 export async function DELETE(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
