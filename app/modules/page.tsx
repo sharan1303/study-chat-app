@@ -3,7 +3,7 @@
 import React, { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -57,15 +57,21 @@ function ModulesLoading() {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between px-3 py-4">
-          <div className="h-6 w-36 bg-gray-200 animate-pulse rounded"></div>
+        <div className="flex items-center justify-between px-3 py-3.5">
+          <h1 className="font-bold text-xl">Categories</h1>
         </div>
 
-        {/* Tabs skeleton */}
+        {/* Tabs with static labels */}
         <div className="px-3">
-          <div className="grid w-full max-w-md grid-cols-2 h-9 bg-gray-100 rounded-md">
-            <div className="m-1 h-7 w-auto bg-gray-200 animate-pulse rounded-sm"></div>
-            <div className="m-1 h-7 w-auto bg-gray-100 rounded-sm"></div>
+          <div className="grid w-full max-w-md grid-cols-2 h-9 bg-gray-100 rounded-lg">
+            <div className="flex items-center justify-center m-1 h-7 bg-white rounded-lg">
+              <span className="font-medium text-sm">Modules</span>
+            </div>
+            <div className="flex items-center justify-center m-1 h-7 w-auto rounded-sm">
+              <span className="font-medium text-sm text-muted-foreground">
+                All Resources
+              </span>
+            </div>
           </div>
 
           {/* Search bar and button skeleton */}
@@ -73,25 +79,15 @@ function ModulesLoading() {
             <div className="relative flex-1 max-w-md">
               <div className="h-9 w-full bg-gray-200 animate-pulse rounded"></div>
             </div>
-            <div className="h-9 w-40 bg-gray-200 animate-pulse rounded"></div>
+            <Button variant="outline" disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Module
+            </Button>
           </div>
 
-          {/* Module cards skeleton */}
+          {/* Empty area for modules to load into */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader>
-                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-1"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </CardContent>
-                <CardFooter>
-                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                </CardFooter>
-              </Card>
-            ))}
+            {/* No skeleton cards as requested */}
           </div>
         </div>
       </div>
@@ -192,7 +188,7 @@ function ModulesPageContent({
       <div className="flex min-h-screen w-full flex-col">
         <div className="flex-1 space-y-4">
           <div className="flex p-5 items-center">
-            <h1 className="font-bold text-2xl">Modules</h1>
+            <h1 className="font-bold text-xl">Categories</h1>
           </div>
           <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
             <h3 className="text-xl font-medium">Please sign in</h3>
@@ -332,7 +328,7 @@ function ModulesPageContent({
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4">
         <div className="flex items-center justify-between px-3 py-3.5">
-          <h1 className="font-bold text-xl">Content</h1>
+          <h1 className="font-bold text-xl">Categories</h1>
         </div>
 
         {/* Tabs for Module and Resources - now at the top */}
@@ -378,20 +374,7 @@ function ModulesPageContent({
           <TabsContent value="modules" className="mt-2">
             {isLoading ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardHeader>
-                      <div className="h-5 bg-gray-200 rounded w-3/4 mb-1"></div>
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                    </CardContent>
-                    <CardFooter>
-                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    </CardFooter>
-                  </Card>
-                ))}
+                {/* No skeleton cards as requested */}
               </div>
             ) : filteredModules.length === 0 ? (
               <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
