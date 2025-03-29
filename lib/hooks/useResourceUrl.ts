@@ -1,10 +1,19 @@
 import { useState, useCallback } from "react";
 
 /**
- * Hook to manage resource URLs and regenerate them when needed
- * @param resourceId The ID of the resource
- * @param initialUrl The initial URL of the resource
- * @returns An object with the current URL and loading state
+ * Custom React hook to manage and regenerate a resource URL.
+ *
+ * This hook tracks the current resource URL while monitoring the regeneration process and capturing any related errors.
+ * It provides an asynchronous function that sends a request to regenerate the URL. If token-related issues are encountered,
+ * the regeneration function automatically retries up to two times with a short delay between attempts.
+ *
+ * @param resourceId - The ID of the resource. Regeneration is skipped if not provided.
+ * @param initialUrl - The initial URL of the resource.
+ * @returns An object containing:
+ *   - url: The current resource URL.
+ *   - isLoading: A flag indicating whether regeneration is in progress.
+ *   - error: An error message if URL regeneration fails, or null.
+ *   - regenerateUrl: An asynchronous function that triggers URL regeneration, returning the new URL on success or null on failure.
  */
 export function useResourceUrl(resourceId: string, initialUrl: string) {
   // Store the actual URL we're using, separate from the initialUrl prop

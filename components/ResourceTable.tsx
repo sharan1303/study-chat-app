@@ -222,6 +222,19 @@ const getDetailedFileType = (resource: Resource): string => {
   );
 };
 
+/**
+ * Renders a table displaying resource information.
+ *
+ * When in a loading state, a skeleton table with animated placeholder rows is shown.
+ * Otherwise, the table displays each resource (excluding those marked as deleted) as a row.
+ *
+ * @param resources - An array of resource objects to display.
+ * @param modules - An array of module objects used for the module column.
+ * @param onUpdate - Callback invoked when a resource is updated or deleted.
+ * @param showModuleColumn - Flag to determine if the module column should be shown. Defaults to true.
+ * @param currentModuleId - Identifier for the current module context.
+ * @param isLoading - Flag indicating whether to display a loading skeleton instead of actual data. Defaults to false.
+ */
 export function ResourceTable({
   resources,
   modules,

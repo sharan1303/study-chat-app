@@ -5,6 +5,23 @@ import "dotenv/config";
 // No need to initialize with secretKey as it uses the env variable automatically
 const prisma = new PrismaClient();
 
+/**
+ * Synchronizes user data from Clerk to the database.
+ *
+ * This asynchronous function retrieves users from the Clerk service and ensures that each user is
+ * accurately represented in the database. For each user, it will either update the existing record with
+ * the latest email and name information or create a new entry if the user is not found. Users without a
+ * valid email address are skipped.
+ *
+ * In the event of an error during synchronization, the error is logged and the process terminates with
+ * a status code of 1. The function also guarantees that the database connection is properly closed upon
+ * completion.
+ *
+ * @async
+ * @returns {Promise<void>}
+ *
+ * @remark Missing first names are handled by assigning "Anonymous User" as the default name.
+ */
 async function syncUsers() {
   console.log("Starting Clerk users sync...");
 

@@ -2,7 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
-// GET /api/resources - Get all resources for the current user
+/**
+ * Retrieves all resources for the authenticated user.
+ *
+ * This function handles GET requests by first verifying user authentication. It extracts an
+ * optional module ID from the query parameters and queries the database for resources linked to
+ * the user's modules. The returned resources are formatted to include key details such as the module
+ * name, creation and update timestamps, and file size. If the user is not authenticated, a 401 error
+ * is returned; if an error occurs during data retrieval, a 500 error is returned.
+ *
+ * @param request - The incoming HTTP request.
+ * @returns A JSON response containing an array of formatted resource objects or an error message.
+ */
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
@@ -56,7 +67,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/resources - Create a new resource
+/**
+ * Creates a new resource for the authenticated user.
+ *
+ * Expects a JSON body with the resource properties:
+ * - title: The resource title (required).
+ * - type: The resource type (required).
+ * - url: The URL for the resource file (optional).
+ * - moduleId: The identifier of the module the resource belongs to (required).
+ *
+ * Returns a JSON response with the newly created resource's details if successful.
+ * If the request is missing required fields, the module is not found or not accessible by the user, or an error occurs during creation,
+ * an appropriate JSON error response with a corresponding HTTP status is returned.
+ *
+ * @param request - The HTTP request containing the JSON body with resource details.
+ *
+ * @returns A JSON response with the new resource details on success, or an error message on failure.
+ */
 export async function POST(request: Request) {
   const { userId } = await auth();
 

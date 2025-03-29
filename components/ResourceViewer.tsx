@@ -11,6 +11,14 @@ interface ResourceViewerProps {
   title: string;
 }
 
+/**
+ * Renders a viewer for a resource (image, PDF, video, or other file) with secure access handling.
+ *
+ * When a public URL is provided and the user is signed in, the component attempts to fetch a signed URL for secure access.
+ * While fetching, a loading indicator is displayed. If the fetch fails, an error message is shown.
+ * Depending on the resource type, it renders the corresponding display component or, for unsupported types, a download link.
+ * If neither a public URL nor a signed URL is available, an informational message is presented.
+ */
 export function ResourceViewer({
   resourceId,
   resourceType,

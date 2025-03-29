@@ -11,6 +11,23 @@ export const config = {
   },
 };
 
+/**
+ * Processes a file upload request.
+ *
+ * This API endpoint verifies that the user is authenticated, then extracts a file and its associated metadata (title, moduleId, type)
+ * from the submitted form data. It ensures that all required fields are present, checks that the referenced module exists and is owned by the user,
+ * and validates that the file does not exceed a 10MB size limit.
+ *
+ * Upon successful validation, the file is assigned a unique filename and uploaded to Supabase storage. A signed URL valid for 24 hours is generated
+ * (and normalized to use the correct path), and a new resource record is created in the database. The endpoint responds with a JSON object containing
+ * the resource's details.
+ *
+ * In cases of authentication failure, missing fields, module access issues, file size violations, or problems during file upload or URL generation,
+ * the function returns a JSON error response with the appropriate HTTP status code.
+ *
+ * @param request - The incoming HTTP request containing form data with the file and its metadata.
+ * @returns A JSON response with resource details on success or an error message with an appropriate HTTP status code on failure.
+ */
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
 

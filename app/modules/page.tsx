@@ -53,6 +53,15 @@ interface Resource {
   _deleted?: boolean;
 }
 
+/**
+ * Renders a loading skeleton for the modules page.
+ *
+ * This component displays a placeholder UI that mimics the layout of the modules page while data is loading.
+ * It includes a header for "Categories", static tabs for "Modules" and "All Resources", a search bar skeleton,
+ * and a disabled "Create Module" button with a Plus icon.
+ *
+ * @returns The React element representing the loading skeleton layout.
+ */
 function ModulesLoading() {
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -95,7 +104,16 @@ function ModulesLoading() {
   );
 }
 
-// Create a component that receives searchParams as props
+/**
+ * Renders the modules page content with tabs for modules and resources.
+ *
+ * This component fetches and displays modules based on an optional search query, using URL parameters to
+ * determine the active tab, whether to open the resource upload dialog, and a preselected module for uploading resources.
+ * It checks for user authentication, displaying a sign-in prompt if the user is unauthorized, and conditionally renders
+ * either a filtered list of modules or a resource table through a nested component.
+ *
+ * @param searchParams - URL query parameters that set the initial UI state (e.g., active tab, resource upload dialog visibility, and preselected module).
+ */
 function ModulesPageContent({
   searchParams,
 }: {
@@ -204,7 +222,17 @@ function ModulesPageContent({
     );
   }
 
-  // Replace it with this simple wrapper component
+  /**
+   * Fetches modules and resources from the API and displays them in a resource table, filtered by a search query.
+   *
+   * This component retrieves module data for selector options and, if the user is signed in, fetches resource data.
+   * It filters the resources by matching the search query against their title, description, or associated module name.
+   * Additionally, it handles resource updates by marking deleted resources appropriately.
+   *
+   * @param searchQuery - A query string used to filter the displayed resources.
+   *
+   * @returns A JSX element rendering the resource table with the filtered resources.
+   */
   function ResourcesWrapper({ searchQuery }: { searchQuery: string }) {
     const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
     const [modules, setModules] = useState<
@@ -216,6 +244,17 @@ function ModulesPageContent({
 
     // Fetch resources from the API
     useEffect(() => {
+      /**
+       * Fetches modules and, if the user is authenticated, resources data from the API, updating state accordingly.
+       *
+       * This asynchronous function begins by setting the resources loading state to true and retrieves all modules, which are then simplified
+       * to include only the id, name, and icon. If the user is signed in, it attempts to fetch resources from the "/api/resources" endpoint.
+       * For unauthorized responses (HTTP 401), it logs a message and clears the filtered resources. If the resources fetch fails for other reasons,
+       * an error is thrown, caught, and logged, with the filtered resources reset to an empty array. Finally, the loading state is set to false.
+       *
+       * @remark
+       * Resources are filtered by the search query if provided; otherwise, all fetched resources are used.
+       */
       async function fetchData() {
         try {
           setResourcesLoading(true);
@@ -430,7 +469,13 @@ function ModulesPageContent({
   );
 }
 
-// Export modules page with proper suspense boundary
+/**
+ * Renders the main modules page using nested Suspense boundaries.
+ *
+ * The component wraps the ModulesPageContent inside two Suspense boundaries, each using ModulesLoading as a fallback.
+ * It utilizes a SearchParamsReader to extract URL search parameters and passes them to ModulesPageContent to manage
+ * module display and resource loading.
+ */
 export default function ModulesPage() {
   return (
     <Suspense fallback={<ModulesLoading />}>
