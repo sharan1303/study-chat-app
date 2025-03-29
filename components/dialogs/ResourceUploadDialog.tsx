@@ -71,6 +71,18 @@ interface ResourceUploadDialogProps {
   preselectedModuleId?: string;
 }
 
+/**
+ * Renders a dialog for uploading a resource to a module.
+ *
+ * This component provides a user interface for uploading a resource via file input or URL. It supports drag-and-drop
+ * file uploads, automatically detects the file's resource type based on its MIME type or extension,
+ * and auto-fills the resource title if not provided. The dialog fetches available modules from the server for selection
+ * and resets its state when opened or closed. If the user is not authenticated, the dialog will close.
+ *
+ * @param open - Indicates whether the upload dialog is visible.
+ * @param onOpenChange - Callback to update the dialog's visibility.
+ * @param preselectedModuleId - Optional module ID to preselect in the module dropdown.
+ */
 export function ResourceUploadDialog({
   open,
   onOpenChange,

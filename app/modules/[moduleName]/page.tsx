@@ -64,6 +64,19 @@ const icons = [
   "🎵",
 ];
 
+/**
+ * Renders and manages the details of a specific module.
+ *
+ * This component fetches module data based on a module name provided via URL parameters and displays the module’s icon,
+ * title, description, and its associated resources. It supports editing the module's title, description, and icon, with updates
+ * triggering either a full page refresh (for name changes) or a component refresh (for description and icon changes). For signed-in
+ * users, the component loads related resources; for anonymous users, it presents an empty resource list. If the module cannot be
+ * found, a notFound response is triggered.
+ *
+ * @param props - Contains URL parameters with the module name.
+ *
+ * @returns A React element representing the module details page.
+ */
 export default function ModuleDetailsPage(props: {
   params: Promise<{ moduleName: string }>;
 }) {

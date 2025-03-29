@@ -3,7 +3,31 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { getSignedUrl } from "@/lib/supabase";
 
-// GET /api/resources/[id]/secure-url - Get a secure signed URL for a resource
+/**
+ * Retrieves a secure signed URL for a specified resource.
+ *
+ * This GET endpoint ensures that the request is authenticated and verifies that the
+ * authenticated user owns the resource. It then checks for an associated file URL and,
+ * if the URL follows the Supabase storage path pattern, generates a signed URL with a 5-minute
+ * expiry. If the file URL does not match the expected pattern, the original URL is returned.
+ *
+ * The JSON response includes:
+ * - `signedUrl`: The signed URL if generated, or the original file URL.
+ * - `expiresAt`: An ISO timestamp indicating when the signed URL expires (if applicable).
+ * - `isOriginalUrl`: A flag indicating whether the returned URL is the original file URL.
+ *
+ * HTTP responses:
+ * - 401: Returned if the request is unauthenticated.
+ * - 404: Returned if the resource is not found, access is denied, or no file URL is associated.
+ * - 500: Returned if there is an error generating the signed URL.
+ *
+ * @example
+ * const response = await GET(request, { params: Promise.resolve({ id: "resource123" }) });
+ * // JSON response: { signedUrl: "...", expiresAt: "2025-03-25T...", isOriginalUrl: false }
+ *
+ * @param request - The incoming HTTP request.
+ * @param props - An object containing route parameters, including the resource ID.
+ */
 export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }

@@ -19,7 +19,14 @@ if (!supabaseUrl || !supabaseServiceKey) {
   console.error("Missing Supabase environment variables");
 }
 
-// Ensure a fresh client is created for each request
+/**
+ * Creates and returns a new Supabase client with admin privileges.
+ *
+ * The client is configured to automatically refresh tokens without persisting sessions,
+ * ensuring that a fresh instance is created for each request.
+ *
+ * @returns A new Supabase client instance configured with admin privileges.
+ */
 export function getSupabaseAdmin() {
   return createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
@@ -37,7 +44,24 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   },
 });
 
-// Upload a file to Supabase Storage
+/**
+ * Uploads a file to a specified Supabase Storage bucket.
+ *
+ * The function uses a freshly created Supabase admin client to attempt to upload the provided file
+ * to the given bucket and path. Additional upload options can be supplied to customize the behavior.
+ * If the upload encounters an error, the function logs the error and returns false.
+ *
+ * @example
+ * const success = await uploadFile('photos', 'user1/avatar.png', fileObject, 'user1', { cacheControl: '3600' });
+ *
+ * @param bucket - The bucket in Supabase Storage where the file will be stored.
+ * @param path - The destination path within the bucket.
+ * @param file - The File object to be uploaded.
+ * @param userId - The identifier of the user associated with the upload.
+ * @param options - Optional settings to customize the upload.
+ *
+ * @returns A promise that resolves to true if the file is uploaded successfully, or false if an error occurs.
+ */
 export async function uploadFile(
   bucket: string,
   path: string,
@@ -66,7 +90,17 @@ export async function uploadFile(
   }
 }
 
-// Get a signed URL for a file (with expiry time)
+/**
+ * Retrieves a signed URL for a file in Supabase Storage.
+ *
+ * This function creates a fresh admin client and requests a signed URL for the specified file in the given bucket.
+ * The URL will expire after the specified duration. If an error occurs, the function logs the error and returns null.
+ *
+ * @param bucket - The name of the Supabase Storage bucket containing the file.
+ * @param path - The file path within the bucket.
+ * @param expiresIn - The duration in seconds for which the signed URL remains valid. Defaults to 604800 (7 days).
+ * @returns The signed URL data if the operation is successful; otherwise, null.
+ */
 export async function getSignedUrl(
   bucket: string,
   path: string,
@@ -92,7 +126,15 @@ export async function getSignedUrl(
   }
 }
 
-// Delete a file from Supabase Storage
+/**
+ * Deletes a file from a specified Supabase Storage bucket.
+ *
+ * This function creates a fresh admin client and attempts to remove the file at the given path from the designated bucket. If the deletion fails, it logs the error and returns null.
+ *
+ * @param bucket - The name of the storage bucket.
+ * @param path - The path to the file being deleted.
+ * @returns The deletion result data if successful; otherwise, null.
+ */
 export async function deleteFile(bucket: string, path: string) {
   // Get a fresh client for each operation
   const client = getSupabaseAdmin();

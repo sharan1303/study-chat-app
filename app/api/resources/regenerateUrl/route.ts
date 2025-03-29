@@ -3,6 +3,20 @@ import { auth } from "@clerk/nextjs/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import prisma from "@/lib/prisma";
 
+/**
+ * Handles a POST request to regenerate a signed URL for a resource.
+ *
+ * This function authenticates the user and validates the request payload to ensure a resource identifier is provided.
+ * It retrieves the specified resource, verifies ownership, and confirms that the resource has an associated file URL.
+ * The file path is then extracted from the URL using several patterns. A new signed URL valid for 12 hours is generated
+ * via Supabase, with a retry mechanism in case of JWT-related issues. On success, the resource is updated in the database
+ * with the new URL, and a JSON response containing the resource ID, new URL, and update timestamp is returned.
+ * In case of errors—such as authentication failure, missing or invalid resource data, URL extraction failure, or database update issues—
+ * a corresponding error response with an appropriate HTTP status is returned.
+ *
+ * @param request - The incoming Next.js API request containing a JSON body with the resource identifier.
+ * @returns A JSON response with the updated resource details on success, or an error message with a corresponding HTTP status.
+ */
 export async function POST(request: NextRequest) {
   console.log("🔄 URL REGENERATION - Request received");
 
