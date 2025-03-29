@@ -113,21 +113,17 @@ export const api = {
    * Get resources for a module
    */
   async getResources(moduleId: string) {
-    // Always ensure we have a session ID by using getOrCreate
-    const sessionId = getOrCreateSessionIdClient();
-    console.log("Client: Using session ID for getResources:", sessionId);
-
-    const queryString = sessionId ? `?sessionId=${sessionId}` : "";
-    console.log(
-      `Client: Making request to /api/modules/${moduleId}/resources${queryString}`
-    );
+    // Resources are only available to authenticated users
+    // No sessionId support for resources
 
     try {
-      const response = await fetch(
-        `/api/modules/${moduleId}/resources${queryString}`
-      );
+      const response = await fetch(`/api/modules/${moduleId}/resources`);
 
-      if (!response.ok) {
+      if (response.status === 401) {
+        // Handle unauthorized gracefully - user is not logged in
+        console.log("User is not authenticated for resources");
+        return { resources: [] };
+      } else if (!response.ok) {
         throw new Error(`Failed to fetch resources: ${response.statusText}`);
       }
 
@@ -150,25 +146,16 @@ export const api = {
     moduleId: string,
     data: { url?: string; title: string; content?: string; type?: string }
   ) {
-    // Always ensure we have a session ID by using getOrCreate
-    const sessionId = getOrCreateSessionIdClient();
-    console.log("Client: Using session ID for createResource:", sessionId);
+    // Resources are only available to authenticated users
+    // No sessionId support for resources
 
-    const queryString = sessionId ? `?sessionId=${sessionId}` : "";
-    console.log(
-      `Client: Making request to /api/modules/${moduleId}/resources${queryString}`
-    );
-
-    const response = await fetch(
-      `/api/modules/${moduleId}/resources${queryString}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      }
-    );
+    const response = await fetch(`/api/modules/${moduleId}/resources`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
 
     if (!response.ok) {
       const errorData = await response.json();

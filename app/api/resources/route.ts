@@ -37,13 +37,13 @@ export async function GET(request: NextRequest) {
     const formattedResources = resources.map((resource) => ({
       id: resource.id,
       title: resource.title,
-      description: resource.content,
       type: resource.type,
       url: resource.fileUrl,
       moduleId: resource.moduleId,
       moduleName: resource.module?.name || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
+      fileSize: resource.fileSize || null,
     }));
 
     return NextResponse.json(formattedResources);
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
   try {
     const json = await request.json();
-    const { title, description, type, url, moduleId } = json;
+    const { title, type, url, moduleId } = json;
 
     // Validate the request
     if (!title || !type || !moduleId) {
@@ -95,7 +95,6 @@ export async function POST(request: Request) {
     const resource = await prisma.resource.create({
       data: {
         title,
-        content: description || "",
         type,
         fileUrl: url || null,
         moduleId,
@@ -105,8 +104,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: resource.id,
       title: resource.title,
-      description: resource.content,
       type: resource.type,
+      fileSize: resource.fileSize || null,
       url: resource.fileUrl,
       moduleId: resource.moduleId,
       createdAt: resource.createdAt.toISOString(),

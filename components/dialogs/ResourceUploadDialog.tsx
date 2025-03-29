@@ -4,7 +4,7 @@ import axios from "axios";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Upload, Plus, X } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 
@@ -19,7 +19,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -38,7 +37,6 @@ import {
 // Schema for resource creation
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters"),
-  description: z.string().optional(),
   type: z.string().min(1, "Please select a resource type"),
   url: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
   moduleId: z.string().min(1, "Please select a module"),
@@ -53,6 +51,10 @@ const resourceTypes = [
   { value: "notes", label: "Notes" },
   { value: "code", label: "Code" },
   { value: "video", label: "Video" },
+  { value: "audio", label: "Audio" },
+  { value: "document", label: "Document" },
+  { value: "spreadsheet", label: "Spreadsheet" },
+  { value: "archive", label: "Archive" },
 ];
 
 // Interface for module data
@@ -83,13 +85,13 @@ export function ResourceUploadDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [moduleLoadError, setModuleLoadError] = useState<string | null>(null);
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      description: "",
       type: "",
       url: "",
       moduleId: preselectedModuleId || "",
@@ -101,7 +103,6 @@ export function ResourceUploadDialog({
     if (open) {
       form.reset({
         title: "",
-        description: "",
         type: "",
         url: "",
         moduleId: preselectedModuleId || "",
@@ -116,37 +117,37 @@ export function ResourceUploadDialog({
       if (!open) return;
       try {
         setIsLoading(true);
+        setModuleLoadError(null);
+        console.log("Fetching modules...");
         const response = await axios.get("/api/modules");
+        console.log("Modules API response:", response.data);
 
-        // Make sure we're handling the response data correctly
-        if (response.data && Array.isArray(response.data)) {
-          setModules(response.data);
-        } else if (
+        // Handle the response data format - API returns { modules: [...] }
+        if (
           response.data &&
-          typeof response.data === "object" &&
           response.data.modules &&
           Array.isArray(response.data.modules)
         ) {
-          // Handle case where API returns { modules: [...] }
+          console.log(
+            "Setting modules from response.data.modules:",
+            response.data.modules
+          );
           setModules(response.data.modules);
-        } else if (
-          response.data &&
-          typeof response.data === "object" &&
-          response.data.data &&
-          Array.isArray(response.data.data)
-        ) {
-          // Handle case where API returns { data: [...] }
-          setModules(response.data.data);
+        } else if (response.data && Array.isArray(response.data)) {
+          console.log("Setting modules from response.data:", response.data);
+          setModules(response.data);
         } else {
           // Set modules to empty array if data is not in expected format
           console.error("Unexpected API response format:", response.data);
           setModules([]);
+          setModuleLoadError("Unexpected data format from server");
           toast.error("Failed to load modules: unexpected data format");
         }
       } catch (error) {
         console.error("Error fetching modules:", error);
+        setModules([]);
+        setModuleLoadError("Failed to load your modules");
         toast.error("Failed to load modules");
-        setModules([]); // Ensure modules is an array even after error
       } finally {
         setIsLoading(false);
       }
@@ -177,23 +178,30 @@ export function ResourceUploadDialog({
       formData.append("moduleId", values.moduleId);
       formData.append("type", values.type);
 
-      if (values.description) {
-        formData.append("description", values.description);
-      }
-
-      if (values.url) {
+      // Use URL field for external resources only if no file is uploaded
+      if (values.url && !selectedFile) {
         formData.append("url", values.url);
       }
 
+      // Handle file uploads with the new endpoint
       if (selectedFile) {
+        // Add the file to form data
         formData.append("file", selectedFile);
-      }
 
-      await axios.post("/api/resources", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+        // Use the new file upload endpoint
+        await axios.post("/api/resources/upload", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        // For non-file resources (links, etc.), use the standard endpoint
+        await axios.post("/api/resources", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
 
       toast.success("Resource created successfully");
 
@@ -250,19 +258,90 @@ export function ResourceUploadDialog({
   const handleFile = (file: File) => {
     setSelectedFile(file);
 
-    // Auto-detect resource type based on file extension
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    let type = "";
-    if (extension === "pdf") type = "pdf";
-    else if (["jpg", "jpeg", "png", "gif", "svg"].includes(extension || ""))
-      type = "image";
-    else if (["mp4", "avi", "mov"].includes(extension || "")) type = "video";
+    // Get file extension and mime type
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    const mimeType = file.type.toLowerCase();
 
-    if (type) {
-      form.setValue("type", type);
+    console.log("File info:", {
+      name: file.name,
+      extension,
+      mimeType,
+      size: file.size,
+    });
+
+    // Auto-detect resource type based on file extension and mime type
+    let type = "";
+
+    // Check mime type first
+    if (mimeType.includes("pdf")) {
+      type = "pdf";
+    } else if (mimeType.includes("image/")) {
+      // Use standard "image" type instead of "image/extension"
+      type = "image";
+    } else if (mimeType.includes("video/")) {
+      // Use standard "video" type instead of "video/extension"
+      type = "video";
+    } else if (mimeType.includes("audio/")) {
+      // Use standard "audio" type instead of "audio/extension"
+      type = "audio";
+    } else if (
+      mimeType.includes("text/") ||
+      mimeType.includes("application/msword") ||
+      mimeType.includes(
+        "application/vnd.openxmlformats-officedocument.wordprocessing"
+      )
+    ) {
+      type = "document";
+    } else if (
+      mimeType.includes("spreadsheet") ||
+      mimeType.includes("excel") ||
+      mimeType.includes("csv")
+    ) {
+      type = "spreadsheet";
+    } else if (
+      mimeType.includes("zip") ||
+      mimeType.includes("archive") ||
+      mimeType.includes("compressed")
+    ) {
+      type = "archive";
     }
 
-    // Auto-fill title if empty
+    // If mime type didn't work, try extension
+    if (!type) {
+      if (extension === "pdf") {
+        type = "pdf";
+      } else if (
+        ["jpg", "jpeg", "png", "gif", "svg", "webp", "bmp"].includes(extension)
+      ) {
+        type = "image";
+      } else if (["mp4", "avi", "mov", "webm", "mkv"].includes(extension)) {
+        type = "video";
+      } else if (["mp3", "wav", "ogg", "flac", "aac"].includes(extension)) {
+        type = "audio";
+      } else if (["doc", "docx", "txt", "rtf", "odt"].includes(extension)) {
+        type = "document";
+      } else if (["xls", "xlsx", "csv", "ods"].includes(extension)) {
+        type = "spreadsheet";
+      } else if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) {
+        type = "archive";
+      } else if (
+        ["html", "css", "js", "ts", "jsx", "tsx", "json", "php", "py"].includes(
+          extension
+        )
+      ) {
+        type = "code";
+      }
+    }
+
+    // Set a default type if we couldn't detect it
+    if (!type) {
+      type = "document";
+    }
+
+    console.log("Detected resource type:", type);
+    form.setValue("type", type);
+
+    // Auto-fill title if empty (remove extension from filename)
     if (!form.getValues().title) {
       const fileName = file.name.split(".").slice(0, -1).join(".");
       form.setValue("title", fileName);
@@ -276,7 +355,7 @@ export function ResourceUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto z-[100]">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Upload Resource</DialogTitle>
@@ -349,7 +428,31 @@ export function ResourceUploadDialog({
         {/* Form fields */}
         <div className="mt-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+              onKeyDown={(e) => {
+                // Submit form when Enter is pressed in an input field
+                if (e.key === "Enter" && !e.shiftKey) {
+                  // Skip if in textarea or submitting is in progress
+                  if (e.target instanceof HTMLTextAreaElement || isSubmitting) {
+                    return;
+                  }
+
+                  // Skip if in select elements
+                  if (
+                    e.target instanceof HTMLElement &&
+                    (e.target.tagName === "SELECT" ||
+                      e.target.closest('[role="combobox"]'))
+                  ) {
+                    return;
+                  }
+
+                  e.preventDefault();
+                  form.handleSubmit(onSubmit)();
+                }
+              }}
+            >
               <FormField
                 control={form.control}
                 name="title"
@@ -358,25 +461,6 @@ export function ResourceUploadDialog({
                     <FormLabel>Title</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter resource title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter resource description"
-                        {...field}
-                        value={field.value || ""}
-                        h-1
-                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -395,11 +479,15 @@ export function ResourceUploadDialog({
                         value={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select resource type" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent
+                          position="popper"
+                          sideOffset={4}
+                          className="z-[200]"
+                        >
                           {resourceTypes.map((type) => (
                             <SelectItem key={type.value} value={type.value}>
                               {type.label}
@@ -420,21 +508,32 @@ export function ResourceUploadDialog({
                       <FormLabel>Module</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value}
+                        value={field.value || undefined}
                         disabled={!!preselectedModuleId || isLoading}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select a module" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent
+                          position="popper"
+                          sideOffset={4}
+                          className="z-[200]"
+                        >
                           {isLoading ? (
                             <div className="p-2 flex items-center justify-center">
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
                               <span>Loading modules...</span>
                             </div>
-                          ) : Array.isArray(modules) && modules.length > 0 ? (
+                          ) : moduleLoadError ? (
+                            <div className="p-2 text-center text-destructive">
+                              {moduleLoadError}
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Try refreshing the dialog
+                              </div>
+                            </div>
+                          ) : modules.length > 0 ? (
                             modules.map((moduleItem) => (
                               <SelectItem
                                 key={moduleItem.id}
@@ -447,9 +546,12 @@ export function ResourceUploadDialog({
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="no-modules">
-                              No modules available
-                            </SelectItem>
+                            <div className="p-2 text-center text-muted-foreground">
+                              No modules available.
+                              <div className="mt-1 text-xs">
+                                You need to create a module first.
+                              </div>
+                            </div>
                           )}
                         </SelectContent>
                       </Select>
@@ -480,28 +582,30 @@ export function ResourceUploadDialog({
                 )}
               />
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Resource
-                    </>
-                  )}
-                </Button>
+              <div className="flex justify-between items-center gap-2 pt-4">
+                <div className="text-xs text-muted-foreground">
+                  Press Enter to upload or Ctrl+Enter in description
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>Upload</>
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </Form>

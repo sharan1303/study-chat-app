@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/module-form";
 import { Plus } from "lucide-react";
 
@@ -107,6 +112,7 @@ export default function ModuleList({
               </Button>
             </DialogTrigger>
             <DialogContent>
+              <DialogTitle>Create New Module</DialogTitle>
               <ModuleForm successEventName="module-create-success" />
             </DialogContent>
           </Dialog>
@@ -133,6 +139,7 @@ export default function ModuleList({
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
+                    <DialogTitle>Create New Module</DialogTitle>
                     <ModuleForm successEventName="module-create-success" />
                   </DialogContent>
                 </Dialog>
