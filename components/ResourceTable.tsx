@@ -232,17 +232,52 @@ export function ResourceTable({
 }: ResourceTableProps) {
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center space-y-4 py-8">
-        <p className="text-muted-foreground text-sm">Loading resources...</p>
-      </div>
-    );
-  }
-
-  if (resources.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-        <h3 className="text-xl font-medium">No resources found</h3>
-        <p className="text-muted-foreground">Add resources to get started</p>
+      <div className="overflow-x-auto border rounded-md">
+        <table className="w-full min-w-full table-fixed">
+          <thead>
+            <tr className="border-b bg-muted/50 text-xs font-medium text-muted-foreground">
+              <th className="text-left p-2.5 w-5/12">Name</th>
+              <th className="text-left p-2.5 w-1/12">Type</th>
+              {showModuleColumn && (
+                <th className="text-left p-2.5 w-2/12">Module</th>
+              )}
+              <th className="text-left p-2.5 w-1/12">Size</th>
+              <th className="text-left p-2.5 w-2/12">Added</th>
+              <th className="text-right p-2.5 w-1/12"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array(5)
+              .fill(0)
+              .map((_, index) => (
+                <tr key={index} className="border-b animate-pulse">
+                  <td className="p-2.5">
+                    <div className="flex items-center">
+                      <div className="mr-3 bg-muted-foreground/20 rounded-full w-[18px] h-[18px]"></div>
+                      <div className="h-4 bg-muted-foreground/20 rounded w-3/4"></div>
+                    </div>
+                  </td>
+                  <td className="p-2.5">
+                    <div className="h-3 bg-muted-foreground/20 rounded w-4/5"></div>
+                  </td>
+                  {showModuleColumn && (
+                    <td className="p-2.5">
+                      <div className="h-3 bg-muted-foreground/20 rounded w-2/3"></div>
+                    </td>
+                  )}
+                  <td className="p-2.5">
+                    <div className="h-3 bg-muted-foreground/20 rounded w-1/2"></div>
+                  </td>
+                  <td className="p-2.5">
+                    <div className="h-3 bg-muted-foreground/20 rounded w-2/3"></div>
+                  </td>
+                  <td className="p-2.5 text-right">
+                    <div className="h-7 bg-muted-foreground/20 rounded w-12 ml-auto"></div>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
       </div>
     );
   }

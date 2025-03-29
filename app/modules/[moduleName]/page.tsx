@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
-import { Check, MessageSquare, X } from "lucide-react";
+import { Check, Edit, MessageSquare, Trash, X } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useAuth } from "@clerk/nextjs";
@@ -339,23 +339,44 @@ export default function ModuleDetailsPage(props: {
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center">
               {/* Icon skeleton */}
-              <div className="h-10 w-10 bg-gray-200 animate-pulse rounded"></div>
+              <Button
+                variant="ghost"
+                disabled
+                className="text-xl cursor-default h-10 w-10 bg-gray-200 animate-pulse"
+                aria-hidden
+              ></Button>
               {/* Title skeleton */}
               <div className="h-8 w-48 bg-gray-200 animate-pulse rounded ml-2"></div>
             </div>
 
             {/* Action buttons skeleton */}
-            <div className="flex gap-2 pr-16">
-              <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+            <div className="flex items-center gap-1 pr-16">
+              <Button
+                variant="outline"
+                disabled
+                className="flex items-center gap-2 ml-1 mr-1"
+                aria-hidden
+              >
+                <MessageSquare className="h-5 w-5" />
+                <span>Go to Chat</span>
+              </Button>
+              <Button variant="ghost" disabled size="icon" aria-hidden>
+                <Edit className="h-5 w-5" />
+              </Button>
+
+              <Button variant="ghost" disabled size="icon" aria-hidden>
+                <Trash className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
           <div className="space-y-6 px-3">
             {/* Description section skeleton */}
             <div className="space-y-2">
-              <div className="h-7 w-32 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-24 w-full bg-gray-200 animate-pulse rounded p-4 min-h-[158px]"></div>
+              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <div className="text-muted-foreground p-4 rounded min-h-[158px] bg-gray-200 animate-pulse">
+                <span className="opacity-0">Loading description...</span>
+              </div>
             </div>
 
             <div className="my-6 h-px bg-gray-200"></div>
@@ -363,53 +384,25 @@ export default function ModuleDetailsPage(props: {
             {/* Resources section skeleton */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="h-7 w-32 bg-gray-200 animate-pulse rounded"></div>
-                <div className="h-9 min-w-[180px] bg-gray-200 animate-pulse rounded"></div>
+                <h2 className="text-lg font-semibold">Resources</h2>
+                <Button
+                  variant="outline"
+                  disabled
+                  className="opacity-70"
+                  aria-hidden
+                >
+                  Upload Resource
+                </Button>
               </div>
 
-              {/* Resource table skeleton - an alternate view that better represents the table layout */}
-              <div className="overflow-x-auto border rounded-md">
-                <table className="w-full min-w-full table-fixed">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left p-3 w-1/4">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-20"></div>
-                      </th>
-                      <th className="text-left p-3 w-1/3">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-24"></div>
-                      </th>
-                      <th className="text-left p-3 w-1/8">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-12"></div>
-                      </th>
-                      <th className="text-left p-3 w-1/8">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-14"></div>
-                      </th>
-                      <th className="text-right p-3 w-1/8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <tr key={i} className="border-b">
-                        <td className="p-3">
-                          <div className="h-5 bg-gray-200 animate-pulse rounded w-3/4"></div>
-                        </td>
-                        <td className="p-3">
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-full"></div>
-                        </td>
-                        <td className="p-3">
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-12"></div>
-                        </td>
-                        <td className="p-3">
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-20"></div>
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="h-8 w-16 ml-auto bg-gray-200 animate-pulse rounded"></div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Use ResourceTable with isLoading prop */}
+              <ResourceTable
+                resources={[]}
+                modules={[]}
+                onUpdate={() => {}}
+                showModuleColumn={false}
+                isLoading={true}
+              />
             </div>
           </div>
         </div>
@@ -505,7 +498,7 @@ export default function ModuleDetailsPage(props: {
 
         <div className="space-y-6 px-3">
           <div>
-            <h2 className="text-xl font-semibold mb-2">Description</h2>
+            <h2 className="text-lg font-semibold mb-2">Description</h2>
             {/* Editable description */}
             {isEditingDescription ? (
               <div className="flex flex-col gap-2">
@@ -555,57 +548,42 @@ export default function ModuleDetailsPage(props: {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Resources</h2>
+              <h2 className="text-lg font-semibold">Resources</h2>
               {isSignedIn && (
                 <ResourceUploadButton variant="outline" moduleId={module.id} />
               )}
             </div>
 
-            {!isSignedIn ? (
-              <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-                <h3 className="text-xl font-medium">
-                  Sign in to view resources
-                </h3>
-                <p className="text-muted-foreground">
-                  You need to be signed in to view and manage resources
-                </p>
-              </div>
-            ) : (
-              <ResourceTable
-                resources={resources}
-                modules={allModules}
-                onUpdate={(updatedResource) => {
-                  if (updatedResource._deleted) {
-                    // If resource was deleted, keep it in state but mark as deleted
-                    setResources(
-                      resources.map((r) =>
-                        r.id === updatedResource.id
-                          ? { ...r, _deleted: true }
-                          : r
-                      )
-                    );
-                  } else if (updatedResource.moduleId !== module?.id) {
-                    // If module changed, remove from this list
-                    setResources(
-                      resources.map((r) =>
-                        r.id === updatedResource.id
-                          ? { ...r, _deleted: true }
-                          : r
-                      )
-                    );
-                  } else {
-                    // Regular update
-                    setResources(
-                      resources.map((r) =>
-                        r.id === updatedResource.id ? updatedResource : r
-                      )
-                    );
-                  }
-                }}
-                showModuleColumn={false}
-                currentModuleId={module.id}
-              />
-            )}
+            <ResourceTable
+              resources={resources}
+              modules={allModules}
+              onUpdate={(updatedResource) => {
+                if (updatedResource._deleted) {
+                  // If resource was deleted, keep it in state but mark as deleted
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id ? { ...r, _deleted: true } : r
+                    )
+                  );
+                } else if (updatedResource.moduleId !== module?.id) {
+                  // If module changed, remove from this list
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id ? { ...r, _deleted: true } : r
+                    )
+                  );
+                } else {
+                  // Regular update
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id ? updatedResource : r
+                    )
+                  );
+                }
+              }}
+              showModuleColumn={false}
+              currentModuleId={module.id}
+            />
           </div>
         </div>
       </div>
