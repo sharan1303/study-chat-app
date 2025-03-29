@@ -1,10 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect, memo } from "react";
-import { Edit, Trash } from "lucide-react";
+import {
+  Edit,
+  Trash,
+  FileIcon,
+  FileText,
+  Image,
+  File,
+  FileAudio,
+  FileVideo,
+  FileArchive,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -44,6 +53,7 @@ interface Resource {
   createdAt: string;
   updatedAt?: string;
   _deleted?: boolean;
+  fileSize?: number;
 }
 
 interface Module {
@@ -60,6 +70,157 @@ interface ResourceTableProps {
   currentModuleId?: string;
   isLoading?: boolean;
 }
+
+// Function to format file size
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes) return "—";
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = bytes;
+  let unitIndex = 0;
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+
+  return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+};
+
+// Function to get icon based on file type
+const getFileIcon = (type: string): React.ReactElement => {
+  if (!type) return <File size={18} />;
+
+  // If type includes a slash (e.g., image/jpg), extract the primary type
+  const primaryType = type.includes("/")
+    ? type.split("/")[0].toLowerCase()
+    : type.toLowerCase();
+
+  if (primaryType === "pdf" || type === "pdf") return <FileText size={18} />;
+  if (primaryType === "image") return <Image size={18} />;
+  if (primaryType === "video") return <FileVideo size={18} />;
+  if (primaryType === "audio") return <FileAudio size={18} />;
+  if (
+    primaryType === "text" ||
+    primaryType === "document" ||
+    type.includes("document")
+  )
+    return <FileText size={18} />;
+  if (primaryType === "code") return <FileText size={18} />;
+  if (
+    primaryType.includes("zip") ||
+    primaryType.includes("archive") ||
+    primaryType === "archive"
+  )
+    return <FileArchive size={18} />;
+
+  return <FileIcon size={18} />;
+};
+
+// Function to extract file extension from URL or title
+const getFileExtension = (resource: Resource): string => {
+  // If the type already includes an extension (e.g., "image/jpg"), use that
+  if (resource.type && resource.type.includes("/")) {
+    return resource.type.split("/")[1];
+  }
+
+  // Try to extract from fileUrl
+  if (resource.fileUrl) {
+    // Remove query parameters
+    const urlWithoutParams = resource.fileUrl.split("?")[0];
+    // Get the filename
+    const fileName = urlWithoutParams.split("/").pop() || "";
+    // Extract extension
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    if (ext && ext.length > 0 && ext.length < 5) {
+      return ext;
+    }
+  }
+
+  // Try to extract from title if no extension found in URL
+  const titleParts = resource.title.split(".");
+  if (titleParts.length > 1) {
+    const ext = titleParts.pop()?.toLowerCase();
+    if (ext && ext.length > 0 && ext.length < 5) {
+      return ext;
+    }
+  }
+
+  // If no extension found, return the generic type
+  return resource.type;
+};
+
+// Function to get a more descriptive file type display
+const getDetailedFileType = (resource: Resource): string => {
+  // If type already has the format "type/extension", capitalize and return it
+  if (resource.type && resource.type.includes("/")) {
+    const [type, ext] = resource.type.split("/");
+    return `${type.charAt(0).toUpperCase() + type.slice(1)}/${ext}`;
+  }
+
+  const ext = getFileExtension(resource);
+
+  // Map common extensions to more readable names
+  const extensionMap: Record<string, string> = {
+    // Images
+    jpg: "JPEG Image",
+    jpeg: "JPEG Image",
+    png: "PNG Image",
+    gif: "GIF Image",
+    svg: "SVG Image",
+    webp: "WebP Image",
+
+    // Documents
+    pdf: "PDF Document",
+    doc: "Word Document",
+    docx: "Word Document",
+    txt: "Text File",
+    rtf: "RTF Document",
+
+    // Spreadsheets
+    xls: "Excel Spreadsheet",
+    xlsx: "Excel Spreadsheet",
+    csv: "CSV File",
+
+    // Presentations
+    ppt: "PowerPoint",
+    pptx: "PowerPoint",
+
+    // Audio
+    mp3: "MP3 Audio",
+    wav: "WAV Audio",
+    ogg: "OGG Audio",
+
+    // Video
+    mp4: "MP4 Video",
+    mov: "QuickTime Video",
+    avi: "AVI Video",
+    webm: "WebM Video",
+
+    // Archives
+    zip: "ZIP Archive",
+    rar: "RAR Archive",
+    "7z": "7Z Archive",
+    tar: "TAR Archive",
+    gz: "GZip Archive",
+
+    // Code
+    html: "HTML File",
+    css: "CSS File",
+    js: "JavaScript",
+    ts: "TypeScript",
+    jsx: "React JSX",
+    tsx: "React TSX",
+    json: "JSON File",
+    py: "Python File",
+    php: "PHP File",
+  };
+
+  return (
+    extensionMap[ext] ||
+    resource.type.charAt(0).toUpperCase() + resource.type.slice(1)
+  );
+};
 
 export function ResourceTable({
   resources,
@@ -90,15 +251,15 @@ export function ResourceTable({
     <div className="overflow-x-auto border rounded-md">
       <table className="w-full min-w-full table-fixed">
         <thead>
-          <tr className="border-b bg-muted/50">
-            <th className="text-left p-3 font-medium w-1/5">Title</th>
-            <th className="text-left p-3 font-medium w-1/4">Description</th>
-            <th className="text-left p-3 font-medium w-1/12">Type</th>
+          <tr className="border-b bg-muted/50 text-xs font-medium text-muted-foreground">
+            <th className="text-left p-2.5 w-5/12">Name</th>
+            <th className="text-left p-2.5 w-1/12">Type</th>
             {showModuleColumn && (
-              <th className="text-left p-3 font-medium w-1/5">Module</th>
+              <th className="text-left p-2.5 w-2/12">Module</th>
             )}
-            <th className="text-left p-3 font-medium w-1/7">Added</th>
-            <th className="text-right p-3 font-medium w-1/8"></th>
+            <th className="text-left p-2.5 w-1/12">Size</th>
+            <th className="text-left p-2.5 w-2/12">Added</th>
+            <th className="text-right p-2.5 w-1/12"></th>
           </tr>
         </thead>
         <tbody>
@@ -137,9 +298,6 @@ const ResourceRow = memo(
   }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(resource.title);
-    const [editDescription, setEditDescription] = useState(
-      resource.description || ""
-    );
     const [selectedModuleId, setSelectedModuleId] = useState(resource.moduleId);
     const [isSaving, setIsSaving] = useState(false);
     const [showDeleteAlert, setShowDeleteAlert] = useState(false);
@@ -188,7 +346,6 @@ const ResourceRow = memo(
     // Start editing
     const handleEdit = () => {
       setEditTitle(resource.title);
-      setEditDescription(resource.description || "");
       setSelectedModuleId(resource.moduleId);
       setIsEditing(true);
     };
@@ -201,7 +358,6 @@ const ResourceRow = memo(
     // Save resource update
     const saveResourceUpdate = async (updates: {
       title?: string;
-      description?: string;
       moduleId?: string;
     }) => {
       try {
@@ -238,15 +394,13 @@ const ResourceRow = memo(
         return;
       }
 
-      const updates: { title?: string; description?: string; moduleId?: string } =
-        {};
+      const updates: {
+        title?: string;
+        moduleId?: string;
+      } = {};
 
       if (editTitle !== resource.title) {
         updates.title = editTitle;
-      }
-
-      if (editDescription !== resource.description) {
-        updates.description = editDescription;
       }
 
       if (selectedModuleId !== resource.moduleId) {
@@ -461,17 +615,39 @@ const ResourceRow = memo(
       }
     };
 
+    // Format date in a more readable way
+    const formatDate = (dateString: string) => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+
+      if (isToday) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      const options: Intl.DateTimeFormatOptions = {
+        month: "short",
+        day: "numeric",
+        year: now.getFullYear() !== date.getFullYear() ? "numeric" : undefined,
+      };
+
+      return date.toLocaleDateString(undefined, options);
+    };
+
     return (
       <>
         <ContextMenu>
           <ContextMenuTrigger asChild>
-            <tr className="border-b hover:bg-muted/50 cursor-context-menu">
-              <td className="p-3">
+            <tr className="border-b hover:bg-muted/50 cursor-pointer text-sm">
+              <td className="p-2.5 flex items-center">
                 {isEditing ? (
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="h-9 min-w-[200px]"
+                    className="h-8 min-w-[200px] text-sm"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -481,44 +657,31 @@ const ResourceRow = memo(
                     }}
                   />
                 ) : (
-                  <div className="font-medium">{resource.title}</div>
-                )}
-              </td>
-              <td className="p-3">
-                {isEditing ? (
-                  <Textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    className="text-sm min-h-[10px] resize-none"
-                    placeholder="Add a description..."
-                    onKeyDown={(e) => {
-                      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                        e.preventDefault();
-                        handleSave();
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="line-clamp-2 text-sm text-muted-foreground">
-                    {resource.description || "No description provided"}
+                  <div className="flex items-center">
+                    <span className="mr-3 text-muted-foreground">
+                      {getFileIcon(resource.type)}
+                    </span>
+                    <span className="font-medium">{resource.title}</span>
                   </div>
                 )}
               </td>
-              <td className="p-3 text-sm">{resource.type}</td>
+              <td className="p-2.5 text-xs text-muted-foreground">
+                {getDetailedFileType(resource)}
+              </td>
               {showModuleColumn && (
-                <td className="p-3 text-sm">
+                <td className="p-2.5 text-xs">
                   {isEditing ? (
                     <Select
                       value={selectedModuleId}
                       onValueChange={setSelectedModuleId}
                     >
-                      <SelectTrigger className="w-[180px] h-9">
+                      <SelectTrigger className="w-[180px] h-8 text-xs">
                         <SelectValue placeholder="Select a module" />
                       </SelectTrigger>
                       <SelectContent>
                         {modules.map((module) => (
                           <SelectItem key={module.id} value={module.id}>
-                            <span className="flex items-center gap-2">
+                            <span className="flex items-center gap-2 text-xs">
                               <span>{module.icon}</span>
                               <span>{module.name}</span>
                             </span>
@@ -527,14 +690,19 @@ const ResourceRow = memo(
                       </SelectContent>
                     </Select>
                   ) : (
-                    <span>{resource.moduleName || "No module"}</span>
+                    <span className="text-muted-foreground">
+                      {resource.moduleName || "—"}
+                    </span>
                   )}
                 </td>
               )}
-              <td className="p-3 text-sm text-muted-foreground">
-                {new Date(resource.createdAt).toLocaleDateString()}
+              <td className="p-2.5 text-xs text-muted-foreground">
+                {formatFileSize(resource.fileSize)}
               </td>
-              <td className="p-3 text-right">
+              <td className="p-2.5 text-xs text-muted-foreground">
+                {formatDate(resource.createdAt)}
+              </td>
+              <td className="p-2.5 text-right">
                 {isEditing ? (
                   <div className="flex justify-end gap-2">
                     <Button
@@ -542,17 +710,23 @@ const ResourceRow = memo(
                       size="sm"
                       onClick={handleCancel}
                       disabled={isSaving}
+                      className="h-7 text-xs px-2"
                     >
                       Cancel
                     </Button>
-                    <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                    <Button
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="h-7 text-xs px-2"
+                    >
                       Save
                     </Button>
                   </div>
                 ) : (
                   (resource.url || resource.fileUrl) && (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => {
                         console.log(
@@ -562,8 +736,9 @@ const ResourceRow = memo(
                         handleViewResource();
                       }}
                       disabled={isUrlLoading || hookUrlLoading}
+                      className="h-7 text-xs hover:bg-blue-50 hover:text-blue-600"
                     >
-                      {isUrlLoading || hookUrlLoading ? "Loading..." : "View"}
+                      {isUrlLoading || hookUrlLoading ? "Loading..." : "Open"}
                     </Button>
                   )
                 )}
@@ -574,14 +749,14 @@ const ResourceRow = memo(
             <ContextMenuItem
               onClick={handleEdit}
               disabled={isEditing}
-              className="cursor-pointer"
+              className="cursor-pointer text-xs"
             >
-              <Edit className="mr-2 h-4 w-4" /> Edit
+              <Edit className="mr-2 h-4 w-4" /> Rename
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => setShowDeleteAlert(true)}
               disabled={isEditing}
-              className="cursor-pointer text-destructive focus:text-destructive"
+              className="cursor-pointer text-destructive focus:text-destructive text-xs"
             >
               <Trash className="mr-2 h-4 w-4" /> Delete
             </ContextMenuItem>

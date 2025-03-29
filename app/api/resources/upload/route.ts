@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     const title = formData.get("title") as string;
     const moduleId = formData.get("moduleId") as string;
     const type = formData.get("type") as string;
-    const description = (formData.get("description") as string) || "";
 
     // Validate required fields
     if (!file || !title || !moduleId || !type) {
@@ -115,22 +114,20 @@ export async function POST(request: NextRequest) {
     const resource = await prisma.resource.create({
       data: {
         title,
-        content: description || "",
         type,
         fileUrl: normalizedFileUrl,
         moduleId,
         userId,
-        // You might want to store additional metadata
-        // fileSize, mimeType, etc.
+        fileSize: file.size,
       },
     });
 
     return NextResponse.json({
       id: resource.id,
       title: resource.title,
-      description: resource.content,
       type: resource.type,
       url: resource.fileUrl,
+      fileSize: resource.fileSize,
       moduleId: resource.moduleId,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),

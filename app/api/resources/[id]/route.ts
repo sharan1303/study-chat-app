@@ -52,13 +52,13 @@ export async function GET(
     const formattedResource = {
       id: resource.id,
       title: resource.title || "",
-      description: resource.content || "",
       type: resource.type,
       url: resource.fileUrl,
       moduleId: resource.moduleId,
       moduleName: resource.module?.name || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
+      fileSize: resource.fileSize || null,
     };
 
     return NextResponse.json(formattedResource);
@@ -151,13 +151,13 @@ export async function PUT(
     const formattedResource = {
       id: updatedResource.id,
       title: updatedResource.title || "",
-      description: updatedResource.content || "",
       type: updatedResource.type,
       url: updatedResource.fileUrl,
       moduleId: updatedResource.moduleId,
       moduleName: updatedResource.module?.name || null,
       createdAt: updatedResource.createdAt.toISOString(),
       updatedAt: updatedResource.updatedAt.toISOString(),
+      fileSize: updatedResource.fileSize || null,
     };
 
     return NextResponse.json(formattedResource);

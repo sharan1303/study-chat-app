@@ -46,13 +46,12 @@ type ResourceType = {
   id: string;
   fileUrl: string | null; // Changed to match Prisma type
   title: string;
-  content: string | null;
   type: string;
   moduleId: string;
   userId: string | null;
-  sessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  fileSize: number | null;
   module?: {
     name: string;
   };
@@ -109,11 +108,10 @@ export async function GET(
       id: resource.id,
       url: resource.fileUrl, // Map fileUrl from DB to url in API response
       title: resource.title,
-      description: resource.content, // Map content to description for consistency
-      content: resource.content,
       type: resource.type,
       moduleId: resource.moduleId,
       moduleName: resource.module?.name || null,
+      fileSize: resource.fileSize || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     }));
@@ -179,11 +177,9 @@ export async function POST(
       data: {
         fileUrl: url || null, // Map 'url' from API to 'fileUrl' in DB
         title,
-        content: content || null,
         type: type || "note",
         moduleId,
         userId, // Always set userId, never use sessionId
-        sessionId: null, // No sessionId for resources
       },
     });
 
@@ -198,9 +194,8 @@ export async function POST(
       id: resource.id,
       url: resource.fileUrl, // Map 'fileUrl' from DB to 'url' in API
       title: resource.title,
-      content: resource.content,
-      description: resource.content, // Add description for consistency
       type: resource.type,
+      fileSize: resource.fileSize || null,
       moduleId: resource.moduleId,
       moduleName: moduleInfo?.name || null,
       createdAt: resource.createdAt.toISOString(),

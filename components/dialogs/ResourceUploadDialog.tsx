@@ -19,7 +19,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -38,7 +37,6 @@ import {
 // Schema for resource creation
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters"),
-  description: z.string().optional(),
   type: z.string().min(1, "Please select a resource type"),
   url: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
   moduleId: z.string().min(1, "Please select a module"),
@@ -53,6 +51,10 @@ const resourceTypes = [
   { value: "notes", label: "Notes" },
   { value: "code", label: "Code" },
   { value: "video", label: "Video" },
+  { value: "audio", label: "Audio" },
+  { value: "document", label: "Document" },
+  { value: "spreadsheet", label: "Spreadsheet" },
+  { value: "archive", label: "Archive" },
 ];
 
 // Interface for module data
@@ -90,7 +92,6 @@ export function ResourceUploadDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      description: "",
       type: "",
       url: "",
       moduleId: preselectedModuleId || "",
@@ -102,7 +103,6 @@ export function ResourceUploadDialog({
     if (open) {
       form.reset({
         title: "",
-        description: "",
         type: "",
         url: "",
         moduleId: preselectedModuleId || "",
@@ -177,10 +177,6 @@ export function ResourceUploadDialog({
       formData.append("title", values.title);
       formData.append("moduleId", values.moduleId);
       formData.append("type", values.type);
-
-      if (values.description) {
-        formData.append("description", values.description);
-      }
 
       // Use URL field for external resources only if no file is uploaded
       if (values.url && !selectedFile) {
@@ -262,19 +258,90 @@ export function ResourceUploadDialog({
   const handleFile = (file: File) => {
     setSelectedFile(file);
 
-    // Auto-detect resource type based on file extension
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    let type = "";
-    if (extension === "pdf") type = "pdf";
-    else if (["jpg", "jpeg", "png", "gif", "svg"].includes(extension || ""))
-      type = "image";
-    else if (["mp4", "avi", "mov"].includes(extension || "")) type = "video";
+    // Get file extension and mime type
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    const mimeType = file.type.toLowerCase();
 
-    if (type) {
-      form.setValue("type", type);
+    console.log("File info:", {
+      name: file.name,
+      extension,
+      mimeType,
+      size: file.size,
+    });
+
+    // Auto-detect resource type based on file extension and mime type
+    let type = "";
+
+    // Check mime type first
+    if (mimeType.includes("pdf")) {
+      type = "pdf";
+    } else if (mimeType.includes("image/")) {
+      // Use standard "image" type instead of "image/extension"
+      type = "image";
+    } else if (mimeType.includes("video/")) {
+      // Use standard "video" type instead of "video/extension"
+      type = "video";
+    } else if (mimeType.includes("audio/")) {
+      // Use standard "audio" type instead of "audio/extension"
+      type = "audio";
+    } else if (
+      mimeType.includes("text/") ||
+      mimeType.includes("application/msword") ||
+      mimeType.includes(
+        "application/vnd.openxmlformats-officedocument.wordprocessing"
+      )
+    ) {
+      type = "document";
+    } else if (
+      mimeType.includes("spreadsheet") ||
+      mimeType.includes("excel") ||
+      mimeType.includes("csv")
+    ) {
+      type = "spreadsheet";
+    } else if (
+      mimeType.includes("zip") ||
+      mimeType.includes("archive") ||
+      mimeType.includes("compressed")
+    ) {
+      type = "archive";
     }
 
-    // Auto-fill title if empty
+    // If mime type didn't work, try extension
+    if (!type) {
+      if (extension === "pdf") {
+        type = "pdf";
+      } else if (
+        ["jpg", "jpeg", "png", "gif", "svg", "webp", "bmp"].includes(extension)
+      ) {
+        type = "image";
+      } else if (["mp4", "avi", "mov", "webm", "mkv"].includes(extension)) {
+        type = "video";
+      } else if (["mp3", "wav", "ogg", "flac", "aac"].includes(extension)) {
+        type = "audio";
+      } else if (["doc", "docx", "txt", "rtf", "odt"].includes(extension)) {
+        type = "document";
+      } else if (["xls", "xlsx", "csv", "ods"].includes(extension)) {
+        type = "spreadsheet";
+      } else if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) {
+        type = "archive";
+      } else if (
+        ["html", "css", "js", "ts", "jsx", "tsx", "json", "php", "py"].includes(
+          extension
+        )
+      ) {
+        type = "code";
+      }
+    }
+
+    // Set a default type if we couldn't detect it
+    if (!type) {
+      type = "document";
+    }
+
+    console.log("Detected resource type:", type);
+    form.setValue("type", type);
+
+    // Auto-fill title if empty (remove extension from filename)
     if (!form.getValues().title) {
       const fileName = file.name.split(".").slice(0, -1).join(".");
       form.setValue("title", fileName);
@@ -394,31 +461,6 @@ export function ResourceUploadDialog({
                     <FormLabel>Title</FormLabel>
                     <FormControl>
                       <Input placeholder="Enter resource title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description (optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter resource description"
-                        {...field}
-                        value={field.value || ""}
-                        className="h-1"
-                        onKeyDown={(e) => {
-                          if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                            e.preventDefault();
-                            form.handleSubmit(onSubmit)();
-                          }
-                        }}
-                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
