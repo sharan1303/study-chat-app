@@ -6,8 +6,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/module-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ModuleForm } from "@/components/ModuleForm";
 import { Plus } from "lucide-react";
 
 // Define the Module type here instead of importing from Sidebar
@@ -32,6 +37,19 @@ interface ModuleListProps {
   collapsed?: boolean;
 }
 
+/**
+ * Renders a list of module buttons with navigation and creation capabilities.
+ *
+ * This component displays module buttons that, when clicked, either trigger a provided callback or navigate to a module's detail page using a slugified module name. It highlights the active module based on a custom active-check function or the current pathname and supports both a regular and a compact view. When no modules are available and loading is complete, it prompts the user to create their first module via a dialog. The component listens for the "module-create-success" event to close the creation dialog and refresh the module list.
+ *
+ * @param modules - The list of modules to display.
+ * @param loading - Indicates whether module data is currently being loaded.
+ * @param currentModule - The identifier of the currently active module.
+ * @param isActive - Optional function to determine if a module is active; defaults to comparing the module name with the current pathname.
+ * @param handleModuleClick - Optional callback invoked when a module is clicked; if absent, navigation to the module detail page is performed.
+ * @param pathname - An optional pathname used to assess active state; if not provided, the current URL path is used.
+ * @param collapsed - When true, renders the module list in a compact format.
+ */
 export default function ModuleList({
   modules = [],
   loading = false,
@@ -107,6 +125,7 @@ export default function ModuleList({
               </Button>
             </DialogTrigger>
             <DialogContent>
+              <DialogTitle>Create New Module</DialogTitle>
               <ModuleForm successEventName="module-create-success" />
             </DialogContent>
           </Dialog>
@@ -133,6 +152,7 @@ export default function ModuleList({
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
+                    <DialogTitle>Create New Module</DialogTitle>
                     <ModuleForm successEventName="module-create-success" />
                   </DialogContent>
                 </Dialog>

@@ -3,38 +3,25 @@
 import { useEffect, useState, use } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
-import { Check, Edit, MessageSquare, Trash, X } from "lucide-react";
+import { Check, Edit, MessageSquare, Trash, Upload, X } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useAuth } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import ModuleActions from "../module-actions";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
+import ModuleActions from "../module-actions";
 import { ResourceUploadButton } from "@/components/ResourceUploadButton";
+import { ResourceTable } from "@/components/ResourceTable";
 
 interface Module {
   id: string;
@@ -77,18 +64,31 @@ const icons = [
   "🎵",
 ];
 
+/**
+ * Renders and manages the details of a specific module.
+ *
+ * This component fetches module data based on a module name provided via URL parameters and displays the module’s icon,
+ * title, description, and its associated resources. It supports editing the module's title, description, and icon, with updates
+ * triggering either a full page refresh (for name changes) or a component refresh (for description and icon changes). For signed-in
+ * users, the component loads related resources; for anonymous users, it presents an empty resource list. If the module cannot be
+ * found, a notFound response is triggered.
+ *
+ * @param props - Contains URL parameters with the module name.
+ *
+ * @returns A React element representing the module details page.
+ */
 export default function ModuleDetailsPage(props: {
   params: Promise<{ moduleName: string }>;
 }) {
   const params = use(props.params);
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [module, setModule] = useState<Module | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [allModules, setAllModules] = useState<
     { id: string; name: string; icon: string }[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -113,9 +113,42 @@ export default function ModuleDetailsPage(props: {
           console.log(`Found exact match for module: ${exactModules[0].name}`);
           setModule(exactModules[0]);
 
-          // Fetch resources for this module
-          const resourcesData = await api.getResources(exactModules[0].id);
-          setResources(resourcesData.resources || []);
+          // Get all modules for selector
+          const allModulesData = await api.getModules();
+          const modulesData = allModulesData.modules || [];
+          setAllModules(
+            modulesData.map((m: Module) => ({
+              id: m.id,
+              name: m.name,
+              icon: m.icon,
+            }))
+          );
+
+          // Fetch resources only for authenticated users
+          if (isSignedIn) {
+            const resourcesResponse = await fetch("/api/resources");
+            if (resourcesResponse.status === 401) {
+              // Handle unauthorized gracefully - user is not authenticated
+              console.log("User is not authenticated for resources");
+              setResources([]);
+            } else if (resourcesResponse.ok) {
+              const allResources = await resourcesResponse.json();
+              // Filter resources for the current module
+              const moduleResources = allResources.filter(
+                (resource: Resource) => resource.moduleId === exactModules[0].id
+              );
+              setResources(moduleResources);
+            } else {
+              console.error(
+                "Failed to fetch resources:",
+                resourcesResponse.statusText
+              );
+              setResources([]);
+            }
+          } else {
+            // No resources for anonymous users
+            setResources([]);
+          }
           return;
         }
 
@@ -173,12 +206,33 @@ export default function ModuleDetailsPage(props: {
 
         setModule(moduleData);
 
-        // Fetch resources for this module
-        const resourcesData = await api.getResources(moduleData.id);
-        setResources(resourcesData.resources || []);
+        // Fetch resources only for authenticated users
+        if (isSignedIn) {
+          const resourcesResponse = await fetch("/api/resources");
+          if (resourcesResponse.status === 401) {
+            // Handle unauthorized gracefully - user is not authenticated
+            console.log("User is not authenticated for resources");
+            setResources([]);
+          } else if (resourcesResponse.ok) {
+            const allResources = await resourcesResponse.json();
+            // Filter resources for the current module
+            const moduleResources = allResources.filter(
+              (resource: Resource) => resource.moduleId === moduleData.id
+            );
+            setResources(moduleResources);
+          } else {
+            console.error(
+              "Failed to fetch resources:",
+              resourcesResponse.statusText
+            );
+            setResources([]);
+          }
+        } else {
+          // No resources for anonymous users
+          setResources([]);
+        }
       } catch (error) {
         console.error("Error fetching module details:", error);
-        setError("Failed to load module details");
       } finally {
         setIsLoading(false);
       }
@@ -188,7 +242,7 @@ export default function ModuleDetailsPage(props: {
     if (typeof window !== "undefined") {
       fetchModuleDetails();
     }
-  }, [params.moduleName]);
+  }, [params.moduleName, isSignedIn]);
 
   // Set initial edit values when module data loads
   useEffect(() => {
@@ -298,23 +352,44 @@ export default function ModuleDetailsPage(props: {
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center">
               {/* Icon skeleton */}
-              <div className="h-10 w-10 bg-gray-200 animate-pulse rounded"></div>
+              <Button
+                variant="ghost"
+                disabled
+                className="text-xl cursor-default h-10 w-10 bg-gray-200 animate-pulse"
+                aria-hidden
+              ></Button>
               {/* Title skeleton */}
               <div className="h-8 w-48 bg-gray-200 animate-pulse rounded ml-2"></div>
             </div>
 
             {/* Action buttons skeleton */}
-            <div className="flex gap-2 pr-16">
-              <div className="h-9 w-32 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-9 w-24 bg-gray-200 animate-pulse rounded"></div>
+            <div className="flex items-center gap-1 pr-16">
+              <Button
+                variant="outline"
+                disabled
+                className="flex items-center gap-2 ml-1 mr-1"
+                aria-hidden
+              >
+                <MessageSquare className="h-5 w-5" />
+                <span>Go to Chat</span>
+              </Button>
+              <Button variant="ghost" disabled size="icon" aria-hidden>
+                <Edit className="h-5 w-5" />
+              </Button>
+
+              <Button variant="ghost" disabled size="icon" aria-hidden>
+                <Trash className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
           <div className="space-y-6 px-3">
             {/* Description section skeleton */}
             <div className="space-y-2">
-              <div className="h-7 w-32 bg-gray-200 animate-pulse rounded"></div>
-              <div className="h-24 w-full bg-gray-200 animate-pulse rounded p-4 min-h-[158px]"></div>
+              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <div className="text-muted-foreground p-4 rounded min-h-[158px] bg-gray-200 animate-pulse">
+                <span className="opacity-0">Loading description...</span>
+              </div>
             </div>
 
             <div className="my-6 h-px bg-gray-200"></div>
@@ -322,53 +397,26 @@ export default function ModuleDetailsPage(props: {
             {/* Resources section skeleton */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="h-7 w-32 bg-gray-200 animate-pulse rounded"></div>
-                <div className="h-9 min-w-[180px] bg-gray-200 animate-pulse rounded"></div>
+                <h2 className="text-lg font-semibold">Resources</h2>
+                <Button
+                  variant="outline"
+                  disabled
+                  className="opacity-70"
+                  aria-hidden
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload
+                </Button>
               </div>
 
-              {/* Resource table skeleton - an alternate view that better represents the table layout */}
-              <div className="overflow-x-auto border rounded-md">
-                <table className="w-full min-w-full table-fixed">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left p-3 w-1/4">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-20"></div>
-                      </th>
-                      <th className="text-left p-3 w-1/3">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-24"></div>
-                      </th>
-                      <th className="text-left p-3 w-1/8">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-12"></div>
-                      </th>
-                      <th className="text-left p-3 w-1/8">
-                        <div className="h-5 bg-gray-200 animate-pulse rounded w-14"></div>
-                      </th>
-                      <th className="text-right p-3 w-1/8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <tr key={i} className="border-b">
-                        <td className="p-3">
-                          <div className="h-5 bg-gray-200 animate-pulse rounded w-3/4"></div>
-                        </td>
-                        <td className="p-3">
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-full"></div>
-                        </td>
-                        <td className="p-3">
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-12"></div>
-                        </td>
-                        <td className="p-3">
-                          <div className="h-4 bg-gray-200 animate-pulse rounded w-20"></div>
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="h-8 w-16 ml-auto bg-gray-200 animate-pulse rounded"></div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {/* Use ResourceTable with isLoading prop */}
+              <ResourceTable
+                resources={[]}
+                modules={[]}
+                onUpdate={() => {}}
+                showModuleColumn={false}
+                isLoading={true}
+              />
             </div>
           </div>
         </div>
@@ -464,7 +512,7 @@ export default function ModuleDetailsPage(props: {
 
         <div className="space-y-6 px-3">
           <div>
-            <h2 className="text-xl font-semibold mb-2">Description</h2>
+            <h2 className="text-lg font-semibold mb-2">Description</h2>
             {/* Editable description */}
             {isEditingDescription ? (
               <div className="flex flex-col gap-2">
@@ -514,351 +562,45 @@ export default function ModuleDetailsPage(props: {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Resources</h2>
-              <ResourceUploadButton variant="outline" moduleId={module.id} />
+              <h2 className="text-lg font-semibold">Resources</h2>
+              {isSignedIn && (
+                <ResourceUploadButton variant="outline" moduleId={module.id} />
+              )}
             </div>
 
-            {resources.length === 0 ? (
-              <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-                <h3 className="text-xl font-medium">No resources found</h3>
-                <p className="text-muted-foreground">
-                  Add resources to this module to get started
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto border rounded-md">
-                <table className="w-full min-w-full table-fixed">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="text-left p-3 font-medium w-1/4">Title</th>
-                      <th className="text-left p-3 font-medium w-1/3">
-                        Description
-                      </th>
-                      <th className="text-left p-3 font-medium w-1/8">Type</th>
-                      <th className="text-left p-3 font-medium w-1/8">Added</th>
-                      <th className="text-right p-3 font-medium w-1/8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resources
-                      .filter((resource) => !resource._deleted) // Filter out deleted resources
-                      .map((resource) => (
-                        <ResourceRow
-                          key={resource.id}
-                          resource={resource}
-                          modules={allModules}
-                          currentModuleId={module?.id}
-                          onUpdate={(updatedResource) => {
-                            if (updatedResource._deleted) {
-                              // If resource was deleted, keep it in state but mark as deleted
-                              setResources(
-                                resources.map((r) =>
-                                  r.id === updatedResource.id
-                                    ? { ...r, _deleted: true }
-                                    : r
-                                )
-                              );
-                            } else if (
-                              updatedResource.moduleId !== module?.id
-                            ) {
-                              // If module changed, remove from this list
-                              setResources(
-                                resources.map((r) =>
-                                  r.id === updatedResource.id
-                                    ? { ...r, _deleted: true }
-                                    : r
-                                )
-                              );
-                            } else {
-                              // Regular update
-                              setResources(
-                                resources.map((r) =>
-                                  r.id === updatedResource.id
-                                    ? updatedResource
-                                    : r
-                                )
-                              );
-                            }
-                          }}
-                        />
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <ResourceTable
+              resources={resources}
+              modules={allModules}
+              onUpdate={(updatedResource) => {
+                if (updatedResource._deleted) {
+                  // If resource was deleted, keep it in state but mark as deleted
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id ? { ...r, _deleted: true } : r
+                    )
+                  );
+                } else if (updatedResource.moduleId !== module?.id) {
+                  // If module changed, remove from this list
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id ? { ...r, _deleted: true } : r
+                    )
+                  );
+                } else {
+                  // Regular update
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id ? updatedResource : r
+                    )
+                  );
+                }
+              }}
+              showModuleColumn={false}
+            />
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-// Resource row component with context menu
-function ResourceRow({
-  resource,
-  onUpdate,
-  modules = [],
-  currentModuleId,
-}: {
-  resource: Resource;
-  onUpdate: (updatedResource: Resource) => void;
-  modules?: { id: string; name: string; icon: string }[];
-  currentModuleId?: string;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(resource.title);
-  const [editDescription, setEditDescription] = useState(
-    resource.description || ""
-  );
-  const [isSaving, setIsSaving] = useState(false);
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  const [showModuleChangeAlert, setShowModuleChangeAlert] = useState(false);
-  const [selectedModuleId, setSelectedModuleId] = useState(resource.moduleId);
-
-  // Save resource update
-  const saveResourceUpdate = async (updates: {
-    title?: string;
-    description?: string;
-    moduleId?: string;
-  }) => {
-    try {
-      setIsSaving(true);
-      await axios.put(`/api/resources/${resource.id}`, updates);
-
-      // Update local state
-      const updatedResource = {
-        ...resource,
-        ...updates,
-        // If moduleId was updated, update the moduleName too
-        ...(updates.moduleId && {
-          moduleName:
-            modules.find((m) => m.id === updates.moduleId)?.name ||
-            resource.moduleName,
-        }),
-      };
-
-      onUpdate(updatedResource);
-      toast.success("Resource updated");
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating resource:", error);
-      toast.error("Failed to update resource");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Handle save
-  const handleSave = () => {
-    if (editTitle.trim().length < 2) {
-      toast.error("Title must be at least 2 characters");
-      return;
-    }
-
-    const updates: { title?: string; description?: string; moduleId?: string } =
-      {};
-
-    if (editTitle !== resource.title) {
-      updates.title = editTitle;
-    }
-
-    if (editDescription !== resource.description) {
-      updates.description = editDescription;
-    }
-
-    if (selectedModuleId !== resource.moduleId) {
-      if (selectedModuleId !== currentModuleId) {
-        // Show confirmation if changing to a different module
-        setShowModuleChangeAlert(true);
-        return;
-      }
-      updates.moduleId = selectedModuleId;
-    }
-
-    if (Object.keys(updates).length > 0) {
-      saveResourceUpdate(updates);
-    } else {
-      setIsEditing(false);
-    }
-  };
-
-  // Handle module change confirmation
-  const handleModuleChangeConfirm = () => {
-    saveResourceUpdate({ moduleId: selectedModuleId });
-    setShowModuleChangeAlert(false);
-  };
-
-  // Handle delete resource
-  const handleDelete = async () => {
-    try {
-      setIsSaving(true);
-      await axios.delete(`/api/resources/${resource.id}`);
-      toast.success("Resource deleted");
-      // Remove resource from the list
-      onUpdate({ ...resource, _deleted: true } as Resource);
-    } catch (error) {
-      console.error("Error deleting resource:", error);
-      toast.error("Failed to delete resource");
-    } finally {
-      setIsSaving(false);
-      setShowDeleteAlert(false);
-    }
-  };
-
-  // Start editing
-  const handleEdit = () => {
-    setEditTitle(resource.title);
-    setEditDescription(resource.description || "");
-    setSelectedModuleId(resource.moduleId);
-    setIsEditing(true);
-  };
-
-  // Cancel editing
-  const handleCancel = () => {
-    setIsEditing(false);
-  };
-
-  return (
-    <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <tr className="border-b hover:bg-muted/50 cursor-context-menu">
-            <td className="p-3">
-              {isEditing ? (
-                <Input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="h-9"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSave();
-                    }
-                  }}
-                />
-              ) : (
-                <div className="font-medium">{resource.title}</div>
-              )}
-            </td>
-            <td className="p-3">
-              {isEditing ? (
-                <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="text-sm min-h-[20px] resize-none"
-                  placeholder="Add a description..."
-                  onKeyDown={(e) => {
-                    // Save on Ctrl+Enter or Command+Enter
-                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                      e.preventDefault();
-                      handleSave();
-                    }
-                  }}
-                />
-              ) : (
-                <div className="line-clamp-2 text-sm text-muted-foreground">
-                  {resource.description || "No description."}
-                </div>
-              )}
-            </td>
-            <td className="p-3 text-sm">{resource.type}</td>
-            <td className="p-3 text-sm text-muted-foreground">
-              <span>{new Date(resource.createdAt).toLocaleDateString()}</span>
-            </td>
-            <td className="p-3 text-right">
-              {isEditing ? (
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancel}
-                    disabled={isSaving}
-                  >
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                    Save
-                  </Button>
-                </div>
-              ) : (
-                resource.url && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (resource.url) window.open(resource.url, "_blank");
-                    }}
-                  >
-                    View
-                  </Button>
-                )
-              )}
-            </td>
-          </tr>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            onClick={handleEdit}
-            disabled={isEditing}
-            className="cursor-pointer"
-          >
-            <Edit className="mr-2 h-4 w-4" /> Edit
-          </ContextMenuItem>
-          <ContextMenuItem
-            onClick={() => setShowDeleteAlert(true)}
-            disabled={isEditing}
-            className="cursor-pointer text-destructive focus:text-destructive"
-          >
-            <Trash className="mr-2 h-4 w-4" /> Delete
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete &quot;{resource.title}&quot; and
-              cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Module Change Confirmation Dialog */}
-      <AlertDialog
-        open={showModuleChangeAlert}
-        onOpenChange={setShowModuleChangeAlert}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Change module?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This resource will be moved to another module and will no longer
-              appear in the current module.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleModuleChangeConfirm}>
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
   );
 }
 

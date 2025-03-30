@@ -3,18 +3,19 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from '@clerk/themes'
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import ClientSidebar from "@/components/ClientSidebar";
 import { Providers as AppProviders } from "@/lib/providers";
 import { SidebarProvider } from "@/lib/sidebar-context";
 import { SessionProvider } from "@/context/SessionContext";
 import AnonymousDataMigration from "@/components/AnonymousDataMigration";
 import Header from "@/components/Header";
+import localFont from 'next/font/local'
 
 // Session initializer - client component
 import { SessionInitializer } from "@/components/SessionInitializer";
 
-const inter = Inter({ subsets: ["latin"] });
+// Font files
+const myFont = localFont({ src: 'fonts/AtkinsonHyperlegibleNextVF-Variable.woff2' })
 
 export const metadata: Metadata = {
   title: "Study Chat - Your Personal Study Assistant",
@@ -53,7 +54,7 @@ export default function RootLayout({
   return (
     <ClerkProvider appearance={clerkAppearance}>
       <html lang="en" suppressHydrationWarning>
-        <body className={`${inter.className} overflow-hidden flex`}>
+        <body className={`${myFont.className} overflow-hidden flex`}>
           <SessionProvider>
             <AppProviders>
               <SidebarProvider defaultOpen={true}>
