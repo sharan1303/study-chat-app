@@ -15,8 +15,11 @@ export const supabaseClient = createClient(
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error("Missing Supabase environment variables");
+if (!supabaseUrl) {
+  throw new Error("NEXT_PUBLIC_SUPABASE_URL is missing.");
+}
+if (!supabaseServiceKey) {
+  throw new Error("SUPABASE_SERVICE_KEY is missing.");
 }
 
 /**

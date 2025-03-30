@@ -33,6 +33,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  getFileTypeFromExtension,
+  getFileTypeFromMimeType,
+  getBaseResourceType,
+} from "@/lib/fileTypes";
 
 // Schema for resource creation
 const formSchema = z.object({
@@ -42,20 +47,6 @@ const formSchema = z.object({
   moduleId: z.string().min(1, "Please select a module"),
   file: z.any().optional(),
 });
-
-// Resource types
-const resourceTypes = [
-  { value: "pdf", label: "PDF Document" },
-  { value: "link", label: "External Link" },
-  { value: "image", label: "Image" },
-  { value: "notes", label: "Notes" },
-  { value: "code", label: "Code" },
-  { value: "video", label: "Video" },
-  { value: "audio", label: "Audio" },
-  { value: "document", label: "Document" },
-  { value: "spreadsheet", label: "Spreadsheet" },
-  { value: "archive", label: "Archive" },
-];
 
 // Interface for module data
 interface Module {
@@ -98,6 +89,7 @@ export function ResourceUploadDialog({
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [moduleLoadError, setModuleLoadError] = useState<string | null>(null);
+  const [typeLabel, setTypeLabel] = useState<string>("");
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -281,77 +273,22 @@ export function ResourceUploadDialog({
       size: file.size,
     });
 
-    // Auto-detect resource type based on file extension and mime type
-    let type = "";
+    // Get the resource type using the shared utilities
+    const type = getBaseResourceType(extension, mimeType);
 
-    // Check mime type first
-    if (mimeType.includes("pdf")) {
-      type = "pdf";
-    } else if (mimeType.includes("image/")) {
-      // Use standard "image" type instead of "image/extension"
-      type = "image";
-    } else if (mimeType.includes("video/")) {
-      // Use standard "video" type instead of "video/extension"
-      type = "video";
-    } else if (mimeType.includes("audio/")) {
-      // Use standard "audio" type instead of "audio/extension"
-      type = "audio";
-    } else if (
-      mimeType.includes("text/") ||
-      mimeType.includes("application/msword") ||
-      mimeType.includes(
-        "application/vnd.openxmlformats-officedocument.wordprocessing"
-      )
-    ) {
-      type = "document";
-    } else if (
-      mimeType.includes("spreadsheet") ||
-      mimeType.includes("excel") ||
-      mimeType.includes("csv")
-    ) {
-      type = "spreadsheet";
-    } else if (
-      mimeType.includes("zip") ||
-      mimeType.includes("archive") ||
-      mimeType.includes("compressed")
-    ) {
-      type = "archive";
+    // Get the detailed file type label
+    let detectedLabel = "";
+    if (mimeType && mimeType.includes("/")) {
+      detectedLabel = getFileTypeFromMimeType(mimeType);
+    } else if (extension) {
+      detectedLabel = getFileTypeFromExtension(extension);
+    } else {
+      detectedLabel = "Document";
     }
 
-    // If mime type didn't work, try extension
-    if (!type) {
-      if (extension === "pdf") {
-        type = "pdf";
-      } else if (
-        ["jpg", "jpeg", "png", "gif", "svg", "webp", "bmp"].includes(extension)
-      ) {
-        type = "image";
-      } else if (["mp4", "avi", "mov", "webm", "mkv"].includes(extension)) {
-        type = "video";
-      } else if (["mp3", "wav", "ogg", "flac", "aac"].includes(extension)) {
-        type = "audio";
-      } else if (["doc", "docx", "txt", "rtf", "odt"].includes(extension)) {
-        type = "document";
-      } else if (["xls", "xlsx", "csv", "ods"].includes(extension)) {
-        type = "spreadsheet";
-      } else if (["zip", "rar", "7z", "tar", "gz"].includes(extension)) {
-        type = "archive";
-      } else if (
-        ["html", "css", "js", "ts", "jsx", "tsx", "json", "php", "py"].includes(
-          extension
-        )
-      ) {
-        type = "code";
-      }
-    }
-
-    // Set a default type if we couldn't detect it
-    if (!type) {
-      type = "document";
-    }
-
-    console.log("Detected resource type:", type);
+    console.log("Detected resource type:", type, "with label:", detectedLabel);
     form.setValue("type", type);
+    setTypeLabel(detectedLabel);
 
     // Auto-fill title if empty (remove extension from filename)
     if (!form.getValues().title) {
@@ -486,27 +423,21 @@ export function ResourceUploadDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Resource Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select resource type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent
-                          position="popper"
-                          sideOffset={4}
-                          className="z-[200]"
-                        >
-                          {resourceTypes.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        {selectedFile && typeLabel ? (
+                          <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                            <span className="text-foreground">{typeLabel}</span>
+                            <input type="hidden" {...field} />
+                          </div>
+                        ) : (
+                          <div className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm">
+                            <span className="text-muted-foreground">
+                              File type will be detected automatically
+                            </span>
+                            <input type="hidden" {...field} />
+                          </div>
+                        )}
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

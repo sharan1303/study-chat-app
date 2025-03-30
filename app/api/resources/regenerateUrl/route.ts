@@ -4,6 +4,57 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import prisma from "@/lib/prisma";
 
 /**
+ * Attempts to create a signed URL with retry logic for JWT token issues.
+ *
+ * @param filePath - The storage file path to create a signed URL for
+ * @param expirySeconds - How long the signed URL should be valid for
+ * @returns Object containing either data with the signed URL or an error
+ */
+async function createSignedUrlWithRetry(
+  filePath: string,
+  expirySeconds: number
+) {
+  console.log("🔄 Generating signed URL for path:", filePath);
+  const supabase = getSupabaseAdmin();
+
+  const signedUrlResult = await supabase.storage
+    .from("resources")
+    .createSignedUrl(filePath, expirySeconds);
+
+  console.log(
+    "📋 Signed URL result:",
+    JSON.stringify(signedUrlResult, null, 2)
+  );
+
+  // If there's no error or it's not JWT-related, return the original result
+  if (
+    !signedUrlResult.error ||
+    !(
+      signedUrlResult.error.message.includes("JWT") ||
+      signedUrlResult.error.message.includes("expired") ||
+      signedUrlResult.error.message.includes("token")
+    )
+  ) {
+    return signedUrlResult;
+  }
+
+  // Handle JWT token issues with a retry
+  console.log("🔑 JWT token issue detected. Trying with refreshed client");
+
+  // Create a completely new client instance
+  const freshSupabase = getSupabaseAdmin();
+
+  // Try again with the fresh client
+  const retryResult = await freshSupabase.storage
+    .from("resources")
+    .createSignedUrl(filePath, expirySeconds);
+
+  console.log("📋 Retry result:", JSON.stringify(retryResult, null, 2));
+
+  return retryResult;
+}
+
+/**
  * Handles a POST request to regenerate a signed URL for a resource.
  *
  * This function authenticates the user and validates the request payload to ensure a resource identifier is provided.
@@ -143,107 +194,21 @@ export async function POST(request: NextRequest) {
     filePath = filePath.split("?")[0].split("#")[0];
     console.log("🔄 Final file path for signed URL:", filePath);
 
-    // Get a fresh Supabase client for each request
-    console.log("🔄 Initializing Supabase client");
-    const supabase = getSupabaseAdmin();
-
     // Generate a new signed URL (valid for 12 hours)
-    console.log("🔄 Generating signed URL for path:", filePath);
-    const signedUrlResult = await supabase.storage
-      .from("resources")
-      .createSignedUrl(filePath, 60 * 60 * 24); // 12 hours
-
-    console.log(
-      "📋 Signed URL result:",
-      JSON.stringify(signedUrlResult, null, 2)
+    const signedUrlResult = await createSignedUrlWithRetry(
+      filePath,
+      60 * 60 * 24
     );
 
     if (signedUrlResult.error) {
-      console.error("❌ Supabase signed URL error:", signedUrlResult.error);
-
-      // Special handling for JWT expiration errors
-      if (
-        signedUrlResult.error.message.includes("JWT") ||
-        signedUrlResult.error.message.includes("expired") ||
-        signedUrlResult.error.message.includes("token")
-      ) {
-        console.log(
-          "🔑 JWT token issue detected. Trying with refreshed client"
-        );
-
-        // Create a completely new client instance
-        const freshSupabase = getSupabaseAdmin();
-
-        // Try again with the fresh client
-        const retryResult = await freshSupabase.storage
-          .from("resources")
-          .createSignedUrl(filePath, 60 * 60 * 24); // 12 hours
-
-        console.log("📋 Retry result:", JSON.stringify(retryResult, null, 2));
-
-        if (retryResult.error) {
-          console.error("❌ Retry also failed:", retryResult.error);
-          return NextResponse.json(
-            {
-              error: "Failed to generate signed URL even after JWT refresh",
-              details: retryResult.error.message,
-              path: filePath,
-            },
-            { status: 500 }
-          );
-        }
-
-        // Use the retry result if successful
-        if (retryResult.data?.signedUrl) {
-          console.log("✅ Retry successful, got new signed URL");
-          // Create a new result object instead of modifying the existing one
-          const successResult = {
-            data: retryResult.data,
-            error: null,
-          };
-
-          // Continue with the successful result
-          console.log("✅ Successfully generated new signed URL");
-
-          // Update the resource with the new URL
-          try {
-            console.log("🔄 Updating resource in database with new URL");
-            const updatedResource = await prisma.resource.update({
-              where: {
-                id: resourceId,
-              },
-              data: {
-                fileUrl: successResult.data.signedUrl,
-              },
-            });
-
-            console.log("✅ Database update successful");
-
-            return NextResponse.json({
-              id: updatedResource.id,
-              url: updatedResource.fileUrl,
-              updatedAt: updatedResource.updatedAt.toISOString(),
-            });
-          } catch (dbError) {
-            console.error("❌ Database update error:", dbError);
-            // Still return the URL even if DB update fails
-            return NextResponse.json({
-              url: successResult.data.signedUrl,
-              error: "URL generated but database update failed",
-            });
-          }
-        }
-      } else {
-        // For other errors, return the error
-        return NextResponse.json(
-          {
-            error: "Failed to generate signed URL",
-            details: signedUrlResult.error.message,
-            path: filePath,
-          },
-          { status: 500 }
-        );
-      }
+      return NextResponse.json(
+        {
+          error: "Failed to generate signed URL",
+          details: signedUrlResult.error.message,
+          path: filePath,
+        },
+        { status: 500 }
+      );
     }
 
     if (!signedUrlResult.data?.signedUrl) {

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/module-form";
+import { ModuleForm } from "@/components/ModuleForm";
 import {
   AlertDialog,
   AlertDialogAction,

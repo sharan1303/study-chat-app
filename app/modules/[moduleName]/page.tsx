@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
-import { Check, Edit, MessageSquare, Trash, X } from "lucide-react";
+import { Check, Edit, MessageSquare, Trash, Upload, X } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useAuth } from "@clerk/nextjs";
@@ -404,7 +404,8 @@ export default function ModuleDetailsPage(props: {
                   className="opacity-70"
                   aria-hidden
                 >
-                  Upload Resource
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload
                 </Button>
               </div>
 
@@ -595,7 +596,6 @@ export default function ModuleDetailsPage(props: {
                 }
               }}
               showModuleColumn={false}
-              currentModuleId={module.id}
             />
           </div>
         </div>
