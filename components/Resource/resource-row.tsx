@@ -180,15 +180,15 @@ const ModuleSelector = ({
   modules: Module[];
 }) => (
   <Select value={selectedModuleId} onValueChange={setSelectedModuleId}>
-    <SelectTrigger className="w-[180px] h-8 text-xs">
+    <SelectTrigger className="w-full max-w-[160px] h-8 text-xs">
       <SelectValue placeholder="Select a module" />
     </SelectTrigger>
-    <SelectContent>
+    <SelectContent className="w-auto max-w-[180px] z-50">
       {modules.map((module) => (
         <SelectItem key={module.id} value={module.id}>
           <span className="flex items-center gap-2 text-xs">
             <span>{module.icon}</span>
-            <span>{module.name}</span>
+            <span className="truncate">{module.name}</span>
           </span>
         </SelectItem>
       ))}

@@ -5,7 +5,7 @@ import axios from "axios";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSession } from "@/context/SessionContext";
+import { useSession } from "@/context/session-context";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";

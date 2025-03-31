@@ -4,7 +4,7 @@ import {
   ResourceRow,
   type Resource,
   type Module,
-} from "@/components/ResourceRow";
+} from "@/components/Resource/resource-row";
 
 interface ResourceTableProps {
   resources: Resource[];

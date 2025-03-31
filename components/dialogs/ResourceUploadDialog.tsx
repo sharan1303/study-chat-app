@@ -527,7 +527,7 @@ export function ResourceUploadDialog({
 
               <div className="flex justify-between items-center gap-2 pt-4">
                 <div className="text-xs text-muted-foreground">
-                  Press Enter to upload or Ctrl+Enter in description
+                  Press Enter to upload
                 </div>
                 <div className="flex gap-2">
                   <Button

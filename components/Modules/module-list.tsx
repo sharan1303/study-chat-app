@@ -12,7 +12,7 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/ModuleForm";
+import { ModuleForm } from "@/components/Modules/module-form";
 import { Plus } from "lucide-react";
 
 // Define the Module type here instead of importing from Sidebar

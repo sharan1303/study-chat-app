@@ -1,6 +1,6 @@
 "use client";
 
-import ThemeToggle from "./ThemeToggle";
+import ThemeToggle from "../ui/theme-toggle";
 import { usePathname } from "next/navigation";
 
 export default function Header() {

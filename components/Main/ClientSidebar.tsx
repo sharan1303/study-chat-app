@@ -11,10 +11,10 @@ import {
   SidebarTrigger,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { useSidebar } from "@/lib/sidebar-context";
-import ModuleList from "./ModuleList";
+import { useSidebar } from "@/context/sidebar-context";
+import ModuleList from "../Modules/module-list";
 import ChatHistory from "./ChatHistory";
-import UserSection from "./UserSection";
+import UserSection from "../Settings/UserSection";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { encodeModuleSlug, cn } from "@/lib/utils";

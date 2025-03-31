@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { generateId, decodeModuleSlug } from "@/lib/utils";
-import ClientChatPage from "@/app/ClientChatPage";
-import { ChatPageLoading } from "@/app/ClientChatPage";
+import ClientChatPage from "@/components/Main/ClientChatPage";
+import { ChatPageLoading } from "@/components/Main/ClientChatPage";
 import { useMemo } from "react";
 
 // Define a type for the module data
