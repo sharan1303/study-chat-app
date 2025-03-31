@@ -33,15 +33,13 @@ export default function Loading() {
         {/* Search bar and button skeleton */}
         <div className="relative flex items-center gap-2 mt-4 mb-6">
           <div className="relative flex-1 max-w-md">
-            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder={"Search modules..."}
                 className="pl-10"
               />
-            </div>
           </div>
-          <ButtonSkeleton variant="outline" className="opacity-70">
+          <ButtonSkeleton variant="outline" className="opacity-100">
             <PlusIcon />
             Create Module
           </ButtonSkeleton>

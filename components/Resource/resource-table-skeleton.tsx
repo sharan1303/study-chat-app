@@ -8,8 +8,10 @@
  */
 export function ResourceTableSkeleton({
   showModuleColumn = true,
+  rowCount = 5,
 }: {
   showModuleColumn?: boolean;
+  rowCount?: number;
 }) {
   return (
     <div className="overflow-x-auto border rounded-md">
@@ -27,7 +29,7 @@ export function ResourceTableSkeleton({
           </tr>
         </thead>
         <tbody>
-          {Array(5)
+          {Array(rowCount)
             .fill(0)
             .map((_, index) => (
               <tr key={index} className="border-b animate-pulse">

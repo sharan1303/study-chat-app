@@ -45,7 +45,6 @@ export default function ModuleDetailsLoading() {
         <div className="space-y-2">
           <h2 className="text-lg font-semibold mb-2">Description</h2>
           <div className="text-muted-foreground p-4 rounded min-h-[158px] bg-muted">
-            <span className="opacity-0">Loading description...</span>
           </div>
         </div>
 
