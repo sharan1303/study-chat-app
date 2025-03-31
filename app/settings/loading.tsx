@@ -23,7 +23,7 @@ export default function SettingsLoading() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Chat
         </Button>
-        <Skeleton className="h-9 w-[70px]" />
+        <Skeleton className="h-8 w-[70px]" />
       </div>
 
       {/* Main content */}
@@ -62,7 +62,7 @@ export default function SettingsLoading() {
 
           {/* Right side with settings tabs */}
           <div className="flex-1">
-            <Tabs defaultValue="account" className="w-full">
+            <Tabs defaultValue="account" className="w-full mt-0.5">
               <TabsList className="grid grid-cols-4 mb-6 mt-0.5">
                 {[
                   "Account",

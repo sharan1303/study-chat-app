@@ -36,12 +36,12 @@ import {
 } from "@/components/ui/table";
 import { useUser, useAuth, SignedIn } from "@clerk/nextjs";
 import SettingsLoading from "./loading";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "@/components/ui/theme-toggle";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import React, { useRef } from "react";
-import CustomUserProfile from "@/components/CustomUserProfile";
-import EditableProfileImage from "@/components/EditableProfileImage";
+import CustomUserProfile from "@/components/Settings/CustomUserProfile";
+import EditableProfileImage from "@/components/Settings/EditableProfileImage";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useSession } from "@/context/SessionContext";
+import { useSession } from "@/context/session-context";
 import axios from "axios";
 import { toast } from "sonner";
 import {

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { useSidebar } from "@/lib/sidebar-context";
+import { useSidebar } from "@/context/sidebar-context";
 
 // For mobile we'll need a sliding sheet component
 import { Sheet, SheetContent } from "../ui/sheet";
