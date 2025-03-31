@@ -10,7 +10,7 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/module-form";
+import { ModuleForm } from "@/components/Modules/module-form";
 
 interface ModuleOperationsProps {
   showLarge?: boolean;

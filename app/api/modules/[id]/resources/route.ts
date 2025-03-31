@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
-import { SESSION_ID_KEY } from "@/lib/session";
 
-// Helper function to validate module access
-async function validateModuleAccess(
-  moduleId: string,
-  userId: string | null,
-  sessionId: string | null
-) {
-  // Require authentication via userId or sessionId
-  if (!userId && !sessionId) {
+/**
+ * Validates if the specified module exists and is accessible by the given user.
+ *
+ * This function ensures that a valid user ID is provided and verifies that the module with the given
+ * moduleId belongs to that user by querying the database. It returns an object indicating success if
+ * access is confirmed, or an error object with the appropriate HTTP status code if authentication fails,
+ * the module doesn't exist, or an internal error occurs.
+ *
+ * @param moduleId - The identifier of the module.
+ * @param userId - The authenticated user's identifier. If null, authentication is considered missing.
+ *
+ * @returns An object with:
+ * - { success: true } if the module exists and the user is authorized,
+ * - or an error message with a status code:
+ *   - 401 if the user is not authenticated,
+ *   - 404 if the module is not found or access is denied,
+ *   - 500 if a database error occurs.
+ */
+async function validateModuleAccess(moduleId: string, userId: string | null) {
+  // Require authentication with userId
+  if (!userId) {
     return {
       error: "Authentication required",
       status: 401,
@@ -21,11 +33,10 @@ async function validateModuleAccess(
     // Build the query to find the module
     const whereCondition = {
       id: moduleId,
-      ...(userId ? { userId } : {}),
-      ...(sessionId ? { sessionId } : {}),
+      userId,
     };
 
-    // Check if the module exists and belongs to the user/session
+    // Check if the module exists and belongs to the user
     const moduleExists = await prisma.module.findFirst({
       where: whereCondition,
     });
@@ -52,30 +63,42 @@ type ResourceType = {
   id: string;
   fileUrl: string | null; // Changed to match Prisma type
   title: string;
-  content: string | null;
   type: string;
   moduleId: string;
   userId: string | null;
-  sessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  fileSize: number | null;
+  module?: {
+    name: string;
+  };
 };
 
-// GET /api/modules/[moduleId]/resources - Get all resources for a module
-export async function GET(request: NextRequest, props: { params: Promise<{ moduleId: string }> }) {
+/**
+ * Retrieves all resources associated with a specific module.
+ *
+ * This handler authenticates the user and validates that they have access to the requested module. If authentication fails,
+ * it returns a 401 error. If the access check fails, an error response with the corresponding status code is returned.
+ * When successful, it fetches the resources belonging to the authenticated user for the given module, formats the data,
+ * and responds with the list of resources including details such as id, url, title, type, module information, file size,
+ * and timestamps in ISO format.
+ *
+ * @param props - An object whose `params` promise resolves to an object containing:
+ *   - moduleId: The identifier for the module whose resources are being retrieved.
+ *
+ * @returns A JSON response containing an array of formatted resource objects or an error message with an appropriate status code.
+ */
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ moduleId: string }> }
+) {
   const params = await props.params;
   const { userId } = await auth();
-  const searchParams = request.nextUrl.searchParams;
 
-  // Get sessionId from URL - try both parameter names for compatibility
-  const sessionIdFromParam = searchParams.get("sessionId");
-  const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
-  const sessionId = sessionIdFromParam || sessionIdFromKey;
-
-  // For anonymous users, require a session ID
-  if (!userId && !sessionId) {
+  // Require authentication with userId
+  if (!userId) {
     return NextResponse.json(
-      { error: "Session ID or authentication required" },
+      { error: "Authentication required" },
       { status: 401 }
     );
   }
@@ -83,11 +106,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
   const { moduleId } = params;
 
   // Validate module access
-  const accessCheck = await validateModuleAccess(
-    moduleId,
-    userId || null,
-    sessionId
-  );
+  const accessCheck = await validateModuleAccess(moduleId, userId);
   if (!accessCheck.success) {
     return NextResponse.json(
       { error: accessCheck.error },
@@ -100,9 +119,17 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
     const resources = await prisma.resource.findMany({
       where: {
         moduleId,
+        userId, // Only fetch resources created by this user
       },
       orderBy: {
         createdAt: "desc",
+      },
+      include: {
+        module: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -111,9 +138,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
       id: resource.id,
       url: resource.fileUrl, // Map fileUrl from DB to url in API response
       title: resource.title,
-      content: resource.content,
       type: resource.type,
       moduleId: resource.moduleId,
+      moduleName: resource.module?.name || null,
+      fileSize: resource.fileSize || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     }));
@@ -128,21 +156,32 @@ export async function GET(request: NextRequest, props: { params: Promise<{ modul
   }
 }
 
-// POST /api/modules/[moduleId]/resources - Create a new resource
-export async function POST(request: NextRequest, props: { params: Promise<{ moduleId: string }> }) {
+/**
+ * Creates a new resource for a specified module.
+ *
+ * This endpoint authenticates the user and verifies that they have access to the module before creating a resource. It parses the request body for resource details—requiring either a URL or content and ensuring a title of at least 2 characters—and then stores the resource in the database. On success, it returns a JSON payload with the resource details, including the mapped URL, file size, and module name.
+ *
+ * The response may include:
+ * - A 401 status if the user is not authenticated.
+ * - A 400 status if validation fails (missing URL/content or an invalid title).
+ * - A 500 status if an error occurs during resource creation.
+ *
+ * @param request - The HTTP request containing the resource data in its JSON body.
+ * @param props - An object containing route parameters, including a promise that resolves to an object with the moduleId.
+ *
+ * @returns A JSON response with either the created resource data or an error message.
+ */
+export async function POST(
+  request: NextRequest,
+  props: { params: Promise<{ moduleId: string }> }
+) {
   const params = await props.params;
   const { userId } = await auth();
-  const searchParams = request.nextUrl.searchParams;
 
-  // Get sessionId from URL - try both parameter names for compatibility
-  const sessionIdFromParam = searchParams.get("sessionId");
-  const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
-  const sessionId = sessionIdFromParam || sessionIdFromKey;
-
-  // For anonymous users, require a session ID
-  if (!userId && !sessionId) {
+  // Require authentication with userId
+  if (!userId) {
     return NextResponse.json(
-      { error: "Session ID or authentication required" },
+      { error: "Authentication required" },
       { status: 401 }
     );
   }
@@ -150,11 +189,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ modu
   const { moduleId } = params;
 
   // Validate module access
-  const accessCheck = await validateModuleAccess(
-    moduleId,
-    userId || null,
-    sessionId
-  );
+  const accessCheck = await validateModuleAccess(moduleId, userId);
   if (!accessCheck.success) {
     return NextResponse.json(
       { error: accessCheck.error },
@@ -186,12 +221,16 @@ export async function POST(request: NextRequest, props: { params: Promise<{ modu
       data: {
         fileUrl: url || null, // Map 'url' from API to 'fileUrl' in DB
         title,
-        content: content || null,
         type: type || "note",
         moduleId,
-        userId: userId || null,
-        sessionId: userId ? null : sessionId,
+        userId, // Always set userId, never use sessionId
       },
+    });
+
+    // Get the module name
+    const moduleInfo = await prisma.module.findUnique({
+      where: { id: moduleId },
+      select: { name: true },
     });
 
     // Map database resource to API response (add url field for backwards compatibility)
@@ -199,9 +238,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ modu
       id: resource.id,
       url: resource.fileUrl, // Map 'fileUrl' from DB to 'url' in API
       title: resource.title,
-      content: resource.content,
       type: resource.type,
+      fileSize: resource.fileSize || null,
       moduleId: resource.moduleId,
+      moduleName: moduleInfo?.name || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     });

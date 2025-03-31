@@ -70,6 +70,8 @@
     --input: 230 25% 18%;
     --ring: 224.3 76.3% 48%;
 
+    --radius: 0.5rem;
+    
     /* Sidebar Variables (Dark) */
     --sidebar-width: 16rem;
     --sidebar-width-icon: 3rem;

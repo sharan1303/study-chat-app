@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import ClientChatPage from "@/app/ClientChatPage";
-import { ChatPageLoading } from "@/app/ClientChatPage";
+import ClientChatPage from "@/components/Main/ClientChatPage";
+import { ChatPageLoading } from "@/components/Main/ClientChatPage";
 import prisma from "@/lib/prisma";
 
-export default async function ChatPage(props: { params: Promise<{ id: string }> }) {
+export default async function ChatPage(props: {
+  params: Promise<{ id: string }>;
+}) {
   const params = await props.params;
   const session = await auth();
   const userId = session.userId;

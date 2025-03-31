@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bot, ArrowLeft, Info, Trash } from "lucide-react";
+import { Bot, ArrowLeft, Info, Trash, Upload } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -35,14 +35,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useUser, useAuth, SignedIn } from "@clerk/nextjs";
-import Image from "next/image";
-import { UserProfile } from "@clerk/nextjs";
 import SettingsLoading from "./loading";
-import { cn } from "@/lib/utils";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "@/components/ui/theme-toggle";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useRef } from "react";
+import CustomUserProfile from "@/components/Settings/CustomUserProfile";
+import EditableProfileImage from "@/components/Settings/EditableProfileImage";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -50,6 +49,63 @@ function SettingsContent() {
   const { signOut } = useAuth();
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonData = JSON.parse(e.target?.result as string);
+
+        if (!Array.isArray(jsonData)) {
+          toast.error("Invalid JSON format. Expected an array of modules.");
+          return;
+        }
+
+        // Process the imported modules
+        toast.success(`Successfully imported ${jsonData.length} modules`);
+
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      } catch (error) {
+        console.error("Error parsing JSON:", error);
+        toast.error("Failed to parse JSON file. Please check the file format.");
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDeleteAllModules = async () => {
+    try {
+      const response = await fetch("/api/modules/clear", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete modules");
+      }
+
+      toast.success("All modules deleted successfully");
+      setIsDeleteDialogOpen(false);
+
+      window.location.reload();
+    } catch (error) {
+      console.error("Error deleting modules:", error);
+      toast.error("Failed to delete modules");
+    }
+  };
 
   // AI models available in the application
   const aiModels = [
@@ -98,7 +154,6 @@ function SettingsContent() {
 
   const fullName = user?.fullName || user?.firstName || "User";
   const email = user?.primaryEmailAddress?.emailAddress || "";
-  const imageUrl = user?.imageUrl || "/profile-circle.256x256.png";
 
   return (
     <div className="h-full flex flex-col py-2.5">
@@ -130,17 +185,9 @@ function SettingsContent() {
         <div className="flex flex-col md:flex-row gap-8 max-w-6xl mx-auto">
           {/* Left sidebar with user info */}
           <div className="w-full md:w-1/3">
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-32 h-32 rounded-full overflow-hidden mb-4 border-4 border-background shadow-lg">
-                <Image
-                  src={imageUrl}
-                  alt={fullName}
-                  width={128}
-                  height={128}
-                  className={cn("w-full h-full object-cover")}
-                />
-              </div>
-              <h2 className="text-2xl font-bold">{fullName}</h2>
+            <div className="flex flex-col items-center text-center mb-6 mt-10">
+              <EditableProfileImage size={128} />
+              <h2 className="text-2xl font-bold mt-4">{fullName}</h2>
               <p className="text-muted-foreground">{email}</p>
               <Badge variant="secondary" className="mt-2">
                 Free Plan
@@ -187,7 +234,14 @@ function SettingsContent() {
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">N</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">J</kbd>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Toggle Sidebar</span>
+                  <div className="flex gap-1">
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">B</kbd>
                   </div>
                 </div>
               </CardContent>
@@ -199,54 +253,120 @@ function SettingsContent() {
             <Tabs defaultValue="account" className="w-full">
               <TabsList className="grid grid-cols-4 mb-6">
                 <TabsTrigger value="account">Account</TabsTrigger>
-                <TabsTrigger value="customization">Customization</TabsTrigger>
+                <TabsTrigger value="modules">Modules</TabsTrigger>
                 <TabsTrigger value="history">History & Sync</TabsTrigger>
                 <TabsTrigger value="models">Models</TabsTrigger>
               </TabsList>
 
               {/* Account Tab */}
               <TabsContent value="account">
-                <Card>
-                  <CardContent>
-                    <div className="w-9">
-                      <SignedIn>
-                        <UserProfile
-                          routing="hash"
-                          appearance={{
-                            elements: {
-                              rootBox: {
-                                boxShadow: "none",
-                                width: "10%",
-                              },
-                            },
-                          }}
-                        />
-                      </SignedIn>
-                    </div>
-                  </CardContent>
-                </Card>
+                <CustomUserProfile />
               </TabsContent>
 
-              {/* Customization Tab */}
-              <TabsContent value="customization">
+              {/* Modules and sync Tab */}
+              <TabsContent value="modules">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Appearance Settings</CardTitle>
+                    <CardTitle>Manage Modules</CardTitle>
                     <CardDescription>
-                      Customize the look and feel of the application
+                      Import modules from a JSON file or view module usage
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Import a JSON file containing module configurations. The
+                        file should contain an array of module objects.
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="file"
+                          accept=".json"
+                          ref={fileInputRef}
+                          onChange={handleFileImport}
+                          className="hidden"
+                          aria-label="Import modules JSON file"
+                        />
+                        <Button onClick={handleImportClick} className="w-full">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Import Modules from JSON (Coming Soon)
+                        </Button>
+                      </div>
+                    </div>
+
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <h3 className="font-medium">Theme Preferences</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Your theme preference is automatically saved and
-                            synced across devices
-                          </p>
+                      <div className="border rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">Module Analytics</h3>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Track and visualize module usage, performance
+                              metrics, and resource consumption
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              // onClick={() =>
+                              //   toast.success("Module Analytics opened")
+                              // }
+                            >
+                              {/* <Settings className="h-5 w-5" />
+                              See Usage */}
+                              Coming Soon
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                    </div>
+
+                    <Separator className="my-6" />
+
+                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6">
+                      <h3 className="text-2xl font-bold mb-2">Danger Zone</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Permanently remove all installed modules from your
+                        application.
+                      </p>
+                      <AlertDialog
+                        open={isDeleteDialogOpen}
+                        onOpenChange={setIsDeleteDialogOpen}
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            className="w-full sm:w-auto"
+                          >
+                            <Trash className="w-4 h-4 mr-2" />
+                            Delete All Modules
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Are you absolutely sure?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will
+                              permanently delete all installed modules from your
+                              application. Your application will return to its
+                              basic functionality.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDeleteAllModules}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete All Modules
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </CardContent>
                 </Card>
@@ -287,10 +407,8 @@ function SettingsContent() {
 
                       <Separator className="my-6" />
 
-                      <div className="rounded-lg border border-destructive/50 bg-destructive/2 p-6">
-                        <h3 className="text-lg font-semibold text-destructive mb-2">
-                          Danger Zone
-                        </h3>
+                      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6">
+                        <h3 className="text-2xl font-bold mb-2">Danger Zone</h3>
                         <p className="text-sm text-muted-foreground mb-4">
                           Permanently delete your history from both your local
                           device and our servers.*

@@ -1,19 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { deleteFile } from "@/lib/supabase";
 
 // Add this export to tell Next.js that this route should be treated as dynamic
 export const dynamic = "force-dynamic";
 
-// GET /api/resources/[id] - Get resource details
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+/**
+ * Retrieves the details of a resource by its id.
+ *
+ * This endpoint requires authentication. It checks for a valid user identifier, then fetches the resource from the database,
+ * ensuring the resource belongs to the authenticated user through its associated module. On success, it returns a JSON response
+ * with the resource's formatted details, including file size. If authentication fails, it returns a 401 response; if the resource
+ * is not found or access is denied, a 404 response is returned; and in case of an error during the operation, a 500 response is provided.
+ *
+ * @param request - The incoming HTTP request.
+ * @param props - An object containing a promise that resolves to URL parameters, including the resource id.
+ */
+export async function GET(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   const { userId } = await auth();
-  const sessionId = request.nextUrl.searchParams.get("sessionId");
   const resourceId = params.id;
 
-  // Either userId or sessionId must be provided
-  if (!userId && !sessionId) {
+  // Require authentication with userId
+  if (!userId) {
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
@@ -21,20 +34,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   }
 
   try {
-    // Build the module where clause
-    const moduleWhere: Record<string, unknown> = {};
-
-    if (userId) {
-      moduleWhere.userId = userId;
-    } else if (sessionId) {
-      moduleWhere.sessionId = sessionId;
-    }
-
     // Fetch the resource with ownership check
     const resource = await prisma.resource.findFirst({
       where: {
         id: resourceId,
-        module: moduleWhere,
+        module: {
+          userId,
+        },
       },
       include: {
         module: {
@@ -56,13 +62,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const formattedResource = {
       id: resource.id,
       title: resource.title || "",
-      description: resource.content || "",
       type: resource.type,
       url: resource.fileUrl,
       moduleId: resource.moduleId,
       moduleName: resource.module?.name || null,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
+      fileSize: resource.fileSize || null,
     };
 
     return NextResponse.json(formattedResource);
@@ -75,15 +81,26 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   }
 }
 
-// PUT /api/resources/[id] - Update resource
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+/**
+ * Updates an existing resource for the authenticated user.
+ *
+ * This endpoint checks that the resource exists and is owned by the current user. If a new module is specified via the request payload, it validates that the user has access to that module. Upon a successful update, the endpoint returns a JSON response with the updated resource details, including metadata such as the creation and update timestamps and the file size.
+ *
+ * @param request - The incoming HTTP request containing the update payload as JSON.
+ * @param props - An object containing route parameters, including the resource's id.
+ *
+ * @returns A JSON response with the updated resource details.
+ */
+export async function PUT(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   const { userId } = await auth();
-  const sessionId = request.nextUrl.searchParams.get("sessionId");
   const resourceId = params.id;
 
-  // Either userId or sessionId must be provided
-  if (!userId && !sessionId) {
+  // Require authentication with userId
+  if (!userId) {
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
@@ -91,20 +108,13 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
   }
 
   try {
-    // Build the module where clause
-    const moduleWhere: Record<string, unknown> = {};
-
-    if (userId) {
-      moduleWhere.userId = userId;
-    } else if (sessionId) {
-      moduleWhere.sessionId = sessionId;
-    }
-
-    // Check if the resource exists and belongs to the user or session
+    // Check if the resource exists and belongs to the user
     const existingResource = await prisma.resource.findFirst({
       where: {
         id: resourceId,
-        module: moduleWhere,
+        module: {
+          userId,
+        },
       },
       include: {
         module: true,
@@ -120,20 +130,13 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     const { title, description, type, url, moduleId } = await request.json();
 
-    // If moduleId is changing, verify user/session has access to the target module
+    // If moduleId is changing, verify user has access to the target module
     if (moduleId && moduleId !== existingResource.moduleId) {
-      const targetModuleWhere: Record<string, unknown> = {
-        id: moduleId,
-      };
-
-      if (userId) {
-        targetModuleWhere.userId = userId;
-      } else if (sessionId) {
-        targetModuleWhere.sessionId = sessionId;
-      }
-
       const targetModule = await prisma.module.findFirst({
-        where: targetModuleWhere,
+        where: {
+          id: moduleId,
+          userId,
+        },
       });
 
       if (!targetModule) {
@@ -167,13 +170,13 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     const formattedResource = {
       id: updatedResource.id,
       title: updatedResource.title || "",
-      description: updatedResource.content || "",
       type: updatedResource.type,
       url: updatedResource.fileUrl,
       moduleId: updatedResource.moduleId,
       moduleName: updatedResource.module?.name || null,
       createdAt: updatedResource.createdAt.toISOString(),
       updatedAt: updatedResource.updatedAt.toISOString(),
+      fileSize: updatedResource.fileSize || null,
     };
 
     return NextResponse.json(formattedResource);
@@ -186,15 +189,35 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
   }
 }
 
-// DELETE /api/resources/[id] - Delete resource
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+/**
+ * Deletes a resource owned by the authenticated user.
+ *
+ * The function authenticates the user and verifies that the specified resource exists and belongs to the user.
+ * If the resource has an associated file URL, it attempts to delete the corresponding file from Supabase storage
+ * before removing the resource from the database.
+ *
+ * Returns a JSON response indicating success on deletion or an error message with an appropriate HTTP status:
+ * - 401 if authentication fails.
+ * - 404 if the resource is not found or access is denied.
+ * - 500 if an unexpected error occurs during deletion.
+ *
+ * @param request - The incoming HTTP request.
+ * @param props - An object containing a promise that resolves to the route parameters, including the resource ID.
+ *
+ * @returns A JSON response with a success flag or an error message.
+ *
+ * @remark If file deletion from storage fails, the error is logged without interrupting the resource deletion process.
+ */
+export async function DELETE(
+  request: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
   const params = await props.params;
   const { userId } = await auth();
-  const sessionId = request.nextUrl.searchParams.get("sessionId");
   const resourceId = params.id;
 
-  // Either userId or sessionId must be provided
-  if (!userId && !sessionId) {
+  // Require authentication with userId
+  if (!userId) {
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
@@ -202,20 +225,13 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
   }
 
   try {
-    // Build the module where clause
-    const moduleWhere: Record<string, unknown> = {};
-
-    if (userId) {
-      moduleWhere.userId = userId;
-    } else if (sessionId) {
-      moduleWhere.sessionId = sessionId;
-    }
-
-    // Check if the resource exists and belongs to the user or session
+    // Check if the resource exists and belongs to the user
     const resource = await prisma.resource.findFirst({
       where: {
         id: resourceId,
-        module: moduleWhere,
+        module: {
+          userId,
+        },
       },
     });
 
@@ -224,6 +240,30 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
         { error: "Resource not found or access denied" },
         { status: 404 }
       );
+    }
+
+    // If the resource has a file URL in Supabase storage, delete it
+    if (resource.fileUrl) {
+      try {
+        // Extract the path from the fileUrl
+        const fileUrl = new URL(resource.fileUrl);
+        const pathname = fileUrl.pathname;
+
+        // Extract the path from the URL that matches Supabase storage pattern
+        // /storage/v1/object/sign/resources/{userId}/{moduleId}/filename.ext
+        const pathMatch = pathname.match(
+          /\/storage\/v1\/object\/sign\/resources\/(.*)/
+        );
+
+        if (pathMatch && pathMatch[1]) {
+          const storagePath = pathMatch[1];
+          await deleteFile("resources", storagePath);
+          console.log(`Deleted file from storage: ${storagePath}`);
+        }
+      } catch (storageError) {
+        // Log the error but continue with resource deletion from database
+        console.error("Error deleting file from storage:", storageError);
+      }
     }
 
     // Delete the resource
