@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
 import { Check, MessageSquare, X } from "lucide-react";
@@ -265,8 +265,17 @@ export default function ModuleDetailWrapper({
   }) => {
     if (!module) return;
 
+    // Store the original module state for rollback if needed
+    const originalModule = { ...module };
+
     try {
       setIsSaving(true);
+
+      // Apply optimistic update immediately
+      setModule({
+        ...module,
+        ...updates,
+      });
 
       // Check for anonymous sessionId
       const sessionId = localStorage.getItem("anonymous_session_id");
@@ -276,25 +285,23 @@ export default function ModuleDetailWrapper({
         updateUrl = `/api/modules/${module.id}?sessionId=${sessionId}`;
       }
 
-      await axios.put(updateUrl, {
+      // Prepare the update data
+      const updateData = {
         name: updates.name !== undefined ? updates.name : module.name,
         description:
           updates.description !== undefined
             ? updates.description
             : module.description,
         icon: updates.icon !== undefined ? updates.icon : module.icon,
-      });
+      };
 
-      // Update local state for immediate UI feedback
-      setModule({
-        ...module,
-        ...updates,
-      });
+      // Make the API request
+      await axios.put(updateUrl, updateData);
 
       toast.success("Module updated");
 
       // Only use a full page refresh for name changes
-      if (updates.name && updates.name !== module.name) {
+      if (updates.name && updates.name !== originalModule.name) {
         // For name updates, use a full page refresh to update the sidebar
         setTimeout(() => {
           const formattedName = formatModuleNameForUrl(updates.name || "");
@@ -307,6 +314,12 @@ export default function ModuleDetailWrapper({
       }
     } catch (error) {
       console.error("Error updating module:", error);
+
+      // Revert the optimistic update on error
+      if (module) {
+        setModule(originalModule);
+      }
+
       toast.error("Failed to update module");
     } finally {
       setIsSaving(false);
@@ -335,15 +348,15 @@ export default function ModuleDetailWrapper({
   };
 
   // Cancel editing
-  const cancelTitleEdit = () => {
+  const cancelTitleEdit = useCallback(() => {
     setEditTitle(module?.name || "");
     setIsEditingTitle(false);
-  };
+  }, [module, setEditTitle, setIsEditingTitle]);
 
-  const cancelDescriptionEdit = () => {
+  const cancelDescriptionEdit = useCallback(() => {
     setEditDescription(module?.description || "");
     setIsEditingDescription(false);
-  };
+  }, [module, setEditDescription, setIsEditingDescription]);
 
   // Add click outside handler
   useEffect(() => {
@@ -376,7 +389,12 @@ export default function ModuleDetailWrapper({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditingTitle, isEditingDescription]);
+  }, [
+    isEditingTitle,
+    isEditingDescription,
+    cancelDescriptionEdit,
+    cancelTitleEdit,
+  ]);
 
   // This lets us manage the loading state ourselves
   if (isLoading) {
