@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
 import { Check, MessageSquare, X } from "lucide-react";
@@ -92,6 +92,10 @@ export default function ModuleDetailWrapper({
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Refs for detecting clicks outside
+  const titleEditRef = useRef<HTMLDivElement>(null);
+  const descriptionEditRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchModuleDetails = async () => {
@@ -341,6 +345,39 @@ export default function ModuleDetailWrapper({
     setIsEditingDescription(false);
   };
 
+  // Add click outside handler
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      // Handle title edit click outside
+      if (
+        isEditingTitle &&
+        titleEditRef.current &&
+        !titleEditRef.current.contains(event.target as Node)
+      ) {
+        cancelTitleEdit();
+      }
+
+      // Handle description edit click outside
+      if (
+        isEditingDescription &&
+        descriptionEditRef.current &&
+        !descriptionEditRef.current.contains(event.target as Node)
+      ) {
+        cancelDescriptionEdit();
+      }
+    }
+
+    // Add event listener when editing is active
+    if (isEditingTitle || isEditingDescription) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEditingTitle, isEditingDescription]);
+
   // This lets us manage the loading state ourselves
   if (isLoading) {
     return <ModuleDetailsLoading />;
@@ -384,7 +421,7 @@ export default function ModuleDetailWrapper({
 
             {/* Editable title */}
             {isEditingTitle ? (
-              <div className="flex items-center">
+              <div className="flex items-center" ref={titleEditRef}>
                 <Input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
@@ -394,6 +431,10 @@ export default function ModuleDetailWrapper({
                     if (e.key === "Enter") {
                       e.preventDefault();
                       handleTitleSave();
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      cancelTitleEdit();
                     }
                   }}
                 />
@@ -438,7 +479,7 @@ export default function ModuleDetailWrapper({
             <h2 className="text-lg font-semibold mb-2">Description</h2>
             {/* Editable description */}
             {isEditingDescription ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2" ref={descriptionEditRef}>
                 <Textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
@@ -446,10 +487,20 @@ export default function ModuleDetailWrapper({
                   placeholder="Add a description..."
                   autoFocus
                   onKeyDown={(e) => {
+                    // Save on Enter
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleDescriptionSave();
+                    }
                     // Save on Ctrl+Enter or Command+Enter
                     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                       e.preventDefault();
                       handleDescriptionSave();
+                    }
+                    // Cancel on Escape
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      cancelDescriptionEdit();
                     }
                   }}
                 />
