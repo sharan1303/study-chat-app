@@ -128,11 +128,15 @@ export async function getSignedUrl(
  * Deletes a file from a specified Supabase Storage bucket.
  *
  * This function creates a fresh admin client and attempts to remove the file at the given path from the designated bucket.
- * If the file doesn't exist (404 error), it will return a success response with a notFound flag.
+ * If the file does not exist (indicated by a 404 error or "Not found" message), it returns a success response with the notFound flag set to true.
  *
  * @param bucket - The name of the storage bucket.
- * @param path - The path to the file being deleted.
- * @returns An object with success status, data (if available), and additional context like notFound flag.
+ * @param path - The path to the file that should be removed.
+ * @returns An object containing:
+ *   - success: true if the deletion was successful or the file was already absent; false otherwise.
+ *   - data: the response data from the deletion operation, or null if not available.
+ *   - notFound: a boolean flag indicating if the file was not found.
+ *   - error: an error message if the deletion failed.
  */
 export async function deleteFile(bucket: string, path: string) {
   // Get a fresh client for each operation

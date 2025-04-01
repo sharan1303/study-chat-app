@@ -2,7 +2,19 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
-// DELETE - Remove all modules
+/**
+ * Handles HTTP DELETE requests to remove all modules associated with the authenticated user.
+ *
+ * The function authenticates the user and checks for the presence of a confirmation query parameter
+ * ("?confirmed=true"). If the user is not authenticated, it returns a 401 error. If the confirmation is
+ * not provided, it returns a 400 error. When both conditions are met, it deletes all modules tied to the user,
+ * logs the deletion event using both a simple and structured JSON format, and returns a success response with
+ * the count of deleted modules. In case of an unexpected error during deletion, it returns a 500 error.
+ *
+ * @param request - The incoming HTTP request containing the URL with potential query parameters.
+ *
+ * @returns A JSON response indicating success with the count of deleted modules or an error message on failure.
+ */
 export async function DELETE(request: Request) {
   try {
     const { userId } = await auth();

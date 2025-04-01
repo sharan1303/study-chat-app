@@ -33,6 +33,14 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+/**
+ * Sets up the root layout of the application.
+ *
+ * This component provides the foundational HTML structure and wraps its content with essential providers for application state, authentication, session management, and sidebar context.
+ * It renders the nested child components within the main area of the layout.
+ *
+ * @param children - The nested content to display within the layout.
+ */
 export default function RootLayout({
   children,
 }: {
