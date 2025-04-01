@@ -1,0 +1,41 @@
+/* Custom styles for Clerk components */
+/* Note: !important is used throughout this file because Clerk's components have high-specificity selectors that require overriding */
+
+
+/* Dark mode styles with high specificity */
+html[class~="dark"] .cl-card,
+html[class~="dark"] .cl-userButtonPopoverCard {
+  background-color: #1a1e2e !important; /* Dark navy blue */
+}
+
+/* Dark mode input field styles to match the card */
+html[class~="dark"] .cl-formFieldInput,
+html[class~="dark"] .cl-input,
+html[class~="dark"] .cl-formFieldInput input,
+html[class~="dark"] .cl-userButtonPopoverActionButton__username input {
+  background-color: #1f1f23 !important; /* Match card background */
+  color: white !important;
+  border-color: #374151 !important;
+}
+
+/* Light mode card background */
+.cl-card,
+.cl-userButtonPopoverCard {
+  background-color: #ffffff !important;
+}
+
+/* Light mode input field styles to match the card */
+html[class~="light"] .cl-formFieldInput,
+html[class~="light"] .cl-input,
+html[class~="light"] .cl-formFieldInput input,
+html[class~="light"] .cl-userButtonPopoverActionButton__username
+input {
+  background-color: #ffffff !important; /* Match card background */
+  color: black !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Password visibility button in dark mode */
+html[class~="dark"] .cl-formFieldInputShowPasswordButton {
+  color: #9ca3af !important;
+}

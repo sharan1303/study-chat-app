@@ -680,6 +680,7 @@ const ResourceRow = memo(
               setShowDeleteAlert(false)
             )
           }
+          isDeleting={isSaving}
         />
       </>
     );

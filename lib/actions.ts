@@ -7,7 +7,6 @@ export interface ModuleResource {
   id: string;
   title: string;
   type: string;
-  content: string;
   fileUrl: string | null;
   moduleId: string;
   createdAt: string;
@@ -32,7 +31,16 @@ export interface ModuleBasic {
   lastStudied: string | null;
 }
 
-// Server action to fetch module details by ID
+/**
+ * Retrieves detailed information for a specific module along with its associated resources.
+ *
+ * This function fetches the module data for the authenticated user using the provided module ID. If found, it updates the module's
+ * last studied timestamp and returns the module details with all date fields serialized to ISO strings. If the module ID is null,
+ * the user is not authenticated, or the module does not exist, the function returns null.
+ *
+ * @param moduleId - Unique identifier for the module or null if not provided.
+ * @returns A Promise that resolves to the module details with its resources, or null if the module cannot be found.
+ */
 export async function getModuleDetails(
   moduleId: string | null
 ): Promise<ModuleWithResources | null> {
@@ -74,7 +82,6 @@ export async function getModuleDetails(
         : null,
       resources: moduleData.resources.map((resource) => ({
         ...resource,
-        content: resource.content || "",
         createdAt: resource.createdAt.toISOString(),
         updatedAt: resource.updatedAt.toISOString(),
       })),
@@ -117,7 +124,16 @@ export async function getAllModules(): Promise<ModuleBasic[]> {
   }
 }
 
-// Specifically get module by name
+/**
+ * Fetches a module by its name for the authenticated user.
+ *
+ * Performs a case-insensitive search to locate a module by the given name and retrieves its associated resources.
+ * If a module is found, its "lastStudied" timestamp is updated and all date fields are serialized to ISO strings.
+ * Returns null if the module name is null, the user is not authenticated, or no matching module is found.
+ *
+ * @param moduleName - The name of the module to retrieve.
+ * @returns The module details with associated resources, or null if not found or unauthenticated.
+ */
 export async function getModuleByName(
   moduleName: string | null
 ): Promise<ModuleWithResources | null> {
@@ -159,7 +175,6 @@ export async function getModuleByName(
         : null,
       resources: moduleData.resources.map((resource) => ({
         ...resource,
-        content: resource.content || "",
         createdAt: resource.createdAt.toISOString(),
         updatedAt: resource.updatedAt.toISOString(),
       })),
@@ -170,7 +185,18 @@ export async function getModuleByName(
   }
 }
 
-// Function to fetch resources from the database
+/**
+ * Retrieves resources associated with modules belonging to a specific user.
+ *
+ * This function first fetches all modules owned by the given user and extracts their IDs. It then
+ * retrieves resources linked to those modules, including the module's name, orders them by creation
+ * date in descending order, and maps the results to a simplified format with ISO-formatted date strings.
+ * In case of an error during retrieval or mapping, it logs the error and returns an empty array.
+ *
+ * @param userId - The identifier of the user whose module resources are being fetched.
+ * @returns A promise that resolves to an array of resource objects containing properties: id, title, type, url,
+ *          moduleId, moduleName, createdAt, and updatedAt.
+ */
 export async function getResources(userId: string) {
   try {
     // First get user's modules
@@ -206,7 +232,6 @@ export async function getResources(userId: string) {
     return resources.map((resource) => ({
       id: resource.id,
       title: resource.title,
-      description: resource.content, // Map content to description
       type: resource.type,
       url: resource.fileUrl, // Map fileUrl to url
       moduleId: resource.moduleId,

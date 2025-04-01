@@ -24,6 +24,7 @@ import { useSession } from "@/context/session-context";
 import { api } from "@/lib/api";
 import { ResourceTable } from "@/components/Resource/resource-table";
 import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
+import { toast } from "sonner";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -112,6 +113,36 @@ export default function ModulesPageContent({
       fetchModules();
     }
   }, [isSignedIn, isLoaded, sessionId, sessionLoading, searchQuery]);
+
+  // Listen for module creation events to refresh the module list
+  useEffect(() => {
+    const handleModuleCreated = () => {
+      // Refresh modules when a new module is created
+      if (isLoaded && !sessionLoading) {
+        api
+          .getModules(searchQuery || undefined)
+          .then((data) => {
+            const modulesList = data.modules || [];
+            setModules(modulesList);
+            setFilteredModules(modulesList);
+            // If we're on the modules tab, show a toast notification
+            if (activeTab === "modules") {
+              toast.success("New module added");
+            }
+          })
+          .catch((error) => {
+            console.error("Error refreshing modules:", error);
+          });
+      }
+    };
+
+    // Listen for the module-created event
+    window.addEventListener("module-created", handleModuleCreated);
+
+    return () => {
+      window.removeEventListener("module-created", handleModuleCreated);
+    };
+  }, [isLoaded, sessionLoading, searchQuery, activeTab]);
 
   // Filter modules based on search query whenever searchQuery changes
   useEffect(() => {

@@ -150,6 +150,15 @@ export const ModuleForm = ({
           // Show success message
           toast.success("Module created");
 
+          // Dispatch a global event for module creation to refresh the modules list
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("module-created", {
+                detail: createdModule,
+              })
+            );
+          }
+
           // No need to force a page reload - SSE will handle the sidebar update
         } catch (error: unknown) {
           console.error("Error creating module:", error);

@@ -6,6 +6,18 @@ import { ChatPageLoading } from "@/components/Main/ClientChatPage";
 import prisma from "@/lib/prisma";
 import { decodeModuleSlug } from "@/lib/utils";
 
+/**
+ * Renders the module chat page with context tailored to the user's authentication status.
+ *
+ * This asynchronous component awaits route parameters and checks the user session. For unauthenticated users,
+ * it renders a basic chat interface without module details. When the user is authenticated, it retrieves the user record,
+ * decodes the module name, and fetches the corresponding module and chat data from the database. Module date fields are converted
+ * to ISO strings for client-side compatibility. If the user or module cannot be found, a 404 response is returned.
+ *
+ * @param props - Contains a promise that resolves to an object with the module’s encoded name and chat identifier.
+ *
+ * @returns A Suspense component that wraps the client chat page configured with the appropriate module and chat data.
+ */
 export default async function ModuleChatPage(props: {
   params: Promise<{ moduleName: string; id: string }>;
 }) {
@@ -82,7 +94,6 @@ export default async function ModuleChatPage(props: {
       : null,
     resources: moduleData.resources.map((resource) => ({
       ...resource,
-      content: resource.content || "",
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     })),

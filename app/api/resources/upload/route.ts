@@ -16,7 +16,7 @@ export const config = {
  *
  * This API endpoint verifies that the user is authenticated, then extracts a file and its associated metadata (title, moduleId, type)
  * from the submitted form data. It ensures that all required fields are present, checks that the referenced module exists and is owned by the user,
- * and validates that the file does not exceed a 10MB size limit.
+ * and validates that the file does not exceed a 50MB size limit.
  *
  * Upon successful validation, the file is assigned a unique filename and uploaded to Supabase storage. A signed URL valid for 24 hours is generated
  * (and normalized to use the correct path), and a new resource record is created in the database. The endpoint responds with a JSON object containing
@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
     const fileType = file.type;
     const fileSize = file.size;
 
-    // Validate file size (10MB limit)
-    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 10MB
+    // Validate file size (50MB limit)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     if (fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
         { error: "File size exceeds limit (50MB)" },
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     // Get the signed URL - make sure to use the 'sign' path format
     const { data: signedUrlData, error: signUrlError } = await supabase.storage
       .from("resources")
-      .createSignedUrl(filePath, 60 * 60 * 24); // 7 days for initial URL
+      .createSignedUrl(filePath, 60 * 60 * 24); // 24 hours for initial URL
 
     if (signUrlError) {
       console.error("Error creating signed URL:", signUrlError);
