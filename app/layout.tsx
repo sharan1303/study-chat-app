@@ -5,7 +5,7 @@ import { dark } from "@clerk/themes";
 import "./globals.css";
 import localFont from "next/font/local";
 
-import ClientSidebar from "@/components/Main/ClientSidebar";
+import ClientSidebar from "@/components/Sidebar/ClientSidebar";
 
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers as AppProviders } from "@/context/providers";

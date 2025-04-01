@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Modules - Study Chat",
+  title: `Modules - Study Chat`,
   description: "Manage your modules",
 };
 

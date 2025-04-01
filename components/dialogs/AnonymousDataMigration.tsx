@@ -51,6 +51,21 @@ export default function AnonymousDataMigration() {
         }
       } catch (error) {
         console.error("Error checking anonymous data:", error);
+        // Add more detailed error logging with specific error info
+        if (axios.isAxiosError(error)) {
+          console.error(
+            `Status: ${error.response?.status}, Message: ${
+              error.response?.data?.error || error.message
+            }`
+          );
+
+          // Don't show error toast for authentication issues which are expected for new users
+          if (error.response?.status !== 401) {
+            toast.error(
+              "Failed to check for previous data. Please refresh the page."
+            );
+          }
+        }
       }
     };
 
