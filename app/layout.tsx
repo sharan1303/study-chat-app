@@ -33,6 +33,22 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+/**
+ * Root layout component that sets up the application's provider hierarchy.
+ *
+ * Provider Structure (from outermost to innermost):
+ * 1. AppProviders - Sets up global app configuration and utilities
+ * 2. ClerkProviderWithTheme - Handles authentication and user management with theme support
+ * 3. SessionProvider - Manages user session state and persistence
+ * 4. SidebarProvider - Controls sidebar state (open/closed) and related functionality
+ *
+ * Additional Components:
+ * - SessionInitializer: Client-side component that initializes session data
+ * - AnonymousDataMigration: Handles migration of anonymous user data after sign-in
+ *
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to be wrapped by providers
+ */
 export default function RootLayout({
   children,
 }: {

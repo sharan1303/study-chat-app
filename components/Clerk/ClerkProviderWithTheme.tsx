@@ -4,7 +4,16 @@ import React from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { dark } from "@clerk/themes";
-import "./clerk-styles.css"; // Import the custom CSS
+import "./clerk-styles.css"; /**
+ * Wraps the ClerkProvider with theme customization for authentication UI.
+ *
+ * This component uses the current UI theme to configure the appearance of Clerk's
+ * authentication components. It applies a dark theme if the resolved theme is "dark",
+ * and sets custom styles for elements such as the modal close button, primary form button,
+ * and footer action link. The children are rendered within the themed ClerkProvider.
+ *
+ * @param children - React nodes to render within the ClerkProvider.
+ */
 
 export function ClerkProviderWithTheme({
   children,

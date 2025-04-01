@@ -43,7 +43,15 @@ function SearchParamsWrapper({
   return <>{children(searchParams)}</>;
 }
 
-// Main sidebar component that accepts searchParams as a prop
+/**
+ * Renders the sidebar for the Study Chat application.
+ *
+ * This component displays the module list and chat history while managing real-time updates
+ * through server-sent events. It fetches modules and chats based on the current authentication state,
+ * handles optimistic UI updates for new chats, and navigates to appropriate pages upon module or chat interactions.
+ *
+ * @param searchParams - The URL search parameters used to determine the current module context.
+ */
 function ClientSidebarContent({
   searchParams,
 }: {

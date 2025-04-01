@@ -56,7 +56,20 @@ export function ChatPageLoading() {
   );
 }
 
-// Main chat component that uses hooks
+/**
+ * Renders a full-screen chat interface with message history, input, and an optional module header.
+ *
+ * This component manages the chat session by handling message submission with optimistic UI updates,
+ * dynamically updating the chat model based on API responses, and adjusting the browser URL for authenticated users.
+ * It also retrieves a session ID for anonymous users and provides clipboard functionality for copying responses.
+ *
+ * @param initialModuleDetails - Optional module details used to display context-specific header information.
+ * @param chatId - Unique identifier for the chat session.
+ * @param initialMessages - Array of messages to initialize the chat conversation.
+ * @param isAuthenticated - Indicates whether the user is authenticated (defaults to true).
+ *
+ * @returns The rendered chat interface as a React element.
+ */
 export default function ClientChatPage({
   initialModuleDetails,
   chatId,
