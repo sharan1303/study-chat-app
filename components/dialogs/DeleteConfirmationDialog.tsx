@@ -14,6 +14,7 @@ interface DeleteConfirmationDialogProps {
   setIsOpen: (isOpen: boolean) => void;
   resourceTitle: string;
   onDelete: () => void;
+  isDeleting: boolean;
 }
 
 /**
@@ -29,6 +30,7 @@ export function DeleteConfirmationDialog({
   setIsOpen,
   resourceTitle,
   onDelete,
+  isDeleting,
 }: DeleteConfirmationDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
@@ -45,8 +47,9 @@ export function DeleteConfirmationDialog({
           <AlertDialogAction
             onClick={onDelete}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={isDeleting}
           >
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

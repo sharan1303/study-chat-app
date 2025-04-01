@@ -7,7 +7,6 @@ export interface ModuleResource {
   id: string;
   title: string;
   type: string;
-  content: string;
   fileUrl: string | null;
   moduleId: string;
   createdAt: string;
@@ -74,7 +73,6 @@ export async function getModuleDetails(
         : null,
       resources: moduleData.resources.map((resource) => ({
         ...resource,
-        content: resource.content || "",
         createdAt: resource.createdAt.toISOString(),
         updatedAt: resource.updatedAt.toISOString(),
       })),
@@ -159,7 +157,6 @@ export async function getModuleByName(
         : null,
       resources: moduleData.resources.map((resource) => ({
         ...resource,
-        content: resource.content || "",
         createdAt: resource.createdAt.toISOString(),
         updatedAt: resource.updatedAt.toISOString(),
       })),
@@ -206,7 +203,6 @@ export async function getResources(userId: string) {
     return resources.map((resource) => ({
       id: resource.id,
       title: resource.title,
-      description: resource.content, // Map content to description
       type: resource.type,
       url: resource.fileUrl, // Map fileUrl to url
       moduleId: resource.moduleId,

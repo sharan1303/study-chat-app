@@ -3,9 +3,11 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 
 // DELETE - Remove all modules
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
     const { userId } = await auth();
+    const { searchParams } = new URL(request.url);
+    const confirmed = searchParams.get("confirmed") === "true";
 
     // Check if user is authenticated
     if (!userId) {
@@ -15,12 +17,30 @@ export async function DELETE() {
       );
     }
 
+    // Require confirmation for bulk deletion
+    if (!confirmed) {
+      return NextResponse.json(
+        { error: "Confirmation required to delete all modules. Add ?confirmed=true to confirm." },
+        { status: 400 }
+      );
+    }
+
     // Delete all modules belonging to the user
     const deleteResult = await prisma.module.deleteMany({
       where: { userId },
     });
 
     console.log(`Deleted ${deleteResult.count} modules for user ${userId}`);
+    
+    // Use structured logging for better production debugging
+    console.log(
+      JSON.stringify({
+        event: "modules_deleted",
+        userId,
+        count: deleteResult.count,
+        timestamp: new Date().toISOString(),
+      })
+    );
 
     return NextResponse.json({
       success: true,

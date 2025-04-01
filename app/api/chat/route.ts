@@ -1,12 +1,13 @@
 import { Message, streamText } from "ai";
 import { google } from "@ai-sdk/google";
 import { searchWithPerplexity } from "@/lib/search";
+
 import { getModuleContext } from "@/lib/modules";
+
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
 import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
-import { SESSION_ID_KEY } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {

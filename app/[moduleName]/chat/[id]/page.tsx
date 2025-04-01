@@ -82,7 +82,6 @@ export default async function ModuleChatPage(props: {
       : null,
     resources: moduleData.resources.map((resource) => ({
       ...resource,
-      content: resource.content || "",
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     })),

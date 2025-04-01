@@ -157,7 +157,7 @@ export function getFileTypeFromMimeType(mimeType: string): string {
 
   const [type, subtype] = mimeType.toLowerCase().split("/");
 
-  if (mimeTypeMap[type] && mimeTypeMap[type][subtype]) {
+  if (mimeTypeMap[type]?.[subtype]) {
     return mimeTypeMap[type][subtype];
   }
 

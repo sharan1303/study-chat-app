@@ -320,7 +320,38 @@ function ClientSidebarContent({
 
               // Directly update the specific chat in the list
               setChats((prevChats) => {
-                // Find the chat to update
+                // Check if there's an optimistic chat to update
+                const optimisticChatIndex = prevChats.findIndex(
+                  (chat) => chat._isOptimistic === true
+                );
+
+                // If we found an optimistic chat, replace it with the real one
+                if (optimisticChatIndex !== -1) {
+                  console.log(
+                    `Replacing optimistic chat with real ID: ${messageData.chatId}`
+                  );
+
+                  // Get the optimistic chat to preserve any needed data
+                  const optimisticChat = prevChats[optimisticChatIndex];
+
+                  // Create updated chat with real ID and data
+                  const updatedChat = {
+                    ...optimisticChat,
+                    id: messageData.chatId,
+                    title: messageData.chatTitle,
+                    updatedAt: messageData.updatedAt,
+                    _isOptimistic: false, // No longer optimistic
+                  };
+
+                  // Create a new array with the updated chat moved to the top
+                  return [
+                    updatedChat,
+                    ...prevChats.slice(0, optimisticChatIndex),
+                    ...prevChats.slice(optimisticChatIndex + 1),
+                  ];
+                }
+
+                // Find the chat to update by its real ID
                 const chatIndex = prevChats.findIndex(
                   (chat) => chat.id === messageData.chatId
                 );

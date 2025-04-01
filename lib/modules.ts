@@ -13,9 +13,7 @@ export async function getModuleContext(moduleId: string): Promise<string> {
   }
 
   const resourcesContext = modules.resources
-    .map(
-      (resource) => `${resource.title} (${resource.type}):\n${resource.content}`
-    )
+    .map((resource) => `${resource.title} ${resource.type}`)
     .join("\n\n");
 
   return `
