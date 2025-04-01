@@ -1,10 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Environment variables should be set in your .env.local file
-// NEXT_PUBLIC_SUPABASE_URL=your-project-url
-// NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-// SUPABASE_SERVICE_KEY=your-service-key (only for server-side usage)
-
 // Client-side Supabase client (limited permissions via anon key)
 export const supabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -132,11 +127,12 @@ export async function getSignedUrl(
 /**
  * Deletes a file from a specified Supabase Storage bucket.
  *
- * This function creates a fresh admin client and attempts to remove the file at the given path from the designated bucket. If the deletion fails, it logs the error and returns null.
+ * This function creates a fresh admin client and attempts to remove the file at the given path from the designated bucket.
+ * If the file doesn't exist (404 error), it will return a success response with a notFound flag.
  *
  * @param bucket - The name of the storage bucket.
  * @param path - The path to the file being deleted.
- * @returns The deletion result data if successful; otherwise, null.
+ * @returns An object with success status, data (if available), and additional context like notFound flag.
  */
 export async function deleteFile(bucket: string, path: string) {
   // Get a fresh client for each operation
@@ -146,13 +142,38 @@ export async function deleteFile(bucket: string, path: string) {
     const { data, error } = await client.storage.from(bucket).remove([path]);
 
     if (error) {
+      // Check if this is specifically a not-found error
+      const isNotFoundError =
+        error.message.includes("Not found") || error.message.includes("404");
+
+      if (isNotFoundError) {
+        // Return a "success" response for not-found, as the end state is the same (the file doesn't exist in storage)
+        return {
+          success: true,
+          data: null,
+          notFound: true,
+        };
+      }
+
       console.error("Error removing file:", error);
-      return null;
+      return {
+        success: false,
+        error: error.message,
+        data: null,
+      };
     }
 
-    return data;
+    return {
+      success: true,
+      data,
+      notFound: false,
+    };
   } catch (error) {
     console.error("Error deleting file:", error);
-    return null;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      data: null,
+    };
   }
 }

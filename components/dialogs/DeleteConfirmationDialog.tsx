@@ -24,6 +24,7 @@ interface DeleteConfirmationDialogProps {
  * @param setIsOpen - Function to set the open state
  * @param resourceTitle - The title of the resource being deleted
  * @param onDelete - Function to call when deletion is confirmed
+ * @param isDeleting - Whether the deletion is in progress
  */
 export function DeleteConfirmationDialog({
   isOpen,
