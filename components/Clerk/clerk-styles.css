@@ -1,4 +1,6 @@
 /* Custom styles for Clerk components */
+/* Note: !important is used throughout this file because Clerk's components have high-specificity selectors that require overriding */
+
 
 /* Dark mode styles with high specificity */
 html[class~="dark"] .cl-card,
