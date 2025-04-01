@@ -34,12 +34,20 @@ export const viewport: Viewport = {
 };
 
 /**
- * Sets up the root layout of the application.
+ * Root layout component that sets up the application's provider hierarchy.
  *
- * This component provides the foundational HTML structure and wraps its content with essential providers for application state, authentication, session management, and sidebar context.
- * It renders the nested child components within the main area of the layout.
+ * Provider Structure (from outermost to innermost):
+ * 1. AppProviders - Sets up global app configuration and utilities
+ * 2. ClerkProviderWithTheme - Handles authentication and user management with theme support
+ * 3. SessionProvider - Manages user session state and persistence
+ * 4. SidebarProvider - Controls sidebar state (open/closed) and related functionality
  *
- * @param children - The nested content to display within the layout.
+ * Additional Components:
+ * - SessionInitializer: Client-side component that initializes session data
+ * - AnonymousDataMigration: Handles migration of anonymous user data after sign-in
+ *
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to be wrapped by providers
  */
 export default function RootLayout({
   children,
