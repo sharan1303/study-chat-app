@@ -1,11 +1,6 @@
 import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 import { ButtonSkeleton } from "@/components/ui/button-skeleton";
-import {
-  EditIcon,
-  MessageSquareIcon,
-  TrashIcon,
-  UploadIcon,
-} from "@/components/ui/static-icon";
+import { Edit, MessageSquare, Trash, Upload } from "lucide-react";
 
 /**
  * Renders a loading skeleton for the module details page.
@@ -25,16 +20,16 @@ export default function ModuleDetailsLoading() {
         {/* Action buttons skeleton */}
         <div className="flex items-center gap-2 pr-16">
           <ButtonSkeleton variant="outline" className="flex items-center gap-2">
-            <MessageSquareIcon className="h-4 w-4" />
+            <MessageSquare className="h-4 w-4" />
             <span>Go to Chat</span>
           </ButtonSkeleton>
           <div className="flex space-x-1">
             <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
-              <EditIcon className="h-4 w-4" />
+              <Edit className="h-4 w-4" />
             </ButtonSkeleton>
 
             <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
-              <TrashIcon className="h-4 w-4 text-destructive" />
+              <Trash className="h-4 w-4 text-destructive" />
             </ButtonSkeleton>
           </div>
         </div>
@@ -52,10 +47,10 @@ export default function ModuleDetailsLoading() {
 
         {/* Resources section skeleton */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-1">
             <h2 className="text-lg font-semibold">Resources</h2>
             <ButtonSkeleton variant="outline" className="flex items-center">
-              <UploadIcon className="h-4 w-4 mr-2" />
+              <Upload className="h-4 w-4 mr-2" />
               <span>Upload</span>
             </ButtonSkeleton>
           </div>

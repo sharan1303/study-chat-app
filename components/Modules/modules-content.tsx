@@ -23,6 +23,7 @@ import { ResourceUploadButton } from "@/components/Resource/resource-upload-butt
 import { useSession } from "@/context/session-context";
 import { api } from "@/lib/api";
 import { ResourceTable } from "@/components/Resource/resource-table";
+import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -301,13 +302,19 @@ export default function ModulesPageContent({
         </div>
 
         {/* Use the new ResourceTable component */}
-        <ResourceTable
-          resources={filteredResources}
-          modules={modules}
-          onUpdate={handleResourceUpdate}
-          showModuleColumn={true}
-          isLoading={resourcesLoading}
-        />
+        <div className="min-h-[300px]">
+          {resourcesLoading ||
+          (filteredResources.length === 0 && isSignedIn) ? (
+            <ResourceTableSkeleton showModuleColumn={true} />
+          ) : (
+            <ResourceTable
+              resources={filteredResources}
+              modules={modules}
+              onUpdate={handleResourceUpdate}
+              showModuleColumn={true}
+            />
+          )}
+        </div>
       </div>
     );
   }
@@ -376,35 +383,58 @@ export default function ModulesPageContent({
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredModules.map((module) => (
-                  <Link
-                    href={`/modules/${encodeModuleSlug(module.name)}`}
-                    key={module.name}
-                  >
-                    <Card className="hover:bg-muted/50 transition-colors">
-                      <CardHeader>
-                        <CardTitle>
-                          <span className="mr-2">{module.icon}</span>
-                          {module.name}
-                        </CardTitle>
-                        <CardDescription>
-                          {module.description || "No description"}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-sm text-muted-foreground">
-                          {module.resourceCount}{" "}
-                          {module.resourceCount === 1
-                            ? "resource"
-                            : "resources"}
-                        </div>
-                      </CardContent>
-                      <CardFooter className="text-xs text-muted-foreground">
-                        Updated {formatDate(module.updatedAt)}
-                      </CardFooter>
-                    </Card>
-                  </Link>
-                ))}
+                {filteredModules.map((module) => {
+                  // Make sure module name exists and is not empty before encoding
+                  if (!module.name) {
+                    console.error("Module name is missing", module);
+                    return null;
+                  }
+
+                  const moduleSlug = encodeModuleSlug(module.name);
+                  console.log(
+                    `Creating link for "${module.name}" → "${moduleSlug}"`
+                  );
+
+                  // Ensure moduleSlug is not empty
+                  if (!moduleSlug) {
+                    console.error(
+                      "Failed to encode module slug for",
+                      module.name
+                    );
+                    return null;
+                  }
+
+                  return (
+                    <Link
+                      href={`/modules/${moduleSlug}`}
+                      key={module.id || module.name}
+                      prefetch={true}
+                    >
+                      <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader>
+                          <CardTitle>
+                            <span className="mr-2">{module.icon}</span>
+                            {module.name}
+                          </CardTitle>
+                          <CardDescription>
+                            {module.description || "No description"}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm text-muted-foreground">
+                            {module.resourceCount}{" "}
+                            {module.resourceCount === 1
+                              ? "resource"
+                              : "resources"}
+                          </div>
+                        </CardContent>
+                        <CardFooter className="text-xs text-muted-foreground">
+                          Updated {formatDate(module.updatedAt)}
+                        </CardFooter>
+                      </Card>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

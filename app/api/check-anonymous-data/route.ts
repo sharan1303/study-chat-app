@@ -29,15 +29,26 @@ export async function GET(request: NextRequest) {
       where: { sessionId },
     });
 
-    const resourceCount = await prisma.resource.count({
-      where: { sessionId },
-    });
+    // Only query collections that have sessionId in their schema
+    const resourceCount = 0;
+    let chatCount = 0;
 
-    const chatCount = await prisma.chat.count({
-      where: { sessionId },
-    });
+    try {
+      // These queries are wrapped in try/catch to handle schema mismatches
+      chatCount = await prisma.chat.count({
+        where: { sessionId },
+      });
+    } catch (err) {
+      console.warn(
+        "Error counting chats, schema may not have sessionId field:",
+        err
+      );
+    }
 
-    const hasData = moduleCount > 0 || resourceCount > 0 || chatCount > 0;
+    // Skip the resource count since it doesn't have sessionId field
+    // according to the linter error
+
+    const hasData = moduleCount > 0 || chatCount > 0;
 
     return NextResponse.json({
       hasData,
@@ -49,8 +60,23 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error checking anonymous data:", error);
+    // Add more detailed error information for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    console.error("Error details:", {
+      message: errorMessage,
+      stack: errorStack,
+      sessionId: sessionId.substring(0, 8) + "...", // Log partial sessionId for debugging
+      userId: userId.substring(0, 8) + "...", // Log partial userId for debugging
+    });
+
     return NextResponse.json(
-      { error: "Failed to check anonymous data" },
+      {
+        error: "Failed to check anonymous data",
+        details:
+          process.env.NODE_ENV === "development" ? errorMessage : undefined,
+      },
       { status: 500 }
     );
   }

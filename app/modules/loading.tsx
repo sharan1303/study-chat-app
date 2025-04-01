@@ -1,6 +1,6 @@
 import { ButtonSkeleton } from "@/components/ui/button-skeleton";
 import { Input } from "@/components/ui/input";
-import { PlusIcon } from "@/components/ui/static-icon";
+import { Plus } from "lucide-react";
 import { Search } from "lucide-react";
 
 /**
@@ -40,7 +40,7 @@ export default function Loading() {
               />
           </div>
           <ButtonSkeleton variant="outline" className="opacity-100">
-            <PlusIcon />
+            <Plus className="h-4 w-4 mr-2" />
             Create Module
           </ButtonSkeleton>
         </div>

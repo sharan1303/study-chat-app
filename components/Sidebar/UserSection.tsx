@@ -25,7 +25,7 @@ export default function UserSection() {
           </div>
           <Button variant="ghost" size="icon" asChild>
             <Link href="/settings">
-              <Settings className="opacity-0 h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </Link>
           </Button>
         </div>
