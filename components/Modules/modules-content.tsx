@@ -404,7 +404,7 @@ export default function ModulesPageContent({
                 variant="outline"
                 moduleId={preselectedModuleId || undefined}
                 initialOpen={openResourceUpload}
-              ></ResourceUploadButton>
+                />
             ) : null}
           </div>
 
