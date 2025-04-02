@@ -336,6 +336,51 @@ export default function ModuleDetailWrapper({
     }
   }, [moduleName, isSignedIn]);
 
+  // Listen for resource events to refresh the resource list
+  useEffect(() => {
+    if (!isSignedIn || !module) return;
+
+    // Event handlers for resource events
+    const handleResourceCreated = () => {
+      console.log(
+        "Resource created event detected in module detail page, refreshing resources"
+      );
+      fetch("/api/resources")
+        .then((response) => {
+          if (!response.ok) return [];
+          return response.json();
+        })
+        .then((allResources) => {
+          // Filter resources for the current module
+          const moduleResources = allResources.filter(
+            (resource: Resource) => resource.moduleId === module.id
+          );
+          setResources(moduleResources);
+        })
+        .catch((error) => {
+          console.error(
+            "Error refreshing resources after resource creation:",
+            error
+          );
+        });
+    };
+
+    const handleResourceUpdated = handleResourceCreated;
+    const handleResourceDeleted = handleResourceCreated;
+
+    // Add event listeners for SSE events
+    window.addEventListener("resource.created", handleResourceCreated);
+    window.addEventListener("resource.updated", handleResourceUpdated);
+    window.addEventListener("resource.deleted", handleResourceDeleted);
+
+    return () => {
+      // Cleanup on unmount
+      window.removeEventListener("resource.created", handleResourceCreated);
+      window.removeEventListener("resource.updated", handleResourceUpdated);
+      window.removeEventListener("resource.deleted", handleResourceDeleted);
+    };
+  }, [isSignedIn, module]);
+
   // Initialize title and description when module data is loaded
   useEffect(() => {
     if (module) {
@@ -700,7 +745,7 @@ export default function ModuleDetailWrapper({
               ) : resources.length === 0 && isSignedIn ? (
                 <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
                   <h3 className="font-medium">
-                      Access your knowledge base and upload your own resources.
+                    Access your knowledge base and upload your own resources.
                   </h3>
                   <ResourceUploadButton
                     variant="outline"
