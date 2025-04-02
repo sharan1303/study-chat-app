@@ -12,13 +12,11 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -33,19 +31,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  getFileTypeFromExtension,
-  getFileTypeFromMimeType,
-  getBaseResourceType,
-} from "@/lib/fileTypes";
 
 // Schema for resource creation
 const formSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  type: z.string().min(1, "Please select a resource type"),
-  url: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
   moduleId: z.string().min(1, "Please select a module"),
-  file: z.any().optional(),
 });
 
 // Interface for module data
@@ -65,9 +54,8 @@ interface ResourceUploadDialogProps {
 /**
  * Renders a dialog for uploading a resource to a module.
  *
- * This component provides a user interface for uploading a resource via file input or URL. It supports drag-and-drop
- * file uploads, automatically detects the file's resource type based on its MIME type or extension,
- * and auto-fills the resource title if not provided. The dialog fetches available modules from the server for selection
+ * This component provides a user interface for uploading resources via file input. It supports drag-and-drop
+ * file uploads and uses the filename as the resource title. The dialog fetches available modules from the server for selection
  * and resets its state when opened or closed. If the user is not authenticated, the dialog will close.
  *
  * @param open - Indicates whether the upload dialog is visible.
@@ -87,17 +75,13 @@ export function ResourceUploadDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [moduleLoadError, setModuleLoadError] = useState<string | null>(null);
-  const [typeLabel, setTypeLabel] = useState<string>("");
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      type: "",
-      url: "",
       moduleId: preselectedModuleId || "",
     },
   });
@@ -106,12 +90,9 @@ export function ResourceUploadDialog({
   useEffect(() => {
     if (open) {
       form.reset({
-        title: "",
-        type: "",
-        url: "",
         moduleId: preselectedModuleId || "",
       });
-      setSelectedFile(null);
+      setSelectedFiles([]);
     }
   }, [open, form, preselectedModuleId]);
 
@@ -177,50 +158,35 @@ export function ResourceUploadDialog({
     try {
       setIsSubmitting(true);
 
-      const formData = new FormData();
-      formData.append("title", values.title);
-      formData.append("moduleId", values.moduleId);
-      formData.append("type", values.type);
+      // If there are files to upload
+      if (selectedFiles.length > 0) {
+        // For each file, create and submit a FormData object
+        const uploadPromises = selectedFiles.map((file) => {
+          const formData = new FormData();
+          // Use the filename without extension as the title
+          const fileName = file.name.split(".").slice(0, -1).join(".");
+          formData.append("title", fileName);
+          formData.append("moduleId", values.moduleId);
+          formData.append("file", file);
 
-      // Use URL field for external resources only if no file is uploaded
-      if (values.url && !selectedFile) {
-        formData.append("url", values.url);
+          return axios.post("/api/resources/upload", formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+        });
+
+        await Promise.all(uploadPromises);
       }
 
-      // Handle file uploads with the new endpoint
-      if (selectedFile) {
-        // Add the file to form data
-        formData.append("file", selectedFile);
-
-        // Use the new file upload endpoint
-        await axios.post("/api/resources/upload", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-      } else {
-        // For non-file resources (links, etc.), use the standard endpoint
-        await axios.post("/api/resources", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-      }
-
-      toast.success("Resource created successfully");
-
-      // Close the dialog
+      toast.success("Resources created successfully");
       onOpenChange(false);
-
-      // Reset form and selected file
       form.reset();
-      setSelectedFile(null);
-
-      // Refresh the current page to show the newly added resource
+      setSelectedFiles([]);
       router.refresh();
     } catch (error) {
-      console.error("Error creating resource:", error);
-      toast.error("Failed to create resource");
+      console.error("Error creating resources:", error);
+      toast.error("Failed to create resources");
     } finally {
       setIsSubmitting(false);
     }
@@ -244,56 +210,17 @@ export function ResourceUploadDialog({
     e.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      handleFile(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const filesArray = Array.from(e.dataTransfer.files);
+      setSelectedFiles((prev) => [...prev, ...filesArray]);
     }
   };
 
   // Handle file input change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      handleFile(file);
-    }
-  };
-
-  // Process the selected file
-  const handleFile = (file: File) => {
-    setSelectedFile(file);
-
-    // Get file extension and mime type
-    const extension = file.name.split(".").pop()?.toLowerCase() || "";
-    const mimeType = file.type.toLowerCase();
-
-    console.log("File info:", {
-      name: file.name,
-      extension,
-      mimeType,
-      size: file.size,
-    });
-
-    // Get the resource type using the shared utilities
-    const type = getBaseResourceType(extension, mimeType);
-
-    // Get the detailed file type label
-    let detectedLabel = "";
-    if (mimeType && mimeType.includes("/")) {
-      detectedLabel = getFileTypeFromMimeType(mimeType);
-    } else if (extension) {
-      detectedLabel = getFileTypeFromExtension(extension);
-    } else {
-      detectedLabel = "Document";
-    }
-
-    console.log("Detected resource type:", type, "with label:", detectedLabel);
-    form.setValue("type", type);
-    setTypeLabel(detectedLabel);
-
-    // Auto-fill title if empty (remove extension from filename)
-    if (!form.getValues().title) {
-      const fileName = file.name.split(".").slice(0, -1).join(".");
-      form.setValue("title", fileName);
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...filesArray]);
     }
   };
 
@@ -344,6 +271,7 @@ export function ResourceUploadDialog({
               ref={fileInputRef}
               id="file-upload"
               type="file"
+              multiple
               className="hidden"
               onChange={handleFileChange}
               aria-label="File upload"
@@ -351,26 +279,37 @@ export function ResourceUploadDialog({
           </div>
         </div>
 
-        {selectedFile && (
-          <div className="mt-4 p-3 border rounded flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-muted rounded">
-                <Upload className="h-4 w-4" />
+        {selectedFiles.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {selectedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="p-3 border rounded flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-muted rounded">
+                    <Upload className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFiles((prev) =>
+                      prev.filter((_, i) => i !== index)
+                    );
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <div>
-                <p className="font-medium">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedFile(null)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            ))}
           </div>
         )}
 
@@ -404,122 +343,59 @@ export function ResourceUploadDialog({
             >
               <FormField
                 control={form.control}
-                name="title"
+                name="moduleId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter resource title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Resource Type</FormLabel>
+                    <FormLabel>Module</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                      disabled={!!preselectedModuleId || isLoading}
+                    >
                       <FormControl>
-                        {selectedFile && typeLabel ? (
-                          <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                            <span className="text-foreground">{typeLabel}</span>
-                            <input type="hidden" {...field} />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a module" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent
+                        position="popper"
+                        sideOffset={4}
+                        className="z-[200]"
+                      >
+                        {isLoading ? (
+                          <div className="p-2 flex items-center justify-center">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            <span>Loading modules...</span>
                           </div>
+                        ) : moduleLoadError ? (
+                          <div className="p-2 text-center text-destructive">
+                            {moduleLoadError}
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              Try refreshing the dialog
+                            </div>
+                          </div>
+                        ) : modules.length > 0 ? (
+                          modules.map((moduleItem) => (
+                            <SelectItem
+                              key={moduleItem.id}
+                              value={moduleItem.id}
+                            >
+                              <span className="flex items-center gap-2">
+                                <span>{moduleItem.icon}</span>
+                                <span>{moduleItem.name}</span>
+                              </span>
+                            </SelectItem>
+                          ))
                         ) : (
-                          <div className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm">
-                            <span className="text-muted-foreground">
-                              File type will be detected automatically
-                            </span>
-                            <input type="hidden" {...field} />
+                          <div className="p-2 text-center text-muted-foreground">
+                            No modules available.
+                            <div className="mt-1 text-xs">
+                              You need to create a module first.
+                            </div>
                           </div>
                         )}
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="moduleId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Module</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || undefined}
-                        disabled={!!preselectedModuleId || isLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a module" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent
-                          position="popper"
-                          sideOffset={4}
-                          className="z-[200]"
-                        >
-                          {isLoading ? (
-                            <div className="p-2 flex items-center justify-center">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              <span>Loading modules...</span>
-                            </div>
-                          ) : moduleLoadError ? (
-                            <div className="p-2 text-center text-destructive">
-                              {moduleLoadError}
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                Try refreshing the dialog
-                              </div>
-                            </div>
-                          ) : modules.length > 0 ? (
-                            modules.map((moduleItem) => (
-                              <SelectItem
-                                key={moduleItem.id}
-                                value={moduleItem.id}
-                              >
-                                <span className="flex items-center gap-2">
-                                  <span>{moduleItem.icon}</span>
-                                  <span>{moduleItem.name}</span>
-                                </span>
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="p-2 text-center text-muted-foreground">
-                              No modules available.
-                              <div className="mt-1 text-xs">
-                                You need to create a module first.
-                              </div>
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL (optional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="https://example.com/resource"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Enter a URL for external resources
-                    </FormDescription>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
