@@ -698,10 +698,10 @@ export default function ModuleDetailWrapper({
               {isLoading ? (
                 <ResourceTableSkeleton showModuleColumn={false} />
               ) : resources.length === 0 && isSignedIn ? (
-                <div className="flex flex-col items-center justify-center h-[150px] text-muted-foreground">
-                  <p className="mb-4">
-                    Access your knowledge base and upload your own resources.
-                  </p>
+                <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+                  <h3 className="font-medium">
+                      Access your knowledge base and upload your own resources.
+                  </h3>
                   <ResourceUploadButton
                     variant="outline"
                     className="text-secondary-foreground"
