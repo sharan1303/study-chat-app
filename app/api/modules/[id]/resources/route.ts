@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { validateModuleAccess } from "@/lib/moduleAuth";
+import { broadcastResourceCreated } from "@/lib/events";
 
 /**
  * Validates if the specified module exists and is accessible by the given user.
@@ -225,6 +227,12 @@ export async function POST(
         moduleId,
         userId, // Always set userId, never use sessionId
       },
+    });
+
+    // Broadcast the resource created event
+    broadcastResourceCreated({
+      id: resource.id,
+      moduleId: resource.moduleId,
     });
 
     // Get the module name

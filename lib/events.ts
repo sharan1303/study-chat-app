@@ -26,6 +26,9 @@ export const EVENT_TYPES = {
   MODULE_DELETED: "module.deleted",
   MESSAGE_CREATED: "message.created",
   DATA_MIGRATED: "data.migrated",
+  RESOURCE_CREATED: "resource.created",
+  RESOURCE_UPDATED: "resource.updated",
+  RESOURCE_DELETED: "resource.deleted",
 };
 
 // Get access to the global SSE clients array
@@ -135,4 +138,37 @@ export function broadcastChatDeleted(
   targetIds?: string[]
 ) {
   return broadcastEvent(EVENT_TYPES.CHAT_DELETED, chatData, targetIds);
+}
+
+export function broadcastResourceCreated(
+  resourceData: { id: string; moduleId: string },
+  targetIds?: string[]
+) {
+  // Dispatch DOM event for client-side listeners
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("resource-created"));
+  }
+  return broadcastEvent(EVENT_TYPES.RESOURCE_CREATED, resourceData, targetIds);
+}
+
+export function broadcastResourceUpdated(
+  resourceData: { id: string; moduleId: string },
+  targetIds?: string[]
+) {
+  // Dispatch DOM event for client-side listeners
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("resource-updated"));
+  }
+  return broadcastEvent(EVENT_TYPES.RESOURCE_UPDATED, resourceData, targetIds);
+}
+
+export function broadcastResourceDeleted(
+  resourceData: { id: string; moduleId: string },
+  targetIds?: string[]
+) {
+  // Dispatch DOM event for client-side listeners
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("resource-deleted"));
+  }
+  return broadcastEvent(EVENT_TYPES.RESOURCE_DELETED, resourceData, targetIds);
 }

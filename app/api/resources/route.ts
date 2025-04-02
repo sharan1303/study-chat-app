@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { broadcastResourceCreated } from "@/lib/events";
 
 /**
  * Retrieves all resources for the authenticated user.
@@ -126,6 +127,12 @@ export async function POST(request: Request) {
         fileUrl: url || null,
         moduleId,
       },
+    });
+
+    // Broadcast the resource created event
+    broadcastResourceCreated({
+      id: resource.id,
+      moduleId: resource.moduleId,
     });
 
     return NextResponse.json({

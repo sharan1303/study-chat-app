@@ -10,9 +10,9 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarRail,
-} from "@/components/Sidebar/sidebar";
+} from "@/components/Sidebar/SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
-import ModuleList from "./module-list";
+import ModuleList from "./ModuleList";
 import ChatHistory from "./ChatHistory";
 import UserSection from "./UserSection";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";

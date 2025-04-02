@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
+import { broadcastResourceCreated } from "@/lib/events";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -160,33 +161,89 @@ export function ResourceUploadDialog({
 
       // If there are files to upload
       if (selectedFiles.length > 0) {
+        // Check for files exceeding size limit (50MB)
+        const MAX_FILE_SIZE = 50 * 1024 * 1024;
+        const oversizedFiles = selectedFiles.filter(
+          (file) => file.size > MAX_FILE_SIZE
+        );
+
+        if (oversizedFiles.length > 0) {
+          const fileNames = oversizedFiles.map((f) => f.name).join(", ");
+          toast.error(`File size exceeds limit (50MB): ${fileNames}`);
+          setIsSubmitting(false);
+          return;
+        }
+
         // For each file, create and submit a FormData object
-        const uploadPromises = selectedFiles.map((file) => {
-          const formData = new FormData();
-          // Use the filename without extension as the title
-          const fileName = file.name.split(".").slice(0, -1).join(".");
-          formData.append("title", fileName);
-          formData.append("moduleId", values.moduleId);
-          formData.append("file", file);
+        const uploadResults = await Promise.allSettled(
+          selectedFiles.map(async (file) => {
+            const formData = new FormData();
+            // Use the filename without extension as the title
+            const fileName = file.name.split(".").slice(0, -1).join(".");
+            formData.append("title", fileName);
+            formData.append("moduleId", values.moduleId);
+            formData.append("file", file);
 
-          return axios.post("/api/resources/upload", formData, {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
+            try {
+              return await axios.post("/api/resources/upload", formData, {
+                headers: {
+                  "Content-Type": "multipart/form-data",
+                },
+              });
+            } catch (error) {
+              return { file: file.name, error };
+            }
+          })
+        );
+
+        const successfulUploads = uploadResults.filter(
+          (result) => result.status === "fulfilled"
+        );
+        const failedUploads = uploadResults.filter(
+          (result) => result.status === "rejected"
+        );
+
+        if (failedUploads.length > 0) {
+          const errorMessages = failedUploads
+            .map(
+              (result) => result.reason.response?.data?.error || "Unknown error"
+            )
+            .join("\n");
+          toast.error("Failed to upload resources:\n" + errorMessages);
+        }
+
+        if (successfulUploads.length > 0) {
+          if (successfulUploads.length === 1) {
+            toast.success(
+              `Successfully uploaded ${successfulUploads.length} resource to ${
+                modules.find((m) => m.id === values.moduleId)?.name
+              }`
+            );
+          } else {
+            toast.success(
+              `Successfully uploaded ${successfulUploads.length} resources to ${
+                modules.find((m) => m.id === values.moduleId)?.name
+              }`
+            );
+          }
+
+          // Broadcast resource created event
+          successfulUploads.forEach((upload) => {
+            if (upload.status === "fulfilled" && "data" in upload.value) {
+              const resourceData = upload.value.data;
+              broadcastResourceCreated({
+                id: resourceData.id,
+                moduleId: values.moduleId,
+              });
+            }
           });
-        });
-
-        await Promise.all(uploadPromises);
+        }
       }
 
-      toast.success("Resources created successfully");
       onOpenChange(false);
       form.reset();
       setSelectedFiles([]);
       router.refresh();
-    } catch (error) {
-      console.error("Error creating resources:", error);
-      toast.error("Failed to create resources");
     } finally {
       setIsSubmitting(false);
     }
@@ -236,9 +293,7 @@ export function ResourceUploadDialog({
           <div className="flex items-center justify-between">
             <DialogTitle>Upload Resource</DialogTitle>
           </div>
-          <DialogDescription>
-            Add resources to help study for your modules
-          </DialogDescription>
+          <DialogDescription>Add resources to help you study</DialogDescription>
         </DialogHeader>
 
         {/* File upload area */}
@@ -253,10 +308,10 @@ export function ResourceUploadDialog({
         >
           <div className="flex flex-col items-center justify-center space-y-4">
             <div className="rounded-full bg-muted p-4">
-              <Upload className="h-8 w-8 text-muted-foreground" />
+              <Upload className="h-8 w-8" />
             </div>
             <div>
-              <p className="text-lg font-medium">Drag and Drop assets here</p>
+              <p className="text-lg font-medium">Drag and Drop here</p>
               <p className="text-muted-foreground">Or</p>
             </div>
             <Button

@@ -17,7 +17,7 @@ export function ResourceTableSkeleton({
     <div className="overflow-x-auto border rounded-t-md">
       <table className="w-full min-w-full table-fixed">
         <thead>
-          <tr className="border-b bg-muted/50 text-xs font-medium text-muted-foreground">
+          <tr className="border-b bg-card text-xs font-medium text-muted-foreground">
             <th className="text-left p-2.5 w-4/12">Name</th>
             <th className="text-left p-2.5 w-2/12">Type</th>
             {showModuleColumn && (

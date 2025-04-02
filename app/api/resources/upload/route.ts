@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getSupabaseAdmin, uploadFile } from "@/lib/supabase";
 import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { broadcastResourceCreated } from "@/lib/events";
 
 // Configure Next.js to handle larger uploads
 export const config = {
@@ -136,6 +137,12 @@ export async function POST(request: NextRequest) {
         userId,
         fileSize: file.size,
       },
+    });
+
+    // Broadcast the resource created event
+    broadcastResourceCreated({
+      id: resource.id,
+      moduleId: resource.moduleId,
     });
 
     return NextResponse.json({

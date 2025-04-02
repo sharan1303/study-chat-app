@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { Search } from "lucide-react";
@@ -84,6 +84,36 @@ export default function ModulesPageContent({
     shouldOpenResourceUpload
   );
 
+  // Add resources state in parent component
+  const [allResources, setAllResources] = useState<Resource[]>([]);
+  const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
+  const [resourceModules, setResourceModules] = useState<
+    { id: string; name: string; icon: string }[]
+  >([]);
+  const [resourcesLoading, setResourcesLoading] = useState(true);
+
+  // Helper function to filter resources based on search query
+  const filterResources = useCallback(
+    (resources: Resource[], query: string) => {
+      if (!query) {
+        setFilteredResources(resources);
+      } else {
+        const filtered = resources.filter(
+          (resource) =>
+            resource.title.toLowerCase().includes(query.toLowerCase()) ||
+            (resource.description &&
+              resource.description
+                .toLowerCase()
+                .includes(query.toLowerCase())) ||
+            (resource.moduleName &&
+              resource.moduleName.toLowerCase().includes(query.toLowerCase()))
+        );
+        setFilteredResources(filtered);
+      }
+    },
+    []
+  );
+
   // This effect fetches the modules data from the API
   useEffect(() => {
     async function fetchModules() {
@@ -113,6 +143,103 @@ export default function ModulesPageContent({
       fetchModules();
     }
   }, [isSignedIn, isLoaded, sessionId, sessionLoading, searchQuery]);
+
+  // Define fetchResources in parent component
+  const fetchResources = useCallback(async () => {
+    try {
+      setResourcesLoading(true);
+
+      // Fetch all modules for the selector
+      const modulesData = await api.getModules();
+      const modulesList = modulesData.modules || [];
+      setResourceModules(
+        modulesList.map((m: Module) => ({
+          id: m.id,
+          name: m.name,
+          icon: m.icon,
+        }))
+      );
+
+      // Only attempt to fetch resources if user is signed in
+      if (isSignedIn) {
+        // Fetch resources - these require authentication
+        const resourcesResponse = await fetch("/api/resources");
+
+        if (resourcesResponse.status === 401) {
+          // Handle unauthorized gracefully - user is not logged in
+          console.log("User is not authenticated for resources");
+          setAllResources([]);
+          setFilteredResources([]);
+        } else if (!resourcesResponse.ok) {
+          throw new Error(
+            `Failed to fetch resources: ${resourcesResponse.statusText}`
+          );
+        } else {
+          const resourcesData = await resourcesResponse.json();
+          setAllResources(resourcesData);
+
+          // Initialize filtered resources
+          filterResources(resourcesData, searchQuery);
+        }
+      } else {
+        // User is not signed in, don't try to fetch resources
+        setAllResources([]);
+        setFilteredResources([]);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      // Set resources to empty array on error
+      setAllResources([]);
+      setFilteredResources([]);
+    } finally {
+      setResourcesLoading(false);
+    }
+  }, [isSignedIn, searchQuery, filterResources]);
+
+  // Update filtered resources when search query changes
+  useEffect(() => {
+    filterResources(allResources, searchQuery);
+  }, [searchQuery, allResources, filterResources]);
+
+  // Fetch resources when component mounts
+  useEffect(() => {
+    if (isLoaded && !sessionLoading && isSignedIn) {
+      fetchResources();
+    }
+  }, [fetchResources, isLoaded, isSignedIn, sessionLoading]);
+
+  // Listen for resource events using DOM events
+  useEffect(() => {
+    if (!isSignedIn) return;
+
+    // Event handlers for resource events
+    const handleResourceCreated = () => {
+      console.log("Resource created event detected, refreshing resources list");
+      fetchResources();
+    };
+
+    const handleResourceUpdated = () => {
+      console.log("Resource updated event detected, refreshing resources list");
+      fetchResources();
+    };
+
+    const handleResourceDeleted = () => {
+      console.log("Resource deleted event detected, refreshing resources list");
+      fetchResources();
+    };
+
+    // Add event listeners
+    window.addEventListener("resource-created", handleResourceCreated);
+    window.addEventListener("resource-updated", handleResourceUpdated);
+    window.addEventListener("resource-deleted", handleResourceDeleted);
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener("resource-created", handleResourceCreated);
+      window.removeEventListener("resource-updated", handleResourceUpdated);
+      window.removeEventListener("resource-deleted", handleResourceDeleted);
+    };
+  }, [isSignedIn, fetchResources]);
 
   // Listen for module creation events to refresh the module list
   useEffect(() => {
@@ -175,6 +302,35 @@ export default function ModulesPageContent({
     }
   }, [shouldOpenResourceUpload]);
 
+  // Add resource update handler in parent component
+  const handleResourceUpdate = (updatedResource: Resource) => {
+    if (updatedResource._deleted) {
+      // If resource was deleted, mark as deleted in the UI
+      setAllResources((resources) =>
+        resources.map((r) =>
+          r.id === updatedResource.id ? { ...r, _deleted: true } : r
+        )
+      );
+      setFilteredResources((resources) =>
+        resources.map((r) =>
+          r.id === updatedResource.id ? { ...r, _deleted: true } : r
+        )
+      );
+    } else {
+      // Regular update
+      setAllResources((resources) =>
+        resources.map((r) =>
+          r.id === updatedResource.id ? updatedResource : r
+        )
+      );
+      setFilteredResources((resources) =>
+        resources.map((r) =>
+          r.id === updatedResource.id ? updatedResource : r
+        )
+      );
+    }
+  };
+
   if (!isLoaded || sessionLoading) {
     return null;
   }
@@ -203,125 +359,8 @@ export default function ModulesPageContent({
     );
   }
 
-  /**
-   * Fetches modules and resources from the API and displays them in a resource table, filtered by a search query.
-   *
-   * This component retrieves module data for selector options and, if the user is signed in, fetches resource data.
-   * It filters the resources by matching the search query against their title, description, or associated module name.
-   * Additionally, it handles resource updates by marking deleted resources appropriately.
-   *
-   * @param searchQuery - A query string used to filter the displayed resources.
-   *
-   * @returns A JSX element rendering the resource table with the filtered resources.
-   */
-  function ResourcesWrapper({ searchQuery }: { searchQuery: string }) {
-    const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
-    const [modules, setModules] = useState<
-      { id: string; name: string; icon: string }[]
-    >([]);
-    const [resourcesLoading, setResourcesLoading] = useState(true);
-    const { sessionId } = useSession();
-    const { isSignedIn } = useAuth();
-
-    // Fetch resources from the API
-    useEffect(() => {
-      /**
-       * Fetches modules and, if the user is authenticated, resources data from the API, updating state accordingly.
-       *
-       * This asynchronous function begins by setting the resources loading state to true and retrieves all modules, which are then simplified
-       * to include only the id, name, and icon. If the user is signed in, it attempts to fetch resources from the "/api/resources" endpoint.
-       * For unauthorized responses (HTTP 401), it logs a message and clears the filtered resources. If the resources fetch fails for other reasons,
-       * an error is thrown, caught, and logged, with the filtered resources reset to an empty array. Finally, the loading state is set to false.
-       *
-       * @remark
-       * Resources are filtered by the search query if provided; otherwise, all fetched resources are used.
-       */
-      async function fetchData() {
-        try {
-          setResourcesLoading(true);
-
-          // Fetch all modules for the selector
-          const modulesData = await api.getModules();
-          const modulesList = modulesData.modules || [];
-          setModules(
-            modulesList.map((m: Module) => ({
-              id: m.id,
-              name: m.name,
-              icon: m.icon,
-            }))
-          );
-
-          // Only attempt to fetch resources if user is signed in
-          if (isSignedIn) {
-            // Fetch resources - these require authentication
-            const resourcesResponse = await fetch("/api/resources");
-
-            if (resourcesResponse.status === 401) {
-              // Handle unauthorized gracefully - user is not logged in
-              console.log("User is not authenticated for resources");
-              setFilteredResources([]);
-            } else if (!resourcesResponse.ok) {
-              throw new Error(
-                `Failed to fetch resources: ${resourcesResponse.statusText}`
-              );
-            } else {
-              const resourcesData = await resourcesResponse.json();
-
-              // Initialize filtered resources
-              if (!searchQuery) {
-                setFilteredResources(resourcesData);
-              } else {
-                const filtered = resourcesData.filter(
-                  (resource: Resource) =>
-                    resource.title
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase()) ||
-                    (resource.description &&
-                      resource.description
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase())) ||
-                    (resource.moduleName &&
-                      resource.moduleName
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()))
-                );
-                setFilteredResources(filtered);
-              }
-            }
-          } else {
-            // User is not signed in, don't try to fetch resources
-            setFilteredResources([]);
-          }
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          // Set resources to empty array on error
-          setFilteredResources([]);
-        } finally {
-          setResourcesLoading(false);
-        }
-      }
-
-      fetchData();
-    }, [searchQuery, isSignedIn, sessionId]);
-
-    const handleResourceUpdate = (updatedResource: Resource) => {
-      if (updatedResource._deleted) {
-        // If resource was deleted, mark as deleted in the UI
-        setFilteredResources((resources) =>
-          resources.map((r) =>
-            r.id === updatedResource.id ? { ...r, _deleted: true } : r
-          )
-        );
-      } else {
-        // Regular update
-        setFilteredResources((resources) =>
-          resources.map((r) =>
-            r.id === updatedResource.id ? updatedResource : r
-          )
-        );
-      }
-    };
-
+  // Updated ResourcesWrapper without its own state management
+  function ResourcesWrapper() {
     return (
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
@@ -332,7 +371,7 @@ export default function ModulesPageContent({
           )}
         </div>
 
-        {/* Use the new ResourceTable component */}
+        {/* Use the ResourceTable component */}
         <div className="min-h-[300px]">
           {resourcesLoading ? (
             <ResourceTableSkeleton showModuleColumn={true} />
@@ -345,7 +384,7 @@ export default function ModulesPageContent({
           ) : isSignedIn ? (
             <ResourceTable
               resources={filteredResources}
-              modules={modules}
+              modules={resourceModules}
               onUpdate={handleResourceUpdate}
               showModuleColumn={true}
             />
@@ -361,6 +400,7 @@ export default function ModulesPageContent({
     );
   }
 
+  // Return the main UI
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4">
@@ -404,7 +444,7 @@ export default function ModulesPageContent({
                 variant="outline"
                 moduleId={preselectedModuleId || undefined}
                 initialOpen={openResourceUpload}
-                />
+              />
             ) : null}
           </div>
 
@@ -482,7 +522,7 @@ export default function ModulesPageContent({
           </TabsContent>
 
           <TabsContent value="resources" className="mt-2">
-            <ResourcesWrapper searchQuery={searchQuery} />
+            <ResourcesWrapper />
           </TabsContent>
         </Tabs>
       </div>
