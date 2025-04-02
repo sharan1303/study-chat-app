@@ -187,9 +187,6 @@ export const ModuleForm = ({
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">
-        {initialData ? "Edit Module" : "Create New Module"}
-      </h2>
 
       {formError && (
         <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md mb-4">

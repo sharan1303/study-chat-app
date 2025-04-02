@@ -689,14 +689,25 @@ export default function ModuleDetailWrapper({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Resources</h2>
-              {isSignedIn && (
+              {isSignedIn && !!resources.length && (
                 <ResourceUploadButton variant="outline" moduleId={module.id} />
               )}
             </div>
 
             <div className="min-h-[300px]">
-              {isLoading || (resources.length === 0 && isSignedIn) ? (
+              {isLoading ? (
                 <ResourceTableSkeleton showModuleColumn={false} />
+              ) : resources.length === 0 && isSignedIn ? (
+                <div className="flex flex-col items-center justify-center h-[150px] text-muted-foreground">
+                  <p className="mb-4">
+                    Access your knowledge base and upload your own resources.
+                  </p>
+                  <ResourceUploadButton
+                    variant="outline"
+                    className="text-secondary-foreground"
+                    moduleId={module.id}
+                  />
+                </div>
               ) : (
                 <ResourceTable
                   resources={resources}

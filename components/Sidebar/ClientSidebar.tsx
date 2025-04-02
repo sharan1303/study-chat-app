@@ -173,17 +173,6 @@ function ClientSidebarContent({
     }
   }, [fetchChats]);
 
-  // Determine if a module is active (either in /modules/[name] or /[name]/chat)
-  const isModuleActive = (moduleName: string) => {
-    if (!pathname) return false;
-
-    const encodedName = encodeModuleSlug(moduleName);
-    return (
-      pathname.startsWith(`/modules/${encodedName}`) ||
-      pathname.startsWith(`/${encodedName}/chat`)
-    );
-  };
-
   // Set up Server-Sent Events (SSE) for real-time updates
   useEffect(() => {
     if (!isLoaded) return;
@@ -659,7 +648,6 @@ function ClientSidebarContent({
             modules={modules}
             loading={loading}
             currentModule={currentModule || activeModuleId}
-            isActive={isModuleActive}
             handleModuleClick={handleModuleClick}
             collapsed={state === "collapsed"}
             router={{ push: router.push, refresh: router.refresh }}

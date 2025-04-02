@@ -125,7 +125,9 @@ export default function ModuleList({
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogTitle>Create New Module</DialogTitle>
+              <DialogTitle className="text-xl font-bold ml-4">
+                Create New Module
+              </DialogTitle>
               <ModuleForm successEventName="module-create-success" />
             </DialogContent>
           </Dialog>
@@ -152,7 +154,9 @@ export default function ModuleList({
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogTitle>Create New Module</DialogTitle>
+                    <DialogTitle className="text-xl font-bold ml-4">
+                      Create New Module
+                    </DialogTitle>
                     <ModuleForm successEventName="module-create-success" />
                   </DialogContent>
                 </Dialog>

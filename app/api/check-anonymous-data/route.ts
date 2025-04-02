@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
     console.error("Error details:", {
       message: errorMessage,
       stack: errorStack,
-      sessionId: sessionId.substring(0, 8) + "...", // Log partial sessionId for debugging
-      userId: userId.substring(0, 8) + "...", // Log partial userId for debugging
+      sessionId: `${sessionId.substring(0, 8)}...`, // Log partial sessionId for debugging
+      userId: `${userId.substring(0, 8)}...`, // Log partial userId for debugging
     });
 
     return NextResponse.json(
