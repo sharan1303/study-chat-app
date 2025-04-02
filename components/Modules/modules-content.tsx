@@ -334,16 +334,27 @@ export default function ModulesPageContent({
 
         {/* Use the new ResourceTable component */}
         <div className="min-h-[300px]">
-          {resourcesLoading ||
-          (filteredResources.length === 0 && isSignedIn) ? (
+          {resourcesLoading ? (
             <ResourceTableSkeleton showModuleColumn={true} />
-          ) : (
+          ) : filteredResources.length === 0 && isSignedIn ? (
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+              <h3 className="font-medium">
+                Access your knowledge base and upload your own resources.
+              </h3>
+            </div>
+          ) : isSignedIn ? (
             <ResourceTable
               resources={filteredResources}
               modules={modules}
               onUpdate={handleResourceUpdate}
               showModuleColumn={true}
             />
+          ) : (
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+              <h3 className="font-medium">
+                You need to be signed in to view and upload resources.
+              </h3>
+            </div>
           )}
         </div>
       </div>
@@ -388,13 +399,13 @@ export default function ModulesPageContent({
               <Suspense fallback={<Button disabled>Loading...</Button>}>
                 <ModuleOperations sessionId={sessionId} />
               </Suspense>
-            ) : (
+            ) : isSignedIn ? (
               <ResourceUploadButton
                 variant="outline"
                 moduleId={preselectedModuleId || undefined}
                 initialOpen={openResourceUpload}
-              ></ResourceUploadButton>
-            )}
+                />
+            ) : null}
           </div>
 
           <TabsContent value="modules" className="mt-2">
