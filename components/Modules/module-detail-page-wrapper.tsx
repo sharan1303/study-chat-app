@@ -22,6 +22,7 @@ import {
 import ModuleActions from "@/components/Modules/module-actions";
 import { ResourceUploadButton } from "@/components/Resource/resource-upload-button";
 import { ResourceTable } from "@/components/Resource/resource-table";
+import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 import ModuleDetailsLoading from "@/app/modules/[moduleName]/loading";
 
 interface Module {
@@ -73,9 +74,9 @@ const icons = [
  * triggering either a full page refresh (for name changes) or a component refresh (for description and icon changes).
  */
 export default function ModuleDetailWrapper({
-  params,
+  moduleName,
 }: {
-  params: { moduleName: string };
+  moduleName: string;
 }) {
   const router = useRouter();
   const { isSignedIn } = useAuth();
@@ -85,6 +86,8 @@ export default function ModuleDetailWrapper({
     { id: string; name: string; icon: string }[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -97,25 +100,121 @@ export default function ModuleDetailWrapper({
   const titleEditRef = useRef<HTMLDivElement>(null);
   const descriptionEditRef = useRef<HTMLDivElement>(null);
 
+  // Validate props early
+  useEffect(() => {
+    if (!moduleName || typeof moduleName !== "string") {
+      console.error("Invalid moduleName received", moduleName);
+      setErrorMessage("Invalid module parameters");
+      notFound();
+    }
+  }, [moduleName]);
+
   useEffect(() => {
     const fetchModuleDetails = async () => {
       try {
         setIsLoading(true);
+        setErrorMessage(null);
+
+        // Check if moduleName exists and is not undefined
+        if (
+          !moduleName ||
+          typeof moduleName !== "string" ||
+          !moduleName.trim()
+        ) {
+          console.error(
+            "Module name parameter is missing, empty, or invalid:",
+            moduleName
+          );
+          setErrorMessage("Module name is missing or invalid");
+          setIsLoading(false);
+          return notFound();
+        }
+
+        // Log the raw module name from URL params
+        console.log(`Raw module name from URL: "${moduleName}"`);
+
         // Decode the module name from URL parameters
-        const decodedModuleName = decodeModuleSlug(params.moduleName);
+        const decodedModuleName = decodeModuleSlug(moduleName);
         console.log(`Looking for module with name: "${decodedModuleName}"`);
 
+        // Validate decoded module name
+        if (!decodedModuleName || decodedModuleName === "unnamed-module") {
+          console.error("Failed to decode module name properly");
+          setErrorMessage("Invalid module name format");
+          setIsLoading(false);
+          return notFound();
+        }
+
         // First try an exact match query
-        const exactMatchData = await api.getModules(decodedModuleName, true);
-        const exactModules = exactMatchData.modules || [];
+        console.log("Attempting exact match API query for:", decodedModuleName);
+        try {
+          const exactMatchData = await api.getModules(decodedModuleName, true);
+          console.log("Exact match API response:", exactMatchData);
+          const exactModules = exactMatchData.modules || [];
 
-        if (exactModules.length > 0) {
-          console.log(`Found exact match for module: ${exactModules[0].name}`);
-          setModule(exactModules[0]);
+          if (exactModules.length > 0) {
+            console.log(
+              `Found exact match for module: ${exactModules[0].name}`
+            );
+            setModule(exactModules[0]);
 
-          // Get all modules for selector
+            // Get all modules for selector
+            const allModulesData = await api.getModules();
+            const modulesData = allModulesData.modules || [];
+            setAllModules(
+              modulesData.map((m: Module) => ({
+                id: m.id,
+                name: m.name,
+                icon: m.icon,
+              }))
+            );
+
+            // Fetch resources only for authenticated users
+            if (isSignedIn) {
+              const resourcesResponse = await fetch("/api/resources");
+              if (resourcesResponse.status === 401) {
+                // Handle unauthorized gracefully - user is not authenticated
+                console.log("User is not authenticated for resources");
+                setResources([]);
+              } else if (resourcesResponse.ok) {
+                const allResources = await resourcesResponse.json();
+                // Filter resources for the current module
+                const moduleResources = allResources.filter(
+                  (resource: Resource) =>
+                    resource.moduleId === exactModules[0].id
+                );
+                setResources(moduleResources);
+              } else {
+                console.error(
+                  "Failed to fetch resources:",
+                  resourcesResponse.statusText
+                );
+                setResources([]);
+              }
+            } else {
+              // No resources for anonymous users
+              setResources([]);
+            }
+
+            // Set loading state to false after data is loaded
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error during exact match query:", error);
+        }
+
+        // If no exact match, proceed with the original logic
+        console.log("No exact match found, trying fuzzy match");
+
+        try {
+          // Fetch all modules
           const allModulesData = await api.getModules();
+          console.log("All modules API response:", allModulesData);
+
+          // Handle the new API response format where modules are in a nested 'modules' property
           const modulesData = allModulesData.modules || [];
+
           setAllModules(
             modulesData.map((m: Module) => ({
               id: m.id,
@@ -123,6 +222,78 @@ export default function ModuleDetailWrapper({
               icon: m.icon,
             }))
           );
+
+          if (modulesData.length === 0) {
+            console.error("No modules found in database");
+            setErrorMessage("No modules found");
+            setIsLoading(false);
+            return notFound();
+          }
+
+          // First try exact match (case-insensitive)
+          let moduleData = modulesData.find(
+            (m: Module) =>
+              m.name.toLowerCase() === decodedModuleName.toLowerCase()
+          );
+
+          if (moduleData) {
+            console.log("Found case-insensitive match:", moduleData.name);
+          }
+
+          // If not found with exact match, try a more flexible search
+          if (!moduleData) {
+            // Try matching with normalized strings (removing special chars)
+            moduleData = modulesData.find((m: Module) => {
+              const normalizedDbName = m.name
+                .toLowerCase()
+                .replace(/[^\w\s]/g, "");
+              const normalizedSearchName = decodedModuleName
+                .toLowerCase()
+                .replace(/[^\w\s]/g, "");
+              const isMatch = normalizedDbName === normalizedSearchName;
+              if (isMatch) {
+                console.log("Found normalized match:", m.name);
+              }
+              return isMatch;
+            });
+
+            // If still not found, try API query
+            if (!moduleData) {
+              try {
+                // If not found by case-insensitive match, try direct API query
+                console.log(
+                  "Attempting fuzzy API query for:",
+                  decodedModuleName
+                );
+                const moduleQueryData = await api.getModules(decodedModuleName);
+                console.log("Fuzzy match API response:", moduleQueryData);
+
+                // Handle the new API response format
+                const responseData = moduleQueryData.modules || [];
+
+                if (Array.isArray(responseData) && responseData.length > 0) {
+                  moduleData = responseData[0];
+                  console.log("Found module via API query:", moduleData.name);
+                } else {
+                  console.error("No modules found via API query");
+                  setErrorMessage("Module not found");
+                  setIsLoading(false);
+                  return notFound();
+                }
+              } catch (queryError) {
+                console.error("Error during fuzzy API query:", queryError);
+              }
+            }
+          }
+
+          if (!moduleData) {
+            console.error("Module not found after all search attempts");
+            setErrorMessage("Module not found");
+            setIsLoading(false);
+            return notFound();
+          }
+
+          setModule(moduleData);
 
           // Fetch resources only for authenticated users
           if (isSignedIn) {
@@ -135,7 +306,7 @@ export default function ModuleDetailWrapper({
               const allResources = await resourcesResponse.json();
               // Filter resources for the current module
               const moduleResources = allResources.filter(
-                (resource: Resource) => resource.moduleId === exactModules[0].id
+                (resource: Resource) => resource.moduleId === moduleData.id
               );
               setResources(moduleResources);
             } else {
@@ -149,92 +320,13 @@ export default function ModuleDetailWrapper({
             // No resources for anonymous users
             setResources([]);
           }
-          return;
-        }
-
-        // If no exact match, proceed with the original logic
-        console.log("No exact match found, trying fuzzy match");
-
-        // Fetch all modules
-        const allModulesData = await api.getModules();
-
-        // Handle the new API response format where modules are in a nested 'modules' property
-        const modulesData = allModulesData.modules || [];
-
-        setAllModules(
-          modulesData.map((m: Module) => ({
-            id: m.id,
-            name: m.name,
-            icon: m.icon,
-          }))
-        );
-
-        // First try exact match (case-insensitive)
-        let moduleData = modulesData.find(
-          (m: Module) =>
-            m.name.toLowerCase() === decodedModuleName.toLowerCase()
-        );
-
-        // If not found with exact match, try a more flexible search
-        if (!moduleData) {
-          // Try matching with normalized strings (removing special chars)
-          moduleData = modulesData.find((m: Module) => {
-            const normalizedDbName = m.name
-              .toLowerCase()
-              .replace(/[^\w\s]/g, "");
-            const normalizedSearchName = decodedModuleName
-              .toLowerCase()
-              .replace(/[^\w\s]/g, "");
-            return normalizedDbName === normalizedSearchName;
-          });
-
-          // If still not found, try API query
-          if (!moduleData) {
-            // If not found by case-insensitive match, try direct API query
-            const moduleQueryData = await api.getModules(decodedModuleName);
-
-            // Handle the new API response format
-            const responseData = moduleQueryData.modules || [];
-
-            if (Array.isArray(responseData) && responseData.length > 0) {
-              moduleData = responseData[0];
-            } else {
-              return notFound();
-            }
-          }
-        }
-
-        setModule(moduleData);
-
-        // Fetch resources only for authenticated users
-        if (isSignedIn) {
-          const resourcesResponse = await fetch("/api/resources");
-          if (resourcesResponse.status === 401) {
-            // Handle unauthorized gracefully - user is not authenticated
-            console.log("User is not authenticated for resources");
-            setResources([]);
-          } else if (resourcesResponse.ok) {
-            const allResources = await resourcesResponse.json();
-            // Filter resources for the current module
-            const moduleResources = allResources.filter(
-              (resource: Resource) => resource.moduleId === moduleData.id
-            );
-            setResources(moduleResources);
-          } else {
-            console.error(
-              "Failed to fetch resources:",
-              resourcesResponse.statusText
-            );
-            setResources([]);
-          }
-        } else {
-          // No resources for anonymous users
-          setResources([]);
+        } catch (error) {
+          console.error("Error fetching module details:", error);
+        } finally {
+          setIsLoading(false);
         }
       } catch (error) {
         console.error("Error fetching module details:", error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -242,17 +334,23 @@ export default function ModuleDetailWrapper({
     if (typeof window !== "undefined") {
       fetchModuleDetails();
     }
-  }, [params.moduleName, isSignedIn]);
+  }, [moduleName, isSignedIn]);
 
-  // Set initial edit values when module data loads
+  // Initialize title and description when module data is loaded
   useEffect(() => {
     if (module) {
-      setEditTitle(module.name);
+      setEditTitle(module.name || "");
       setEditDescription(module.description || "");
+
+      // Log successful module load
+      console.log("Module data loaded successfully:", module.name);
+
+      // Update document title
+      document.title = `${module.name} | Study Chat App`;
     }
   }, [module]);
 
-  // Format module name for URLs: replace spaces with hyphens
+  // Format module name for URL
   const formatModuleNameForUrl = (name: string) => {
     return encodeModuleSlug(name);
   };
@@ -396,7 +494,42 @@ export default function ModuleDetailWrapper({
     cancelTitleEdit,
   ]);
 
-  // This lets us manage the loading state ourselves
+  // Add retry function for cases where module might not load on first try
+  const handleRetry = useCallback(() => {
+    if (retryCount < 3) {
+      // Limit retries to prevent infinite loops
+      setRetryCount((prev) => prev + 1);
+      setIsLoading(true);
+      setErrorMessage(null);
+      router.refresh(); // Refresh the page to try loading again
+    } else {
+      // If we've tried too many times, show a more permanent error
+      setErrorMessage(
+        "Unable to load module after multiple attempts. Please go back and try again."
+      );
+    }
+  }, [retryCount, router]);
+
+  // Render error state with retry button
+  if (errorMessage && !isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] px-4">
+        <h2 className="text-xl font-semibold mb-4">Error Loading Module</h2>
+        <p className="text-muted-foreground mb-6 text-center">{errorMessage}</p>
+        <div className="flex gap-4">
+          <Button onClick={() => router.push("/modules")}>
+            Back to Modules
+          </Button>
+          {retryCount < 3 && (
+            <Button variant="outline" onClick={handleRetry}>
+              Try Again
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return <ModuleDetailsLoading />;
   }
@@ -556,40 +689,61 @@ export default function ModuleDetailWrapper({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Resources</h2>
-              {isSignedIn && (
+              {isSignedIn && !!resources.length && (
                 <ResourceUploadButton variant="outline" moduleId={module.id} />
               )}
             </div>
 
-            <ResourceTable
-              resources={resources}
-              modules={allModules}
-              onUpdate={(updatedResource) => {
-                if (updatedResource._deleted) {
-                  // If resource was deleted, keep it in state but mark as deleted
-                  setResources(
-                    resources.map((r) =>
-                      r.id === updatedResource.id ? { ...r, _deleted: true } : r
-                    )
-                  );
-                } else if (updatedResource.moduleId !== module?.id) {
-                  // If module changed, remove from this list
-                  setResources(
-                    resources.map((r) =>
-                      r.id === updatedResource.id ? { ...r, _deleted: true } : r
-                    )
-                  );
-                } else {
-                  // Regular update
-                  setResources(
-                    resources.map((r) =>
-                      r.id === updatedResource.id ? updatedResource : r
-                    )
-                  );
-                }
-              }}
-              showModuleColumn={false}
-            />
+            <div className="min-h-[300px]">
+              {isLoading ? (
+                <ResourceTableSkeleton showModuleColumn={false} />
+              ) : resources.length === 0 && isSignedIn ? (
+                <div className="flex flex-col items-center justify-center h-[150px] text-muted-foreground">
+                  <p className="mb-4">
+                    Access your knowledge base and upload your own resources.
+                  </p>
+                  <ResourceUploadButton
+                    variant="outline"
+                    className="text-secondary-foreground"
+                    moduleId={module.id}
+                  />
+                </div>
+              ) : (
+                <ResourceTable
+                  resources={resources}
+                  modules={allModules}
+                  onUpdate={(updatedResource) => {
+                    if (updatedResource._deleted) {
+                      // If resource was deleted, keep it in state but mark as deleted
+                      setResources(
+                        resources.map((r) =>
+                          r.id === updatedResource.id
+                            ? { ...r, _deleted: true }
+                            : r
+                        )
+                      );
+                    } else if (updatedResource.moduleId !== module?.id) {
+                      // If module changed, remove from this list
+                      setResources(
+                        resources.map((r) =>
+                          r.id === updatedResource.id
+                            ? { ...r, _deleted: true }
+                            : r
+                        )
+                      );
+                    } else {
+                      // Regular update
+                      setResources(
+                        resources.map((r) =>
+                          r.id === updatedResource.id ? updatedResource : r
+                        )
+                      );
+                    }
+                  }}
+                  showModuleColumn={false}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

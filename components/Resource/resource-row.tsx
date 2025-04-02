@@ -84,7 +84,8 @@ const getFileIcon = (type: string): React.ReactElement => {
 
   if (primaryType === "application" && type.includes("pdf"))
     return <FileText size={18} />;
-  if (primaryType === "image") return <Image size={18} />;
+  if (primaryType === "image")
+    return <Image size={18} aria-label="Image file" />;
   if (primaryType === "video") return <FileVideo size={18} />;
   if (primaryType === "audio") return <FileAudio size={18} />;
   if (
@@ -679,6 +680,7 @@ const ResourceRow = memo(
               setShowDeleteAlert(false)
             )
           }
+          isDeleting={isSaving}
         />
       </>
     );

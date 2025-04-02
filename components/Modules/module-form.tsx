@@ -150,6 +150,15 @@ export const ModuleForm = ({
           // Show success message
           toast.success("Module created");
 
+          // Dispatch a global event for module creation to refresh the modules list
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("module-created", {
+                detail: createdModule,
+              })
+            );
+          }
+
           // No need to force a page reload - SSE will handle the sidebar update
         } catch (error: unknown) {
           console.error("Error creating module:", error);
@@ -178,9 +187,6 @@ export const ModuleForm = ({
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">
-        {initialData ? "Edit Module" : "Create New Module"}
-      </h2>
 
       {formError && (
         <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md mb-4">

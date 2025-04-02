@@ -1,13 +1,27 @@
 import { Message, streamText } from "ai";
 import { google } from "@ai-sdk/google";
 import { searchWithPerplexity } from "@/lib/search";
+
 import { getModuleContext } from "@/lib/modules";
+
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
 import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
-import { SESSION_ID_KEY } from "@/lib/session";
 
+/**
+ * Handles an HTTP POST request for chat interactions.
+ *
+ * This asynchronous function processes a chat request by extracting user messages, performing an optional search on the last user message,
+ * and constructing a system prompt tailored for either a module-specific or a general study assistant context. It streams an AI-generated response
+ * and, if enabled, saves the chat history by updating the database and broadcasting relevant events.
+ *
+ * The request body must be valid JSON, including keys such as messages, chatId, moduleId, sessionId, title, and an optional saveHistory flag.
+ * On success, it returns a streaming Response with a header indicating the AI model used. Errors in any step result in an appropriate JSON error
+ * response with corresponding HTTP status codes.
+ *
+ * @param request - The incoming HTTP request containing chat interaction data.
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json();

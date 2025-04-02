@@ -7,7 +7,7 @@ import { Edit, Loader2, Trash } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/Modules/module-form";
 import {
   AlertDialog,
@@ -117,6 +117,9 @@ export default function ModuleActions({
         </DialogTrigger>
         {moduleDetails && (
           <DialogContent className="sm:max-w-[600px]">
+            <DialogTitle className="text-xl font-bold ml-4">
+              {moduleDetails ? "Edit Module" : "Create NewModule"}
+            </DialogTitle>
             <ModuleForm
               initialData={moduleDetails}
               onSuccess={handleEditSuccess}
@@ -140,6 +143,9 @@ export default function ModuleActions({
           )}
         </Button>
         <AlertDialogContent>
+          <AlertDialogTitle className="text-destructive">
+            Delete Module
+          </AlertDialogTitle>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>

@@ -14,7 +14,7 @@ export function ResourceTableSkeleton({
   rowCount?: number;
 }) {
   return (
-    <div className="overflow-x-auto border rounded-md">
+    <div className="overflow-x-auto border rounded-t-md">
       <table className="w-full min-w-full table-fixed">
         <thead>
           <tr className="border-b bg-muted/50 text-xs font-medium text-muted-foreground">

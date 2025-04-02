@@ -56,7 +56,20 @@ export function ChatPageLoading() {
   );
 }
 
-// Main chat component that uses hooks
+/**
+ * Renders a full-screen chat interface with message history, input, and an optional module header.
+ *
+ * This component manages the chat session by handling message submission with optimistic UI updates,
+ * dynamically updating the chat model based on API responses, and adjusting the browser URL for authenticated users.
+ * It also retrieves a session ID for anonymous users and provides clipboard functionality for copying responses.
+ *
+ * @param initialModuleDetails - Optional module details used to display context-specific header information.
+ * @param chatId - Unique identifier for the chat session.
+ * @param initialMessages - Array of messages to initialize the chat conversation.
+ * @param isAuthenticated - Indicates whether the user is authenticated (defaults to true).
+ *
+ * @returns The rendered chat interface as a React element.
+ */
 export default function ClientChatPage({
   initialModuleDetails,
   chatId,
@@ -194,7 +207,7 @@ export default function ClientChatPage({
     null
   );
   // Default model name - we'll try to retrieve it dynamically if possible
-  const [modelName, setModelName] = React.useState<string>("Gemini Flash");
+  const [modelName, setModelName] = React.useState<string>("Gemini 2.0 Flash");
 
   const copyToClipboard = React.useCallback(
     (text: string, messageId: string) => {
@@ -224,7 +237,10 @@ export default function ClientChatPage({
 
           // Add the user message with its styling
           result.push(
-            <div key={`user-${message.id}`} className="flex justify-end">
+            <div
+              key={`user-${message.id || index}`}
+              className="flex justify-end"
+            >
               <div className="flex items-center gap-2 max-w-full flex-row-reverse">
                 <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground break-words">
                   <div className="whitespace-pre-wrap">{message.content}</div>
@@ -237,26 +253,33 @@ export default function ClientChatPage({
           if (hasAIResponse) {
             result.push(
               <div
-                key={`ai-${nextMessage.id}`}
+                key={`ai-${nextMessage.id || `${index}-response`}`}
                 className="mt-4 text-gray-800 dark:text-gray-200 group relative"
               >
                 <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                  <ReactMarkdown key={`md-${nextMessage.id}`}>
+                  <ReactMarkdown
+                    key={`md-${nextMessage.id || `${index}-response-md`}`}
+                  >
                     {nextMessage.content}
                   </ReactMarkdown>
                 </div>
                 <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
                   <button
-                    key={`btn-${nextMessage.id}`}
+                    key={`btn-${nextMessage.id || `${index}-response-btn`}`}
                     onClick={() =>
-                      copyToClipboard(nextMessage.content, nextMessage.id)
+                      copyToClipboard(
+                        nextMessage.content,
+                        nextMessage.id || `${index}-response`
+                      )
                     }
                     className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
                     aria-label="Copy response"
                   >
                     {copiedMessageId === nextMessage.id ? (
                       <span
-                        key={`copied-${nextMessage.id}`}
+                        key={`copied-${
+                          nextMessage.id || `${index}-response-copied`
+                        }`}
                         className="flex items-center gap-1"
                       >
                         <Check className="h-4 w-4 text-green-500" />
@@ -264,7 +287,9 @@ export default function ClientChatPage({
                       </span>
                     ) : (
                       <span
-                        key={`copy-${nextMessage.id}`}
+                        key={`copy-${
+                          nextMessage.id || `${index}-response-copy`
+                        }`}
                         className="flex items-center gap-1"
                       >
                         <Copy className="h-4 w-4" />
@@ -273,7 +298,7 @@ export default function ClientChatPage({
                     )}
                   </button>
                   <div
-                    key={`model-${nextMessage.id}`}
+                    key={`model-${nextMessage.id || `${index}-response-model`}`}
                     className="text-xs text-muted-foreground"
                   >
                     Generated with {modelName}
@@ -286,24 +311,29 @@ export default function ClientChatPage({
           // Handle case where the first message is from the assistant
           result.push(
             <div
-              key={`assistant-${message.id}`}
+              key={`assistant-${message.id || index}`}
               className="text-gray-800 dark:text-gray-200 group relative"
             >
               <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                <ReactMarkdown key={`md-assistant-${message.id}`}>
+                <ReactMarkdown key={`md-assistant-${message.id || index}`}>
                   {message.content}
                 </ReactMarkdown>
               </div>
               <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
                 <button
-                  key={`btn-assistant-${message.id}`}
-                  onClick={() => copyToClipboard(message.content, message.id)}
+                  key={`btn-assistant-${message.id || index}`}
+                  onClick={() =>
+                    copyToClipboard(
+                      message.content,
+                      message.id || `assistant-${index}`
+                    )
+                  }
                   className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
                   aria-label="Copy response"
                 >
                   {copiedMessageId === message.id ? (
                     <span
-                      key={`copied-assistant-${message.id}`}
+                      key={`copied-assistant-${message.id || index}`}
                       className="flex items-center gap-1"
                     >
                       <Check className="h-4 w-4 text-green-500" />
@@ -311,7 +341,7 @@ export default function ClientChatPage({
                     </span>
                   ) : (
                     <span
-                      key={`copy-assistant-${message.id}`}
+                      key={`copy-assistant-${message.id || index}`}
                       className="flex items-center gap-1"
                     >
                       <Copy className="h-4 w-4" />
@@ -320,7 +350,7 @@ export default function ClientChatPage({
                   )}
                 </button>
                 <div
-                  key={`model-assistant-${message.id}`}
+                  key={`model-assistant-${message.id || index}`}
                   className="text-xs text-muted-foreground"
                 >
                   Generated with {modelName}

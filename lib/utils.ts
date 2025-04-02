@@ -33,7 +33,13 @@ export function formatDate(dateString: string | null): string {
  * Maintains compatibility with existing routing
  */
 export function encodeModuleSlug(moduleName: string): string {
-  if (!moduleName) return "";
+  if (!moduleName || typeof moduleName !== "string") {
+    console.warn(
+      "Invalid module name provided to encodeModuleSlug:",
+      moduleName
+    );
+    return "unnamed-module"; // Return a default string instead of empty
+  }
 
   // Step 1: Convert to lowercase for consistency
   const lowerCaseName = moduleName.toLowerCase();
@@ -49,7 +55,19 @@ export function encodeModuleSlug(moduleName: string): string {
     .replace(/-+/g, "-") // Replace multiple consecutive hyphens with a single hyphen
     .replace(/^-|-$/g, ""); // Remove leading and trailing hyphens
 
-  return cleanedName;
+  // If after cleaning we have empty string, use default
+  if (!cleanedName) {
+    console.warn(
+      "Module name resulted in empty slug after cleaning:",
+      moduleName
+    );
+    return "unnamed-module";
+  }
+
+  // Step 5: Add additional URL encoding to ensure it's properly handled by the router
+  // Important: In Next.js dynamic routes, URI encoding can cause issues with route matching
+  // So we need to be careful with what we encode and how
+  return cleanedName; // Return the cleaned name without URI encoding to ensure route matching works
 }
 
 /**
@@ -57,13 +75,36 @@ export function encodeModuleSlug(moduleName: string): string {
  * Focuses on matching the database record format rather than exact restoration
  */
 export function decodeModuleSlug(encodedSlug: string): string {
-  if (!encodedSlug) return "";
+  if (!encodedSlug || typeof encodedSlug !== "string") {
+    console.warn(
+      "Invalid module slug received in decodeModuleSlug:",
+      encodedSlug
+    );
+    return "unnamed-module"; // Return default value instead of empty string
+  }
 
-  // Step 1: Decode any URI components
-  const decodedSlug = decodeURIComponent(encodedSlug);
+  try {
+    // Log the original slug for debugging
+    console.log(`Decoding slug: "${encodedSlug}"`);
 
-  // Step 2: Replace hyphens with spaces for matching with database records
-  return decodedSlug.replace(/-/g, " ");
+    // Next.js already decodes the URL parameters, so we don't need to decode again
+    // This avoids double-decoding issues that can corrupt the string
+    const decodedSlug = encodedSlug;
+
+    // Replace hyphens with spaces for matching with database records
+    const result = decodedSlug.replace(/-/g, " ");
+
+    // Ensure we don't return empty string
+    const finalResult = result.trim() ? result.trim() : "unnamed-module";
+
+    console.log(`Decoded result: "${finalResult}"`);
+    return finalResult;
+  } catch (error) {
+    console.error("Error decoding module slug:", error, encodedSlug);
+    // Fallback with basic hyphen replacement if decoding fails
+    const fallbackResult = encodedSlug.replace(/-/g, " ");
+    return fallbackResult.trim() ? fallbackResult.trim() : "unnamed-module";
+  }
 }
 
 /**

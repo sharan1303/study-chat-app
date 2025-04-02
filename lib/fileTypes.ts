@@ -147,17 +147,22 @@ export function getFileTypeFromExtension(extension: string): string {
 }
 
 /**
- * Gets a human-readable file type description from a MIME type
+ * Returns a human-readable file type description from a MIME type.
  *
- * @param mimeType The MIME type string (e.g., "image/jpeg")
- * @returns Human-readable file type or a formatted version of the MIME type if not found
+ * This function converts the provided MIME type to lowercase and splits it into its primary type and subtype.
+ * It then checks a predefined mapping for a matching description. If a match is found, that description is returned.
+ * If no match exists, the function returns the MIME type formatted with the primary type capitalized.
+ * An empty input results in "Unknown".
+ *
+ * @param mimeType - MIME type string (e.g., "image/jpeg").
+ * @returns A human-readable file type description, a formatted MIME type string, or "Unknown" for an empty input.
  */
 export function getFileTypeFromMimeType(mimeType: string): string {
   if (!mimeType) return "Unknown";
 
   const [type, subtype] = mimeType.toLowerCase().split("/");
 
-  if (mimeTypeMap[type] && mimeTypeMap[type][subtype]) {
+  if (mimeTypeMap[type]?.[subtype]) {
     return mimeTypeMap[type][subtype];
   }
 

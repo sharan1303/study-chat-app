@@ -1,19 +1,18 @@
 import React from "react";
 import type { Metadata, Viewport } from "next";
 
-import { dark } from "@clerk/themes";
 import "./globals.css";
 import localFont from "next/font/local";
 
-import ClientSidebar from "@/components/Main/ClientSidebar";
+import ClientSidebar from "@/components/Sidebar/ClientSidebar";
 
-import { ClerkProvider } from "@clerk/nextjs";
 import { Providers as AppProviders } from "@/context/providers";
 import { SidebarProvider } from "@/context/sidebar-context";
 import { SessionProvider } from "@/context/session-context";
 
 import AnonymousDataMigration from "@/components/dialogs/AnonymousDataMigration";
 import Header from "@/components/Main/Header";
+import { ClerkProviderWithTheme } from "@/components/Clerk/ClerkProviderWithTheme";
 
 // Session initializer - client component
 import { SessionInitializer } from "@/components/Main/SessionInitializer";
@@ -34,33 +33,33 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
-// Clerk appearance config
-const clerkAppearance = {
-  baseTheme: [dark],
-  variables: {
-    colorInputBackground: "#ffffff",
-    colorInputText: "#000000",
-  },
-  elements: {
-    modalCloseButton: "absolute right-4 top-4",
-    card: "rounded-lg shadow-md",
-    formButtonPrimary:
-      "bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded",
-    footerActionLink: "text-blue-600 hover:text-blue-800 font-semibold",
-  },
-};
-
+/**
+ * Root layout component that sets up the application's provider hierarchy.
+ *
+ * Provider Structure (from outermost to innermost):
+ * 1. AppProviders - Sets up global app configuration and utilities
+ * 2. ClerkProviderWithTheme - Handles authentication and user management with theme support
+ * 3. SessionProvider - Manages user session state and persistence
+ * 4. SidebarProvider - Controls sidebar state (open/closed) and related functionality
+ *
+ * Additional Components:
+ * - SessionInitializer: Client-side component that initializes session data
+ * - AnonymousDataMigration: Handles migration of anonymous user data after sign-in
+ *
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to be wrapped by providers
+ */
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider appearance={clerkAppearance}>
-      <html lang="en" suppressHydrationWarning>
-        <body className={`${myFont.className} overflow-hidden flex`}>
-          <SessionProvider>
-            <AppProviders>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${myFont.className} overflow-hidden flex`}>
+        <AppProviders>
+          <ClerkProviderWithTheme>
+            <SessionProvider>
               <SidebarProvider defaultOpen={true}>
                 <ClientSidebar />
                 <main className="flex-1 pl-7 pt-0.5 relative">
@@ -69,11 +68,11 @@ export default function RootLayout({
                   <AnonymousDataMigration />
                 </main>
               </SidebarProvider>
-            </AppProviders>
-            <SessionInitializer />
-          </SessionProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+              <SessionInitializer />
+            </SessionProvider>
+          </ClerkProviderWithTheme>
+        </AppProviders>
+      </body>
+    </html>
   );
 }

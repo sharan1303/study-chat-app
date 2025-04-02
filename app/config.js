@@ -7,5 +7,4 @@ export const dynamicRoutes = ["/modules", "/settings"];
 
 export const dynamicParams = {
   "/[moduleName]": true,
-  "/modules/[id]": true,
 };

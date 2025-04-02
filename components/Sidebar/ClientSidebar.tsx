@@ -10,11 +10,11 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarRail,
-} from "@/components/ui/sidebar";
+} from "@/components/Sidebar/sidebar";
 import { useSidebar } from "@/context/sidebar-context";
-import ModuleList from "../Modules/module-list";
+import ModuleList from "./module-list";
 import ChatHistory from "./ChatHistory";
-import UserSection from "../Settings/UserSection";
+import UserSection from "./UserSection";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { encodeModuleSlug, cn } from "@/lib/utils";
@@ -43,7 +43,15 @@ function SearchParamsWrapper({
   return <>{children(searchParams)}</>;
 }
 
-// Main sidebar component that accepts searchParams as a prop
+/**
+ * Renders the sidebar for the Study Chat application.
+ *
+ * This component displays the module list and chat history while managing real-time updates
+ * through server-sent events. It fetches modules and chats based on the current authentication state,
+ * handles optimistic UI updates for new chats, and navigates to appropriate pages upon module or chat interactions.
+ *
+ * @param searchParams - The URL search parameters used to determine the current module context.
+ */
 function ClientSidebarContent({
   searchParams,
 }: {
@@ -164,17 +172,6 @@ function ClientSidebarContent({
       setLoadingChats(false);
     }
   }, [fetchChats]);
-
-  // Determine if a module is active (either in /modules/[name] or /[name]/chat)
-  const isModuleActive = (moduleName: string) => {
-    if (!pathname) return false;
-
-    const encodedName = encodeModuleSlug(moduleName);
-    return (
-      pathname.startsWith(`/modules/${encodedName}`) ||
-      pathname.startsWith(`/${encodedName}/chat`)
-    );
-  };
 
   // Set up Server-Sent Events (SSE) for real-time updates
   useEffect(() => {
@@ -320,7 +317,38 @@ function ClientSidebarContent({
 
               // Directly update the specific chat in the list
               setChats((prevChats) => {
-                // Find the chat to update
+                // Check if there's an optimistic chat to update
+                const optimisticChatIndex = prevChats.findIndex(
+                  (chat) => chat._isOptimistic === true
+                );
+
+                // If we found an optimistic chat, replace it with the real one
+                if (optimisticChatIndex !== -1) {
+                  console.log(
+                    `Replacing optimistic chat with real ID: ${messageData.chatId}`
+                  );
+
+                  // Get the optimistic chat to preserve any needed data
+                  const optimisticChat = prevChats[optimisticChatIndex];
+
+                  // Create updated chat with real ID and data
+                  const updatedChat = {
+                    ...optimisticChat,
+                    id: messageData.chatId,
+                    title: messageData.chatTitle,
+                    updatedAt: messageData.updatedAt,
+                    _isOptimistic: false, // No longer optimistic
+                  };
+
+                  // Create a new array with the updated chat moved to the top
+                  return [
+                    updatedChat,
+                    ...prevChats.slice(0, optimisticChatIndex),
+                    ...prevChats.slice(optimisticChatIndex + 1),
+                  ];
+                }
+
+                // Find the chat to update by its real ID
                 const chatIndex = prevChats.findIndex(
                   (chat) => chat.id === messageData.chatId
                 );
@@ -620,7 +648,6 @@ function ClientSidebarContent({
             modules={modules}
             loading={loading}
             currentModule={currentModule || activeModuleId}
-            isActive={isModuleActive}
             handleModuleClick={handleModuleClick}
             collapsed={state === "collapsed"}
             router={{ push: router.push, refresh: router.refresh }}
