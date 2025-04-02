@@ -213,33 +213,57 @@ export default function ModulesPageContent({
     if (!isSignedIn) return;
 
     // Event handlers for resource events
-    const handleResourceCreated = () => {
-      console.log("Resource created event detected, refreshing resources list");
-      fetchResources();
+    const handleResourceCreated = async (event: Event) => {
+      console.log("Resource created event detected!", event);
+      console.log("Refreshing resources list");
+
+      try {
+        // Fetch all modules for the selector without showing loading state
+        const modulesData = await api.getModules();
+        const modulesList = modulesData.modules || [];
+        setResourceModules(
+          modulesList.map((m: Module) => ({
+            id: m.id,
+            name: m.name,
+            icon: m.icon,
+          }))
+        );
+
+        // Fetch resources without showing loading state
+        const resourcesResponse = await fetch("/api/resources");
+        console.log(
+          "Resource fetch response status:",
+          resourcesResponse.status
+        );
+
+        if (resourcesResponse.ok) {
+          const resourcesData = await resourcesResponse.json();
+          console.log("Fetched resources data:", resourcesData.length, "items");
+          // Ensure we're not filtering out any resources
+          setAllResources(resourcesData);
+          filterResources(resourcesData, searchQuery);
+        }
+      } catch (error) {
+        console.error("Error refreshing resources:", error);
+      }
     };
 
-    const handleResourceUpdated = () => {
-      console.log("Resource updated event detected, refreshing resources list");
-      fetchResources();
-    };
-
-    const handleResourceDeleted = () => {
-      console.log("Resource deleted event detected, refreshing resources list");
-      fetchResources();
-    };
+    // Reuse the same optimized update handler
+    const handleResourceUpdated = handleResourceCreated;
+    const handleResourceDeleted = handleResourceCreated;
 
     // Add event listeners
-    window.addEventListener("resource-created", handleResourceCreated);
-    window.addEventListener("resource-updated", handleResourceUpdated);
-    window.addEventListener("resource-deleted", handleResourceDeleted);
+    window.addEventListener("resource.created", handleResourceCreated);
+    window.addEventListener("resource.updated", handleResourceUpdated);
+    window.addEventListener("resource.deleted", handleResourceDeleted);
 
     // Cleanup on unmount
     return () => {
-      window.removeEventListener("resource-created", handleResourceCreated);
-      window.removeEventListener("resource-updated", handleResourceUpdated);
-      window.removeEventListener("resource-deleted", handleResourceDeleted);
+      window.removeEventListener("resource.created", handleResourceCreated);
+      window.removeEventListener("resource.updated", handleResourceUpdated);
+      window.removeEventListener("resource.deleted", handleResourceDeleted);
     };
-  }, [isSignedIn, fetchResources]);
+  }, [isSignedIn, filterResources, searchQuery]);
 
   // Listen for module creation events to refresh the module list
   useEffect(() => {

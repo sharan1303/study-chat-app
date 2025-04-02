@@ -146,7 +146,7 @@ export function broadcastResourceCreated(
 ) {
   // Dispatch DOM event for client-side listeners
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("resource-created"));
+    window.dispatchEvent(new Event("resource.created"));
   }
   return broadcastEvent(EVENT_TYPES.RESOURCE_CREATED, resourceData, targetIds);
 }
@@ -157,7 +157,7 @@ export function broadcastResourceUpdated(
 ) {
   // Dispatch DOM event for client-side listeners
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("resource-updated"));
+    window.dispatchEvent(new Event("resource.updated"));
   }
   return broadcastEvent(EVENT_TYPES.RESOURCE_UPDATED, resourceData, targetIds);
 }
@@ -168,7 +168,7 @@ export function broadcastResourceDeleted(
 ) {
   // Dispatch DOM event for client-side listeners
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("resource-deleted"));
+    window.dispatchEvent(new Event("resource.deleted"));
   }
   return broadcastEvent(EVENT_TYPES.RESOURCE_DELETED, resourceData, targetIds);
 }
