@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState, useCallback } from "react";
+import React, { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { Search } from "lucide-react";

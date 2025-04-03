@@ -26,7 +26,6 @@ interface ResourceModule {
 export function useResources(
   isSignedIn: boolean,
   searchQuery: string,
-  sessionId: string | null
 ) {
   const [allResources, setAllResources] = useState<Resource[]>([]);
   const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
