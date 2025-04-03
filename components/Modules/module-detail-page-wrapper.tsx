@@ -171,19 +171,22 @@ export default function ModuleDetailWrapper({
 
             // Fetch resources only for authenticated users
             if (isSignedIn) {
-              const resourcesResponse = await fetch("/api/resources");
+              const resourcesResponse = await fetch(
+                `/api/modules/${exactModules[0].id}/resources`
+              );
               if (resourcesResponse.status === 401) {
                 // Handle unauthorized gracefully - user is not authenticated
                 console.log("User is not authenticated for resources");
                 setResources([]);
               } else if (resourcesResponse.ok) {
-                const allResources = await resourcesResponse.json();
-                // Filter resources for the current module
-                const moduleResources = allResources.filter(
-                  (resource: Resource) =>
-                    resource.moduleId === exactModules[0].id
+                const responseData = await resourcesResponse.json();
+                // Handle both response formats - direct array or { resources: [] }
+                const moduleResources =
+                  responseData.resources || responseData || [];
+                console.log("Initial resources fetch:", moduleResources);
+                setResources(
+                  Array.isArray(moduleResources) ? moduleResources : []
                 );
-                setResources(moduleResources);
               } else {
                 console.error(
                   "Failed to fetch resources:",
@@ -297,18 +300,41 @@ export default function ModuleDetailWrapper({
 
           // Fetch resources only for authenticated users
           if (isSignedIn) {
-            const resourcesResponse = await fetch("/api/resources");
+            const resourceApiUrl = `/api/modules/${moduleData.id}/resources`;
+            console.log(
+              `Fetching resources from: ${resourceApiUrl}, moduleId=${moduleData.id}`
+            );
+
+            const resourcesResponse = await fetch(resourceApiUrl);
             if (resourcesResponse.status === 401) {
               // Handle unauthorized gracefully - user is not authenticated
               console.log("User is not authenticated for resources");
               setResources([]);
             } else if (resourcesResponse.ok) {
-              const allResources = await resourcesResponse.json();
-              // Filter resources for the current module
-              const moduleResources = allResources.filter(
-                (resource: Resource) => resource.moduleId === moduleData.id
+              const responseData = await resourcesResponse.json();
+              // Handle both response formats - direct array or { resources: [] }
+              const moduleResources =
+                responseData.resources || responseData || [];
+              console.log(
+                `Received ${moduleResources.length} resources from ${resourceApiUrl}`
               );
-              setResources(moduleResources);
+              console.log("Fuzzy match resources fetch:", moduleResources);
+
+              // Double-check if all resources are for this module
+              if (moduleResources.length > 0) {
+                const wrongModuleResources = moduleResources.filter(
+                  (r: Resource) => r.moduleId !== moduleData.id
+                );
+                if (wrongModuleResources.length > 0) {
+                  console.error(
+                    `ERROR: ${wrongModuleResources.length}/${moduleResources.length} resources are for different modules!`
+                  );
+                }
+              }
+
+              setResources(
+                Array.isArray(moduleResources) ? moduleResources : []
+              );
             } else {
               console.error(
                 "Failed to fetch resources:",
@@ -341,43 +367,84 @@ export default function ModuleDetailWrapper({
     if (!isSignedIn || !module) return;
 
     // Event handlers for resource events
-    const handleResourceCreated = () => {
-      console.log(
-        "Resource created event detected in module detail page, refreshing resources"
-      );
-      fetch("/api/resources")
-        .then((response) => {
-          if (!response.ok) return [];
-          return response.json();
-        })
-        .then((allResources) => {
-          // Filter resources for the current module
-          const moduleResources = allResources.filter(
-            (resource: Resource) => resource.moduleId === module.id
-          );
-          setResources(moduleResources);
-        })
-        .catch((error) => {
-          console.error(
-            "Error refreshing resources after resource creation:",
-            error
-          );
-        });
+    const handleResourceCreated = (
+      event: CustomEvent<{ id: string; moduleId: string }>
+    ) => {
+      const resourceData = event.detail;
+      console.log(`Resource event received with data:`, resourceData);
+      console.log(`Current module ID: ${module.id}`);
+
+      // Only refresh resources if this event is for the current module
+      if (resourceData && resourceData.moduleId === module.id) {
+        console.log(
+          `Resource created event detected for module ${module.id}, refreshing resources`
+        );
+        const resourceApiUrl = `/api/modules/${module.id}/resources`;
+        console.log(`Fetching from: ${resourceApiUrl}`);
+
+        fetch(resourceApiUrl)
+          .then((response) => {
+            console.log(`Response status: ${response.status}`);
+            if (!response.ok) return [];
+            return response.json();
+          })
+          .then((responseData) => {
+            // Handle both response formats - direct array or { resources: [] }
+            console.log(`Raw response data:`, responseData);
+            const moduleResources =
+              responseData.resources || responseData || [];
+            console.log(`Processed resources data:`, moduleResources);
+            console.log(
+              `Setting ${moduleResources.length} resources for module ${module.id}`
+            );
+            setResources(Array.isArray(moduleResources) ? moduleResources : []);
+          })
+          .catch((error) => {
+            console.error(
+              "Error refreshing resources after resource creation:",
+              error
+            );
+            setResources([]);
+          });
+      } else {
+        console.log(
+          `Ignoring resource event for different module: ${resourceData?.moduleId}`
+        );
+      }
     };
 
+    // Use the same handler for updated and deleted resources
     const handleResourceUpdated = handleResourceCreated;
     const handleResourceDeleted = handleResourceCreated;
 
-    // Add event listeners for SSE events
-    window.addEventListener("resource.created", handleResourceCreated);
-    window.addEventListener("resource.updated", handleResourceUpdated);
-    window.addEventListener("resource.deleted", handleResourceDeleted);
+    // Add event listeners for SSE events with CustomEvent type casting
+    window.addEventListener(
+      "resource.created",
+      handleResourceCreated as EventListener
+    );
+    window.addEventListener(
+      "resource.updated",
+      handleResourceUpdated as EventListener
+    );
+    window.addEventListener(
+      "resource.deleted",
+      handleResourceDeleted as EventListener
+    );
 
     return () => {
       // Cleanup on unmount
-      window.removeEventListener("resource.created", handleResourceCreated);
-      window.removeEventListener("resource.updated", handleResourceUpdated);
-      window.removeEventListener("resource.deleted", handleResourceDeleted);
+      window.removeEventListener(
+        "resource.created",
+        handleResourceCreated as EventListener
+      );
+      window.removeEventListener(
+        "resource.updated",
+        handleResourceUpdated as EventListener
+      );
+      window.removeEventListener(
+        "resource.deleted",
+        handleResourceDeleted as EventListener
+      );
     };
   }, [isSignedIn, module]);
 
@@ -554,6 +621,28 @@ export default function ModuleDetailWrapper({
       );
     }
   }, [retryCount, router]);
+
+  // Add debugging effect to monitor resources changes
+  useEffect(() => {
+    if (module && resources) {
+      console.log(
+        `[RESOURCE STATE] Module ${module.id} has ${resources.length} resources`
+      );
+      if (resources.length > 0) {
+        // Log first few resources to check they match the expected module
+        const sampleSize = Math.min(10, resources.length);
+        const sample = resources.slice(0, sampleSize);
+        console.log(
+          `[RESOURCE STATE] Sample resources:`,
+          sample.map((r) => ({
+            id: r.id,
+            title: r.title,
+            moduleId: r.moduleId,
+          }))
+        );
+      }
+    }
+  }, [resources, module]);
 
   // Render error state with retry button
   if (errorMessage && !isLoading) {
@@ -755,7 +844,7 @@ export default function ModuleDetailWrapper({
                 </div>
               ) : (
                 <ResourceTable
-                  resources={resources}
+                  resources={Array.isArray(resources) ? resources : []}
                   modules={allModules}
                   onUpdate={(updatedResource) => {
                     if (updatedResource._deleted) {
