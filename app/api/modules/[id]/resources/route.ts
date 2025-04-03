@@ -158,7 +158,7 @@ export async function GET(
     // Format the response
     const formattedResources = resources.map((resource: ResourceType) => ({
       id: resource.id,
-      url: resource.fileUrl, // Map fileUrl from DB to url in API response
+      fileUrl: resource.fileUrl, // Use fileUrl consistently with DB field name
       title: resource.title,
       type: resource.type,
       moduleId: resource.moduleId,
@@ -193,7 +193,7 @@ export async function GET(
  * - A 500 status if an error occurs during resource creation.
  *
  * @param request - The HTTP request containing the resource data in its JSON body.
- * @param props - An object containing route parameters, including a promise that resolves to an object with the moduleId.
+ * @param props - An object containing route parameters, including a promise that resolves to a module object with the id.
  *
  * @returns A JSON response with either the created resource data or an error message.
  */
@@ -212,7 +212,7 @@ export async function POST(
     );
   }
 
-  // Extract moduleId from params - the parameter name should be 'id' not 'moduleId'
+  // Extract moduleId from params
   const moduleId = params.id;
   console.log(
     `POST /api/modules/${moduleId}/resources - Creating resource for module`
@@ -269,10 +269,10 @@ export async function POST(
       select: { name: true },
     });
 
-    // Map database resource to API response (add url field for backwards compatibility)
+    // Map database resource to API response
     return NextResponse.json({
       id: resource.id,
-      url: resource.fileUrl, // Map 'fileUrl' from DB to 'url' in API
+      fileUrl: resource.fileUrl, // Use fileUrl consistently with DB field name
       title: resource.title,
       type: resource.type,
       fileSize: resource.fileSize || null,

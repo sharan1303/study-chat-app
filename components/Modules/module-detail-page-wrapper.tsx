@@ -37,9 +37,8 @@ interface Module {
 interface Resource {
   id: string;
   title: string;
-  description: string;
   type: string;
-  url?: string | null;
+  fileUrl: string | null;
   moduleId: string;
   moduleName?: string | null;
   createdAt: string;
@@ -621,28 +620,6 @@ export default function ModuleDetailWrapper({
       );
     }
   }, [retryCount, router]);
-
-  // Add debugging effect to monitor resources changes
-  useEffect(() => {
-    if (module && resources) {
-      console.log(
-        `[RESOURCE STATE] Module ${module.id} has ${resources.length} resources`
-      );
-      if (resources.length > 0) {
-        // Log first few resources to check they match the expected module
-        const sampleSize = Math.min(10, resources.length);
-        const sample = resources.slice(0, sampleSize);
-        console.log(
-          `[RESOURCE STATE] Sample resources:`,
-          sample.map((r) => ({
-            id: r.id,
-            title: r.title,
-            moduleId: r.moduleId,
-          }))
-        );
-      }
-    }
-  }, [resources, module]);
 
   // Render error state with retry button
   if (errorMessage && !isLoading) {

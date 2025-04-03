@@ -25,6 +25,7 @@ import { api } from "@/lib/api";
 import { ResourceTable } from "@/components/Resource/resource-table";
 import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 import { toast } from "sonner";
+import { useResources } from "@/lib/hooks/useResources";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -37,19 +38,6 @@ interface Module {
   icon: string;
   resourceCount: number;
   updatedAt: string;
-}
-
-// Define interface for the resource data
-interface Resource {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  url?: string | null;
-  moduleId: string;
-  moduleName?: string | null;
-  createdAt: string;
-  _deleted?: boolean;
 }
 
 /**
@@ -84,35 +72,13 @@ export default function ModulesPageContent({
     shouldOpenResourceUpload
   );
 
-  // Add resources state in parent component
-  const [allResources, setAllResources] = useState<Resource[]>([]);
-  const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
-  const [resourceModules, setResourceModules] = useState<
-    { id: string; name: string; icon: string }[]
-  >([]);
-  const [resourcesLoading, setResourcesLoading] = useState(true);
-
-  // Helper function to filter resources based on search query
-  const filterResources = useCallback(
-    (resources: Resource[], query: string) => {
-      if (!query) {
-        setFilteredResources(resources);
-      } else {
-        const filtered = resources.filter(
-          (resource) =>
-            resource.title.toLowerCase().includes(query.toLowerCase()) ||
-            (resource.description &&
-              resource.description
-                .toLowerCase()
-                .includes(query.toLowerCase())) ||
-            (resource.moduleName &&
-              resource.moduleName.toLowerCase().includes(query.toLowerCase()))
-        );
-        setFilteredResources(filtered);
-      }
-    },
-    []
-  );
+  // Use the custom hook for resource state management
+  const {
+    filteredResources,
+    resourceModules,
+    resourcesLoading,
+    handleResourceUpdate,
+  } = useResources(!!isSignedIn, searchQuery, sessionId);
 
   // This effect fetches the modules data from the API
   useEffect(() => {
@@ -143,127 +109,6 @@ export default function ModulesPageContent({
       fetchModules();
     }
   }, [isSignedIn, isLoaded, sessionId, sessionLoading, searchQuery]);
-
-  // Define fetchResources in parent component
-  const fetchResources = useCallback(async () => {
-    try {
-      setResourcesLoading(true);
-
-      // Fetch all modules for the selector
-      const modulesData = await api.getModules();
-      const modulesList = modulesData.modules || [];
-      setResourceModules(
-        modulesList.map((m: Module) => ({
-          id: m.id,
-          name: m.name,
-          icon: m.icon,
-        }))
-      );
-
-      // Only attempt to fetch resources if user is signed in
-      if (isSignedIn) {
-        // Fetch resources - these require authentication
-        const resourcesResponse = await fetch("/api/resources");
-
-        if (resourcesResponse.status === 401) {
-          // Handle unauthorized gracefully - user is not logged in
-          console.log("User is not authenticated for resources");
-          setAllResources([]);
-          setFilteredResources([]);
-        } else if (!resourcesResponse.ok) {
-          throw new Error(
-            `Failed to fetch resources: ${resourcesResponse.statusText}`
-          );
-        } else {
-          const resourcesData = await resourcesResponse.json();
-          setAllResources(resourcesData);
-
-          // Initialize filtered resources
-          filterResources(resourcesData, searchQuery);
-        }
-      } else {
-        // User is not signed in, don't try to fetch resources
-        setAllResources([]);
-        setFilteredResources([]);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      // Set resources to empty array on error
-      setAllResources([]);
-      setFilteredResources([]);
-    } finally {
-      setResourcesLoading(false);
-    }
-  }, [isSignedIn, searchQuery, filterResources]);
-
-  // Update filtered resources when search query changes
-  useEffect(() => {
-    filterResources(allResources, searchQuery);
-  }, [searchQuery, allResources, filterResources]);
-
-  // Fetch resources when component mounts
-  useEffect(() => {
-    if (isLoaded && !sessionLoading && isSignedIn) {
-      fetchResources();
-    }
-  }, [fetchResources, isLoaded, isSignedIn, sessionLoading]);
-
-  // Listen for resource events using DOM events
-  useEffect(() => {
-    if (!isSignedIn) return;
-
-    // Event handlers for resource events
-    const handleResourceCreated = async (event: Event) => {
-      console.log("Resource created event detected!", event);
-      console.log("Refreshing resources list");
-
-      try {
-        // Fetch all modules for the selector without showing loading state
-        const modulesData = await api.getModules();
-        const modulesList = modulesData.modules || [];
-        setResourceModules(
-          modulesList.map((m: Module) => ({
-            id: m.id,
-            name: m.name,
-            icon: m.icon,
-          }))
-        );
-
-        // Fetch resources without showing loading state
-        const resourcesResponse = await fetch("/api/resources");
-        console.log(
-          "Resource fetch response status:",
-          resourcesResponse.status
-        );
-
-        if (resourcesResponse.ok) {
-          const resourcesData = await resourcesResponse.json();
-          console.log("Fetched resources data:", resourcesData.length, "items");
-          // Ensure we're not filtering out any resources
-          setAllResources(resourcesData);
-          filterResources(resourcesData, searchQuery);
-        }
-      } catch (error) {
-        console.error("Error refreshing resources:", error);
-      }
-    };
-
-    // Reuse the same optimized update handler
-    const handleResourceUpdated = handleResourceCreated;
-    const handleResourceDeleted = handleResourceCreated;
-
-    // Add event listeners
-    window.addEventListener("resource.created", handleResourceCreated);
-    window.addEventListener("resource.updated", handleResourceUpdated);
-    window.addEventListener("resource.deleted", handleResourceDeleted);
-
-    // Cleanup on unmount
-    return () => {
-      window.removeEventListener("resource.created", handleResourceCreated);
-      window.removeEventListener("resource.updated", handleResourceUpdated);
-      window.removeEventListener("resource.deleted", handleResourceDeleted);
-    };
-  }, [isSignedIn, filterResources, searchQuery]);
 
   // Listen for module creation events to refresh the module list
   useEffect(() => {
@@ -326,35 +171,6 @@ export default function ModulesPageContent({
     }
   }, [shouldOpenResourceUpload]);
 
-  // Add resource update handler in parent component
-  const handleResourceUpdate = (updatedResource: Resource) => {
-    if (updatedResource._deleted) {
-      // If resource was deleted, mark as deleted in the UI
-      setAllResources((resources) =>
-        resources.map((r) =>
-          r.id === updatedResource.id ? { ...r, _deleted: true } : r
-        )
-      );
-      setFilteredResources((resources) =>
-        resources.map((r) =>
-          r.id === updatedResource.id ? { ...r, _deleted: true } : r
-        )
-      );
-    } else {
-      // Regular update
-      setAllResources((resources) =>
-        resources.map((r) =>
-          r.id === updatedResource.id ? updatedResource : r
-        )
-      );
-      setFilteredResources((resources) =>
-        resources.map((r) =>
-          r.id === updatedResource.id ? updatedResource : r
-        )
-      );
-    }
-  };
-
   if (!isLoaded || sessionLoading) {
     return null;
   }
@@ -383,7 +199,7 @@ export default function ModulesPageContent({
     );
   }
 
-  // Updated ResourcesWrapper without its own state management
+  // Updated ResourcesWrapper using the resources from our custom hook
   function ResourcesWrapper() {
     return (
       <div className="mt-6">
@@ -407,7 +223,10 @@ export default function ModulesPageContent({
             </div>
           ) : isSignedIn ? (
             <ResourceTable
-              resources={filteredResources}
+              resources={filteredResources.map((resource) => ({
+                ...resource,
+                fileSize: resource.fileSize ?? undefined,
+              }))}
               modules={resourceModules}
               onUpdate={handleResourceUpdate}
               showModuleColumn={true}

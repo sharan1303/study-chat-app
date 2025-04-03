@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       id: resource.id,
       title: resource.title,
       type: resource.type,
-      url: resource.fileUrl,
+      fileUrl: resource.fileUrl,
       fileSize: resource.fileSize,
       moduleId: resource.moduleId,
       createdAt: resource.createdAt.toISOString(),
