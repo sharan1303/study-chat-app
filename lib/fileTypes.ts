@@ -37,6 +37,8 @@ export const mimeTypeMap: Record<string, Record<string, string>> = {
     "svg+xml": "Image/SVG",
     webp: "Image/WebP",
     bmp: "Image/BMP",
+    heic: "Image/HEIC",
+    heif: "Image/HEIF",
   },
   video: {
     mp4: "Video/MP4",
@@ -78,6 +80,8 @@ export const extensionMap: Record<string, string> = {
   svg: "Image/SVG",
   webp: "Image/WebP",
   bmp: "Image/BMP",
+  heic: "Image/HEIC",
+  heif: "Image/HEIF",
 
   // Videos
   mp4: "Video/MP4",

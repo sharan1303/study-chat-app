@@ -63,7 +63,7 @@ export async function GET(
       id: resource.id,
       title: resource.title || "",
       type: resource.type,
-      url: resource.fileUrl,
+      fileUrl: resource.fileUrl,
       moduleId: resource.moduleId,
       moduleName: resource.module?.name || null,
       createdAt: resource.createdAt.toISOString(),
@@ -128,7 +128,7 @@ export async function PUT(
       );
     }
 
-    const { title, description, type, url, moduleId } = await request.json();
+    const { title, type, fileUrl, moduleId } = await request.json();
 
     // If moduleId is changing, verify user has access to the target module
     if (moduleId && moduleId !== existingResource.moduleId) {
@@ -152,9 +152,8 @@ export async function PUT(
       where: { id: resourceId },
       data: {
         ...(title ? { title } : {}),
-        ...(description !== undefined ? { content: description } : {}),
         ...(type ? { type } : {}),
-        ...(url !== undefined ? { fileUrl: url } : {}),
+        ...(fileUrl !== undefined ? { fileUrl } : {}),
         ...(moduleId ? { moduleId } : {}),
       },
       include: {
@@ -171,7 +170,7 @@ export async function PUT(
       id: updatedResource.id,
       title: updatedResource.title || "",
       type: updatedResource.type,
-      url: updatedResource.fileUrl,
+      fileUrl: updatedResource.fileUrl,
       moduleId: updatedResource.moduleId,
       moduleName: updatedResource.module?.name || null,
       createdAt: updatedResource.createdAt.toISOString(),

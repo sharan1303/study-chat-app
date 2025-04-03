@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { broadcastResourceCreated } from "@/lib/events";
 
 /**
  * Retrieves all resources for the authenticated user.
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
       id: resource.id,
       title: resource.title,
       type: resource.type,
-      url: resource.fileUrl,
+      fileUrl: resource.fileUrl,
       moduleId: resource.moduleId,
       moduleName: resource.module?.name || null,
       createdAt: resource.createdAt.toISOString(),
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
  * Expects a JSON body with the resource properties:
  * - title: The resource title (required).
  * - type: The resource type (required).
- * - url: The URL for the resource file (optional).
+ * - fileUrl: The URL for the resource file (optional).
  * - moduleId: The identifier of the module the resource belongs to (required).
  *
  * Returns a JSON response with the newly created resource's details if successful.
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
 
   try {
     const json = await request.json();
-    const { title, type, url, moduleId } = json;
+    const { title, type, fileUrl, moduleId } = json;
 
     // Validate the request
     if (!title || !type || !moduleId) {
@@ -123,9 +124,15 @@ export async function POST(request: Request) {
       data: {
         title,
         type,
-        fileUrl: url || null,
+        fileUrl: fileUrl || null,
         moduleId,
       },
+    });
+
+    // Broadcast the resource created event
+    broadcastResourceCreated({
+      id: resource.id,
+      moduleId: resource.moduleId,
     });
 
     return NextResponse.json({
@@ -133,7 +140,7 @@ export async function POST(request: Request) {
       title: resource.title,
       type: resource.type,
       fileSize: resource.fileSize || null,
-      url: resource.fileUrl,
+      fileUrl: resource.fileUrl,
       moduleId: resource.moduleId,
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
