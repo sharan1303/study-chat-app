@@ -68,6 +68,14 @@ export default function ChatHistory({
   }, []);
 
   const isActiveChat = (chat: Chat) => {
+    // Special case for welcome chat
+    if (
+      pathname === "/chat/welcome" &&
+      chat.title === "Welcome to Study Chat"
+    ) {
+      return true;
+    }
+
     if (pathname === `/chat/${chat.id}`) {
       return true;
     }
@@ -167,14 +175,17 @@ export default function ChatHistory({
                     className={cn(
                       "w-full max-w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
                       isActiveChat(chat)
-                        ? "bg-accent text-accent-foreground font-medium"
+                        ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
                         : ""
                     )}
                   >
                     <button
                       className="flex-1 flex items-center justify-between truncate"
                       onClick={() => {
-                        if (chat.moduleId && chat.module) {
+                        // Special case for welcome chat
+                        if (chat.title === "Welcome to Study Chat") {
+                          router.push(`/chat/welcome`);
+                        } else if (chat.moduleId && chat.module) {
                           const encodedName = encodeModuleSlug(
                             chat.module.name
                           );

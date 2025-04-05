@@ -71,7 +71,7 @@
     --ring: 224.3 76.3% 48%;
 
     --radius: 0.5rem;
-    
+
     /* Sidebar Variables (Dark) */
     --sidebar-width: 16rem;
     --sidebar-width-icon: 3rem;
@@ -103,6 +103,57 @@ div[contenteditable="true"] {
 /* Chat input specific styling */
 .chat-input-area {
   background-color: hsl(var(--input)) !important;
+}
+
+/* Markdown content spacing */
+.prose-spacing h1,
+.prose-spacing h2 {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.prose-spacing h3 {
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+.prose-spacing h4,
+.prose-spacing h5,
+.prose-spacing h6 {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.prose-spacing p {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  line-height: 1.8;
+}
+
+.prose-spacing p + p {
+  margin-top: 2em;
+}
+
+.prose-spacing ul,
+.prose-spacing ol {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.prose-spacing li {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  line-height: 1.8;
+}
+
+.prose-spacing li > p {
+  margin-top: 0.1em;
+  margin-bottom: 0.5em;
+}
+
+.prose-spacing pre {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
 }
 
 /* Skeleton loading styling */

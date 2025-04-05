@@ -8,6 +8,11 @@ import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
 import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
+import {
+  createGeneralSystemPrompt,
+  createModuleSystemPrompt,
+  SEARCH_INDICATORS,
+} from "@/lib/prompts";
 
 /**
  * Handles an HTTP POST request for chat interactions.
@@ -31,6 +36,7 @@ export async function POST(request: Request) {
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
     const shouldSaveHistory = body.saveHistory !== false;
+    const forceOldest = body.forceOldest === true;
     const currentUserObj = await currentUser();
     const userId = currentUserObj?.id || null;
 
@@ -128,56 +134,10 @@ export async function POST(request: Request) {
     if (isModuleMode && shouldSaveHistory) {
       // Module-specific mode: Get module context and build specialized prompt
       const moduleContext = await getModuleContext(moduleId);
-
-      systemMessage = `You are an AI study assistant specialized in helping with this specific module.
-      
-Use the following context about this module to help the student:
-
-${moduleContext}
-
-${
-  shouldSearch
-    ? "Also use the following search results to provide a comprehensive answer:"
-    : ""
-}
-${searchContext}
-
-Always provide accurate, helpful information relative to the module context.
-Explain concepts clearly and provide examples when appropriate.
-Break down complex topics into understandable parts.
-If you're not sure about something, acknowledge that and suggest what might be reasonable.
-
-Format your responses using Markdown:
-- Use **bold** for emphasis
-- Use bullet points for lists
-- Use numbered lists for steps
-- Use headings (## and ###) for sections
-- Use code blocks for code examples
-- Use > for quotes`;
+      systemMessage = createModuleSystemPrompt(moduleContext, searchContext);
     } else {
       // Basic mode: General study assistant
-      systemMessage = `You are StudyAI, an AI assistant for learning.
-You can answer questions about a variety of topics to help users learn.
-For the full experience with personalized modules, encourage the user to sign up or sign in.
-
-${
-  shouldSearch
-    ? "Use the following search results to provide a comprehensive answer:"
-    : ""
-}
-${searchContext}
-
-Always provide accurate, helpful information.
-Explain concepts clearly and provide examples when appropriate.
-Break down complex topics into understandable parts.
-
-Format your responses using Markdown:
-- Use **bold** for emphasis
-- Use bullet points for lists
-- Use numbered lists for steps
-- Use headings (## and ###) for sections
-- Use code blocks for code examples
-- Use > for quotes`;
+      systemMessage = createGeneralSystemPrompt(searchContext);
     }
 
     // Format messages for the model including the system message
@@ -193,7 +153,7 @@ Format your responses using Markdown:
 
     try {
       // Use the streamText function from the AI SDK
-      const result = await streamText({
+      const result = streamText({
         model: google("gemini-2.0-flash"),
         messages: formattedMessages,
         temperature: 0.7,
@@ -206,7 +166,7 @@ Format your responses using Markdown:
               const isNewChat = !chatId; // No chatId means it's a new chat
 
               // Create data for upsert
-              const chatData = {
+              const chatData: any = {
                 id: requestedChatId,
                 title: chatTitle,
                 messages: messages.concat([
@@ -215,13 +175,24 @@ Format your responses using Markdown:
                 moduleId: isModuleMode ? moduleId : null,
               };
 
+              // Special handling for welcome chat
+              const isWelcomeChat =
+                requestedChatId === "welcome-chat" ||
+                chatTitle === "Welcome to Study Chat";
+
               // Add either userId or sessionId based on authentication state
               if (userId) {
-                // @ts-expect-error - Known property
                 chatData.userId = userId;
               } else if (sessionId) {
-                // @ts-expect-error - Known property
                 chatData.sessionId = sessionId;
+              }
+
+              // If this chat should be forced to appear as the oldest, set an old timestamp
+              if ((forceOldest && isNewChat) || isWelcomeChat) {
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                chatData.createdAt = oneYearAgo;
+                chatData.updatedAt = oneYearAgo;
               }
 
               const savedChat = await prisma.chat.upsert({
@@ -328,27 +299,11 @@ Format your responses using Markdown:
 
 // Simple function to determine if a message likely needs external search
 function needsSearch(message: string): boolean {
-  const searchIndicators = [
-    "search for",
-    "look up",
-    "find information",
-    "what is the latest",
-    "current",
-    "recent",
-    "news about",
-    "how to",
-    "explain",
-    "definition of",
-    "what does",
-    "mean",
-    "?",
-  ];
-
   message = message.toLowerCase();
 
   // If the message contains any search indicators and is of sufficient length
   return (
     message.length > 15 &&
-    searchIndicators.some((term) => message.includes(term.toLowerCase()))
+    SEARCH_INDICATORS.some((term) => message.includes(term.toLowerCase()))
   );
 }
