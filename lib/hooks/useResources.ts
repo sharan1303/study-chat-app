@@ -23,10 +23,7 @@ interface ResourceModule {
   icon: string;
 }
 
-export function useResources(
-  isSignedIn: boolean,
-  searchQuery: string,
-) {
+export function useResources(isSignedIn: boolean, searchQuery: string) {
   const [allResources, setAllResources] = useState<Resource[]>([]);
   const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
   const [resourceModules, setResourceModules] = useState<ResourceModule[]>([]);

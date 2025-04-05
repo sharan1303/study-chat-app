@@ -78,7 +78,7 @@ export default function ModulesPageContent({
     resourceModules,
     resourcesLoading,
     handleResourceUpdate,
-  } = useResources(!!isSignedIn, searchQuery, sessionId);
+  } = useResources(!!isSignedIn, searchQuery);
 
   // This effect fetches the modules data from the API
   useEffect(() => {

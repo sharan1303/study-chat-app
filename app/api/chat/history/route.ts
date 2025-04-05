@@ -40,15 +40,13 @@ export async function GET(request: NextRequest) {
         return new Response("User not found", { status: 404 });
       }
 
-      // @ts-expect-error - Dynamic property assignment
-      where.userId = user.id;
+      where["userId"] = user.id;
     } else if (sessionId) {
       // For anonymous users, find by sessionId
-      // @ts-expect-error - Dynamic property assignment
-      where.sessionId = sessionId;
+      where["sessionId"] = sessionId;
     }
 
-    // Get all chats for this user or session
+    // Fetch all chats for this user/session
     const chats = await prisma.chat.findMany({
       where,
       orderBy: {
@@ -65,6 +63,18 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Filter to keep only one "Welcome to Study Chat" entry
+    let hasWelcomeChat = false;
+    const filteredChats = chats.filter((chat) => {
+      if (chat.title === "Welcome to Study Chat") {
+        if (hasWelcomeChat) {
+          return false; // Skip additional welcome chats
+        }
+        hasWelcomeChat = true;
+      }
+      return true;
+    });
+
     if (userId) {
       console.log(`Found ${chats.length} chats for user ${userId}`);
     } else {
@@ -73,7 +83,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return Response.json(chats);
+    return Response.json(filteredChats);
   } catch (error) {
     console.error("Error fetching chat history:", error);
     return new Response("Error fetching chat history", { status: 500 });
