@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { api } from "@/lib/api";
 import { EVENT_TYPES } from "@/lib/events";
-import { getOrCreateSessionIdClient, SESSION_ID_KEY } from "@/lib/session";
+import { getOrCreateSessionIdClient } from "@/lib/session";
 
 // Define module type
 export interface Module {
@@ -484,6 +484,31 @@ function ClientSidebarContent({
     };
   }, []);
 
+  // Create a welcome chat for anonymous users
+  const createWelcomeChatForAnonymousUsers = useCallback(async () => {
+    try {
+      const sessionId = getOrCreateSessionIdClient();
+      if (!sessionId) return;
+
+      console.log(
+        "Creating welcome chat for anonymous user with sessionId:",
+        sessionId
+      );
+
+      // Call the welcome chat API
+      const response = await fetch(`/api/chat/welcome?sessionId=${sessionId}`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // Refresh chat history to show the welcome chat
+        refreshChatHistory();
+      }
+    } catch (error) {
+      console.error("Error creating welcome chat:", error);
+    }
+  }, [refreshChatHistory]);
+
   // Initial data fetching
   useEffect(() => {
     if (!isLoaded) return;
@@ -508,32 +533,13 @@ function ClientSidebarContent({
         createWelcomeChatForAnonymousUsers();
       }
     });
-  }, [isLoaded, fetchModules, refreshChatHistory, isSignedIn]);
-
-  // Create a welcome chat for anonymous users
-  const createWelcomeChatForAnonymousUsers = async () => {
-    try {
-      const sessionId = getOrCreateSessionIdClient();
-      if (!sessionId) return;
-
-      console.log(
-        "Creating welcome chat for anonymous user with sessionId:",
-        sessionId
-      );
-
-      // Call the welcome chat API
-      const response = await fetch(`/api/chat/welcome?sessionId=${sessionId}`, {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        // Refresh chat history to show the welcome chat
-        refreshChatHistory();
-      }
-    } catch (error) {
-      console.error("Error creating welcome chat:", error);
-    }
-  };
+  }, [
+    isLoaded,
+    fetchModules,
+    refreshChatHistory,
+    isSignedIn,
+    createWelcomeChatForAnonymousUsers,
+  ]);
 
   // Get header height for positioning expand button
   const headerRef = useRef<HTMLDivElement>(null);
