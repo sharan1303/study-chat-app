@@ -11,8 +11,11 @@ import { SidebarProvider } from "@/context/sidebar-context";
 import { SessionProvider } from "@/context/session-context";
 
 import AnonymousDataMigration from "@/components/dialogs/AnonymousDataMigration";
+import PrivacyConsentBar from "@/components/dialogs/PrivacyConsentBar";
 import Header from "@/components/Main/Header";
 import { ClerkProviderWithTheme } from "@/components/Clerk/ClerkProviderWithTheme";
+
+import { Analytics } from "@vercel/analytics/next";
 
 // Session initializer - client component
 import { SessionInitializer } from "@/components/Main/SessionInitializer";
@@ -65,8 +68,10 @@ export default function RootLayout({
                 <main className="flex-1 pl-7 pt-0.5 relative">
                   <Header />
                   {children}
+                  <Analytics />
                   <AnonymousDataMigration />
                 </main>
+                <PrivacyConsentBar />
               </SidebarProvider>
               <SessionInitializer />
             </SessionProvider>

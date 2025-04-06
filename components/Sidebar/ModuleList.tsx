@@ -109,10 +109,10 @@ export default function ModuleList({
   return (
     <div className="flex flex-col h-full">
       {!collapsed && (
-        <div className="px-2 py-2 flex items-center justify-between">
+        <div className="px-2 py-1 flex items-center justify-between">
           <Button
             variant={pathname?.startsWith("/modules") ? "secondary" : "ghost"}
-            className="justify-start w-40 pl-2 pb-2 text-left"
+            className="justify-start hover:bg-accent w-40 pl-2 pb-2 text-left"
             asChild
           >
             <Link href="/modules">Modules & Resources</Link>
@@ -120,7 +120,7 @@ export default function ModuleList({
 
           <Dialog open={isCreating} onOpenChange={setIsCreating}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 mr-2.5">
+              <Button variant="ghost" size="icon" className="hover:bg-accent h-8 w-8 mr-2.5">
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
@@ -137,7 +137,7 @@ export default function ModuleList({
       <ScrollArea className="flex-1 overflow-y-auto">
         <div className={collapsed ? "p-1" : "p-2 pt-0"}>
           {loading ? (
-            <div className="text-center py-6">
+            <div className="text-center py-5">
               {!collapsed && (
                 <>
                   <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-r-transparent mx-auto mb-2" />
