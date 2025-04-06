@@ -307,21 +307,19 @@ export default function ClientChatPage({
                 <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-spacing">
                   <ReactMarkdown
                     components={{
-                      h1: ({ node, ...props }) => (
+                      h1: ({ ...props }) => (
                         <h1 className="text-2xl font-bold my-6" {...props} />
                       ),
-                      h2: ({ node, ...props }) => (
+                      h2: ({ ...props }) => (
                         <h2 className="text-xl font-semibold my-5" {...props} />
                       ),
-                      h3: ({ node, ...props }) => (
+                      h3: ({ ...props }) => (
                         <h3 className="text-lg font-medium my-4" {...props} />
                       ),
-                      h4: ({ node, ...props }) => (
+                      h4: ({ ...props }) => (
                         <h4 className="text-lg font-medium my-3" {...props} />
                       ),
-                      p: ({ node, ...props }) => (
-                        <p className="my-3" {...props} />
-                      ),
+                      p: ({ ...props }) => <p className="my-3" {...props} />,
                     }}
                     key={`md-${nextMessage.id || `${index}-response-md`}`}
                   >
@@ -382,21 +380,19 @@ export default function ClientChatPage({
               <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-spacing">
                 <ReactMarkdown
                   components={{
-                    h1: ({ node, ...props }) => (
+                    h1: ({ ...props }) => (
                       <h1 className="text-3xl font-bold my-6" {...props} />
                     ),
-                    h2: ({ node, ...props }) => (
+                    h2: ({ ...props }) => (
                       <h2 className="text-2xl font-semibold my-5" {...props} />
                     ),
-                    h3: ({ node, ...props }) => (
+                    h3: ({ ...props }) => (
                       <h3 className="text-xl font-medium my-4" {...props} />
                     ),
-                    h4: ({ node, ...props }) => (
+                    h4: ({ ...props }) => (
                       <h4 className="text-lg font-medium my-3" {...props} />
                     ),
-                    p: ({ node, ...props }) => (
-                      <p className="my-3" {...props} />
-                    ),
+                    p: ({ ...props }) => <p className="my-3" {...props} />,
                   }}
                   key={`md-assistant-${message.id || index}`}
                 >

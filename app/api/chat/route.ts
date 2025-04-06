@@ -166,6 +166,7 @@ export async function POST(request: Request) {
               const isNewChat = !chatId; // No chatId means it's a new chat
 
               // Create data for upsert
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const chatData: any = {
                 id: requestedChatId,
                 title: chatTitle,

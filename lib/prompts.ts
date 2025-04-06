@@ -55,7 +55,7 @@ export const createModuleWelcomeMessage = (moduleName: string | null) => ({
  * @param searchContext - Optional search results to include in the prompt
  * @returns The system prompt string
  */
-export const createGeneralSystemPrompt = (searchContext: string = "") => `
+export const createGeneralSystemPrompt = (searchContext = "") => `
   You are Study Chat, an AI assistant for learning.
   You can answer questions about a variety of topics to help users learn.
   For the full experience with personalized modules, encourage the user to sign up or sign in.
@@ -90,7 +90,7 @@ export const createGeneralSystemPrompt = (searchContext: string = "") => `
  */
 export const createModuleSystemPrompt = (
   moduleContext: string,
-  searchContext: string = ""
+  searchContext = ""
 ) => `
   You are an AI study assistant specialized in helping with this specific module.
     

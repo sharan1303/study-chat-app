@@ -581,7 +581,7 @@ function ClientSidebarContent({
     (
       chatTitle: string,
       moduleId: string | null = null,
-      forceOldest: boolean = false
+      forceOldest = false
     ) => {
       const optimisticChat: Chat = {
         id: `optimistic-${Date.now()}`, // Temporary ID until real one arrives
