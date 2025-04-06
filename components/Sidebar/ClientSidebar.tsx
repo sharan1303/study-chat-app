@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  Suspense,
+  useCallback,
+} from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Chat } from "./ChatHistory";
 import {
@@ -10,9 +16,9 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarRail,
-} from "@/components/Sidebar/sidebar";
+} from "@/components/Sidebar/SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
-import ModuleList from "./module-list";
+import ModuleList from "./ModuleList";
 import ChatHistory from "./ChatHistory";
 import UserSection from "./UserSection";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -22,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import { api } from "@/lib/api";
 import { EVENT_TYPES } from "@/lib/events";
+import { getOrCreateSessionIdClient } from "@/lib/session";
 
 // Define module type
 export interface Module {
@@ -107,7 +114,7 @@ function ClientSidebarContent({
 
       // For anonymous users, add the sessionId
       if (!isSignedIn) {
-        const sessionId = localStorage.getItem("anonymous_session_id");
+        const sessionId = getOrCreateSessionIdClient();
         if (sessionId) {
           url += `&sessionId=${sessionId}`;
           console.log(
@@ -184,7 +191,7 @@ function ClientSidebarContent({
       url += `?userId=${userId}`;
     } else {
       // For anonymous users, get the session ID from localStorage
-      const sessionId = localStorage.getItem("anonymous_session_id");
+      const sessionId = getOrCreateSessionIdClient();
       if (sessionId) {
         url += `?sessionId=${sessionId}`;
       } else {
@@ -423,7 +430,7 @@ function ClientSidebarContent({
           // Send a ping to keep the connection alive
           let pingUrl = "/api/events/ping";
           if (!userId) {
-            const sessionId = localStorage.getItem("anonymous_session_id");
+            const sessionId = getOrCreateSessionIdClient();
             if (sessionId) {
               pingUrl += `?sessionId=${sessionId}`;
             }
@@ -477,6 +484,31 @@ function ClientSidebarContent({
     };
   }, []);
 
+  // Create a welcome chat for anonymous users
+  const createWelcomeChatForAnonymousUsers = useCallback(async () => {
+    try {
+      const sessionId = getOrCreateSessionIdClient();
+      if (!sessionId) return;
+
+      console.log(
+        "Creating welcome chat for anonymous user with sessionId:",
+        sessionId
+      );
+
+      // Call the welcome chat API
+      const response = await fetch(`/api/chat/welcome?sessionId=${sessionId}`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // Refresh chat history to show the welcome chat
+        refreshChatHistory();
+      }
+    } catch (error) {
+      console.error("Error creating welcome chat:", error);
+    }
+  }, [refreshChatHistory]);
+
   // Initial data fetching
   useEffect(() => {
     if (!isLoaded) return;
@@ -495,8 +527,19 @@ function ClientSidebarContent({
       });
 
     // Fetch initial chat history
-    refreshChatHistory();
-  }, [isLoaded, fetchModules, refreshChatHistory]);
+    refreshChatHistory().then(() => {
+      // For anonymous users, ensure they have a welcome chat
+      if (!isSignedIn) {
+        createWelcomeChatForAnonymousUsers();
+      }
+    });
+  }, [
+    isLoaded,
+    fetchModules,
+    refreshChatHistory,
+    isSignedIn,
+    createWelcomeChatForAnonymousUsers,
+  ]);
 
   // Get header height for positioning expand button
   const headerRef = useRef<HTMLDivElement>(null);
@@ -535,11 +578,17 @@ function ClientSidebarContent({
   // Now let's add the optimistic UI update functionality
   // This function will be used to add a new chat to the list immediately when user creates one
   const addOptimisticChat = useCallback(
-    (chatTitle: string, moduleId: string | null = null) => {
+    (
+      chatTitle: string,
+      moduleId: string | null = null,
+      forceOldest = false
+    ) => {
       const optimisticChat: Chat = {
         id: `optimistic-${Date.now()}`, // Temporary ID until real one arrives
         title: chatTitle,
-        createdAt: new Date().toISOString(),
+        createdAt: forceOldest
+          ? new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString() // One year ago for oldest chats
+          : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         moduleId: moduleId,
         module: moduleId
@@ -552,7 +601,15 @@ function ClientSidebarContent({
         _isOptimistic: true, // Mark as optimistic to replace when real data arrives
       };
 
-      setChats((prevChats) => [optimisticChat, ...prevChats]);
+      setChats((prevChats) => {
+        if (forceOldest) {
+          // Add to the end of the list for oldest chats
+          return [...prevChats, optimisticChat];
+        } else {
+          // Add to the beginning for newest chats
+          return [optimisticChat, ...prevChats];
+        }
+      });
 
       return optimisticChat.id;
     },
@@ -570,7 +627,8 @@ function ClientSidebarContent({
       const win = window as unknown as {
         __sidebarChatUpdater?: (
           title: string,
-          moduleId: string | null
+          moduleId: string | null,
+          forceOldest?: boolean
         ) => string;
       };
       win.__sidebarChatUpdater = addOptimisticChat;
@@ -582,7 +640,8 @@ function ClientSidebarContent({
         const win = window as unknown as {
           __sidebarChatUpdater?: (
             title: string,
-            moduleId: string | null
+            moduleId: string | null,
+            forceOldest?: boolean
           ) => string;
         };
         delete win.__sidebarChatUpdater;

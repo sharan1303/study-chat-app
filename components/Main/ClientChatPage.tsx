@@ -67,6 +67,8 @@ export function ChatPageLoading() {
  * @param chatId - Unique identifier for the chat session.
  * @param initialMessages - Array of messages to initialize the chat conversation.
  * @param isAuthenticated - Indicates whether the user is authenticated (defaults to true).
+ * @param initialTitle - Optional initial title for the chat.
+ * @param forceOldest - When true, ensures this chat appears as the oldest in history (for unauthenticated users).
  *
  * @returns The rendered chat interface as a React element.
  */
@@ -75,11 +77,15 @@ export default function ClientChatPage({
   chatId,
   initialMessages = [],
   isAuthenticated = true,
+  initialTitle,
+  forceOldest = false,
 }: {
   initialModuleDetails?: ModuleWithResources | null;
   chatId: string;
   initialMessages?: Message[];
   isAuthenticated?: boolean;
+  initialTitle?: string;
+  forceOldest?: boolean;
 }) {
   // These states are used for initial values and potential future updates
   const [activeModule] = React.useState<string | null>(
@@ -96,7 +102,12 @@ export default function ClientChatPage({
   // Get access to the sidebar's addOptimisticChat function
   // This allows us to update the chat history immediately when sending a message
   const sidebarChatUpdater = React.useRef<
-    ((title: string, moduleId: string | null) => string) | null
+    | ((
+        title: string,
+        moduleId: string | null,
+        forceOldest?: boolean
+      ) => string)
+    | null
   >(null);
 
   // Connect to the optimistic chat updater if available in the global window object
@@ -105,7 +116,8 @@ export default function ClientChatPage({
       const win = window as unknown as {
         __sidebarChatUpdater?: (
           title: string,
-          moduleId: string | null
+          moduleId: string | null,
+          forceOldest?: boolean
         ) => string;
       };
       if (win.__sidebarChatUpdater) {
@@ -127,6 +139,38 @@ export default function ClientChatPage({
     }
   }, [isAuthenticated]);
 
+  // For the welcome chat, add it to history for anonymous users on initial load
+  React.useEffect(() => {
+    if (
+      !isAuthenticated &&
+      sessionId &&
+      initialTitle &&
+      sidebarChatUpdater.current &&
+      // Specifically check for the welcome chat
+      (forceOldest ||
+        chatId === "welcome-chat" ||
+        chatId.startsWith("welcome-chat-"))
+    ) {
+      // Add the welcome chat to the sidebar for anonymous users
+      sidebarChatUpdater.current(initialTitle, activeModule, true);
+
+      // If this is the welcome chat for first-time users, make sure they see the welcome message
+      if (
+        (chatId === "welcome-chat" || chatId.startsWith("welcome-chat-")) &&
+        window.location.pathname === "/chat/welcome"
+      ) {
+        console.log("Welcome chat loaded for first-time user");
+      }
+    }
+  }, [
+    isAuthenticated,
+    sessionId,
+    initialTitle,
+    forceOldest,
+    activeModule,
+    chatId,
+  ]);
+
   // Reference to the scroll container, but don't auto-scroll
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -141,6 +185,8 @@ export default function ClientChatPage({
         chatId: chatId,
         isAuthenticated: isAuthenticated,
         sessionId: !isAuthenticated ? sessionId : undefined,
+        title: initialTitle,
+        forceOldest: forceOldest,
       },
       onResponse: (response: Response) => {
         // Try to extract model information from headers if available
@@ -192,6 +238,8 @@ export default function ClientChatPage({
       moduleDetails,
       sessionId,
       router,
+      initialTitle,
+      forceOldest,
     ]
   );
 
@@ -242,7 +290,7 @@ export default function ClientChatPage({
               className="flex justify-end"
             >
               <div className="flex items-center gap-2 max-w-full flex-row-reverse">
-                <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground break-words">
+                <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words">
                   <div className="whitespace-pre-wrap">{message.content}</div>
                 </div>
               </div>
@@ -256,8 +304,23 @@ export default function ClientChatPage({
                 key={`ai-${nextMessage.id || `${index}-response`}`}
                 className="mt-4 text-gray-800 dark:text-gray-200 group relative"
               >
-                <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-spacing">
                   <ReactMarkdown
+                    components={{
+                      h1: ({ ...props }) => (
+                        <h1 className="text-2xl font-bold my-6" {...props} />
+                      ),
+                      h2: ({ ...props }) => (
+                        <h2 className="text-xl font-semibold my-5" {...props} />
+                      ),
+                      h3: ({ ...props }) => (
+                        <h3 className="text-lg font-medium my-4" {...props} />
+                      ),
+                      h4: ({ ...props }) => (
+                        <h4 className="text-lg font-medium my-3" {...props} />
+                      ),
+                      p: ({ ...props }) => <p className="my-3" {...props} />,
+                    }}
                     key={`md-${nextMessage.id || `${index}-response-md`}`}
                   >
                     {nextMessage.content}
@@ -314,8 +377,25 @@ export default function ClientChatPage({
               key={`assistant-${message.id || index}`}
               className="text-gray-800 dark:text-gray-200 group relative"
             >
-              <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                <ReactMarkdown key={`md-assistant-${message.id || index}`}>
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-spacing">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ ...props }) => (
+                      <h1 className="text-3xl font-bold my-6" {...props} />
+                    ),
+                    h2: ({ ...props }) => (
+                      <h2 className="text-2xl font-semibold my-5" {...props} />
+                    ),
+                    h3: ({ ...props }) => (
+                      <h3 className="text-xl font-medium my-4" {...props} />
+                    ),
+                    h4: ({ ...props }) => (
+                      <h4 className="text-lg font-medium my-3" {...props} />
+                    ),
+                    p: ({ ...props }) => <p className="my-3" {...props} />,
+                  }}
+                  key={`md-assistant-${message.id || index}`}
+                >
                   {message.content}
                 </ReactMarkdown>
               </div>
@@ -374,7 +454,7 @@ export default function ClientChatPage({
         // Create a chat title from the first message
         const chatTitle =
           message.substring(0, 30) + (message.length > 30 ? "..." : "");
-        sidebarChatUpdater.current(chatTitle, activeModule);
+        sidebarChatUpdater.current(chatTitle, activeModule, forceOldest);
 
         // Log for anonymous users
         if (!isAuthenticated && sessionId) {
@@ -384,7 +464,7 @@ export default function ClientChatPage({
         }
       }
     },
-    [messages.length, isAuthenticated, activeModule, sessionId]
+    [messages.length, isAuthenticated, activeModule, sessionId, forceOldest]
   );
 
   // Handle form submission with optimized event handler
@@ -432,7 +512,7 @@ export default function ClientChatPage({
       >
         {/* Chat Header - Now inside the scrollable area */}
         {moduleDetails && (
-          <div className="px-3 py-3 flex items-center justify-between sticky top-0 bg-background">
+          <div className="px-3 py-2 flex items-center justify-between sticky top-1 bg-background">
             <Button
               variant="ghost"
               className="flex items-center gap-3 -ml-3 px-1 hover:bg-muted/50 rounded"
@@ -467,7 +547,7 @@ export default function ClientChatPage({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col space-y-8 pt-4 pb-8 pl-8 pr-6">
+                <div className="flex flex-col space-y-8 pt-14 pb-8 pl-8 pr-6">
                   {renderedMessages}
                 </div>
               )}

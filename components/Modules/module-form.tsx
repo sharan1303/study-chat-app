@@ -147,9 +147,6 @@ export const ModuleForm = ({
           // Close the dialog
           triggerSuccess();
 
-          // Show success message
-          toast.success("Module created");
-
           // Dispatch a global event for module creation to refresh the modules list
           if (typeof window !== "undefined") {
             window.dispatchEvent(

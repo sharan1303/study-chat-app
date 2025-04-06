@@ -7,6 +7,8 @@ import { generateId, decodeModuleSlug } from "@/lib/utils";
 import ClientChatPage from "@/components/Main/ClientChatPage";
 import { ChatPageLoading } from "@/components/Main/ClientChatPage";
 import { useMemo } from "react";
+import { Message } from "@ai-sdk/react";
+import { createModuleWelcomeMessage } from "@/lib/prompts";
 
 // Define a type for the module data
 interface Resource {
@@ -45,6 +47,12 @@ export default function NewModuleChat() {
 
   // Generate a new chat ID - use useMemo to prevent regeneration on re-renders
   const chatId = useMemo(() => generateId(), []);
+
+  // Create an initial welcome message
+  const welcomeMessage = useMemo<Message>(
+    () => createModuleWelcomeMessage(moduleData?.name || null),
+    [moduleData]
+  );
 
   // Pre-emptively prepare the proper route to avoid 404s
   useEffect(() => {
@@ -231,7 +239,7 @@ export default function NewModuleChat() {
     <ClientChatPage
       initialModuleDetails={moduleData}
       chatId={chatId}
-      initialMessages={[]}
+      initialMessages={[welcomeMessage]}
       isAuthenticated={!!isSignedIn}
     />
   );

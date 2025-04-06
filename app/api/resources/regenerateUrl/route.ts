@@ -237,14 +237,14 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         id: updatedResource.id,
-        url: updatedResource.fileUrl,
+        fileUrl: updatedResource.fileUrl,
         updatedAt: updatedResource.updatedAt.toISOString(),
       });
     } catch (dbError) {
       console.error("❌ Database update error:", dbError);
       // Still return the URL even if DB update fails
       return NextResponse.json({
-        url: signedUrlResult.data.signedUrl,
+        fileUrl: signedUrlResult.data.signedUrl,
         error: "URL generated but database update failed",
       });
     }

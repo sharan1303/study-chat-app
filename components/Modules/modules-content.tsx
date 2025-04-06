@@ -25,6 +25,7 @@ import { api } from "@/lib/api";
 import { ResourceTable } from "@/components/Resource/resource-table";
 import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 import { toast } from "sonner";
+import { useResources } from "@/lib/hooks/useResources";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
@@ -37,19 +38,6 @@ interface Module {
   icon: string;
   resourceCount: number;
   updatedAt: string;
-}
-
-// Define interface for the resource data
-interface Resource {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  url?: string | null;
-  moduleId: string;
-  moduleName?: string | null;
-  createdAt: string;
-  _deleted?: boolean;
 }
 
 /**
@@ -83,6 +71,14 @@ export default function ModulesPageContent({
   const [openResourceUpload, setOpenResourceUpload] = useState(
     shouldOpenResourceUpload
   );
+
+  // Use the custom hook for resource state management
+  const {
+    filteredResources,
+    resourceModules,
+    resourcesLoading,
+    handleResourceUpdate,
+  } = useResources(!!isSignedIn, searchQuery);
 
   // This effect fetches the modules data from the API
   useEffect(() => {
@@ -203,125 +199,8 @@ export default function ModulesPageContent({
     );
   }
 
-  /**
-   * Fetches modules and resources from the API and displays them in a resource table, filtered by a search query.
-   *
-   * This component retrieves module data for selector options and, if the user is signed in, fetches resource data.
-   * It filters the resources by matching the search query against their title, description, or associated module name.
-   * Additionally, it handles resource updates by marking deleted resources appropriately.
-   *
-   * @param searchQuery - A query string used to filter the displayed resources.
-   *
-   * @returns A JSX element rendering the resource table with the filtered resources.
-   */
-  function ResourcesWrapper({ searchQuery }: { searchQuery: string }) {
-    const [filteredResources, setFilteredResources] = useState<Resource[]>([]);
-    const [modules, setModules] = useState<
-      { id: string; name: string; icon: string }[]
-    >([]);
-    const [resourcesLoading, setResourcesLoading] = useState(true);
-    const { sessionId } = useSession();
-    const { isSignedIn } = useAuth();
-
-    // Fetch resources from the API
-    useEffect(() => {
-      /**
-       * Fetches modules and, if the user is authenticated, resources data from the API, updating state accordingly.
-       *
-       * This asynchronous function begins by setting the resources loading state to true and retrieves all modules, which are then simplified
-       * to include only the id, name, and icon. If the user is signed in, it attempts to fetch resources from the "/api/resources" endpoint.
-       * For unauthorized responses (HTTP 401), it logs a message and clears the filtered resources. If the resources fetch fails for other reasons,
-       * an error is thrown, caught, and logged, with the filtered resources reset to an empty array. Finally, the loading state is set to false.
-       *
-       * @remark
-       * Resources are filtered by the search query if provided; otherwise, all fetched resources are used.
-       */
-      async function fetchData() {
-        try {
-          setResourcesLoading(true);
-
-          // Fetch all modules for the selector
-          const modulesData = await api.getModules();
-          const modulesList = modulesData.modules || [];
-          setModules(
-            modulesList.map((m: Module) => ({
-              id: m.id,
-              name: m.name,
-              icon: m.icon,
-            }))
-          );
-
-          // Only attempt to fetch resources if user is signed in
-          if (isSignedIn) {
-            // Fetch resources - these require authentication
-            const resourcesResponse = await fetch("/api/resources");
-
-            if (resourcesResponse.status === 401) {
-              // Handle unauthorized gracefully - user is not logged in
-              console.log("User is not authenticated for resources");
-              setFilteredResources([]);
-            } else if (!resourcesResponse.ok) {
-              throw new Error(
-                `Failed to fetch resources: ${resourcesResponse.statusText}`
-              );
-            } else {
-              const resourcesData = await resourcesResponse.json();
-
-              // Initialize filtered resources
-              if (!searchQuery) {
-                setFilteredResources(resourcesData);
-              } else {
-                const filtered = resourcesData.filter(
-                  (resource: Resource) =>
-                    resource.title
-                      .toLowerCase()
-                      .includes(searchQuery.toLowerCase()) ||
-                    (resource.description &&
-                      resource.description
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase())) ||
-                    (resource.moduleName &&
-                      resource.moduleName
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()))
-                );
-                setFilteredResources(filtered);
-              }
-            }
-          } else {
-            // User is not signed in, don't try to fetch resources
-            setFilteredResources([]);
-          }
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          // Set resources to empty array on error
-          setFilteredResources([]);
-        } finally {
-          setResourcesLoading(false);
-        }
-      }
-
-      fetchData();
-    }, [searchQuery, isSignedIn, sessionId]);
-
-    const handleResourceUpdate = (updatedResource: Resource) => {
-      if (updatedResource._deleted) {
-        // If resource was deleted, mark as deleted in the UI
-        setFilteredResources((resources) =>
-          resources.map((r) =>
-            r.id === updatedResource.id ? { ...r, _deleted: true } : r
-          )
-        );
-      } else {
-        // Regular update
-        setFilteredResources((resources) =>
-          resources.map((r) =>
-            r.id === updatedResource.id ? updatedResource : r
-          )
-        );
-      }
-    };
-
+  // Updated ResourcesWrapper using the resources from our custom hook
+  function ResourcesWrapper() {
     return (
       <div className="mt-6">
         <div className="flex items-center justify-between mb-4">
@@ -332,24 +211,39 @@ export default function ModulesPageContent({
           )}
         </div>
 
-        {/* Use the new ResourceTable component */}
+        {/* Use the ResourceTable component */}
         <div className="min-h-[300px]">
-          {resourcesLoading ||
-          (filteredResources.length === 0 && isSignedIn) ? (
+          {resourcesLoading ? (
             <ResourceTableSkeleton showModuleColumn={true} />
-          ) : (
+          ) : filteredResources.length === 0 && isSignedIn ? (
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+              <h3 className="font-medium">
+                Access your knowledge base and upload your own resources.
+              </h3>
+            </div>
+          ) : isSignedIn ? (
             <ResourceTable
-              resources={filteredResources}
-              modules={modules}
+              resources={filteredResources.map((resource) => ({
+                ...resource,
+                fileSize: resource.fileSize ?? undefined,
+              }))}
+              modules={resourceModules}
               onUpdate={handleResourceUpdate}
               showModuleColumn={true}
             />
+          ) : (
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+              <h3 className="font-medium">
+                You need to be signed in to view and upload resources.
+              </h3>
+            </div>
           )}
         </div>
       </div>
     );
   }
 
+  // Return the main UI
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4">
@@ -388,13 +282,13 @@ export default function ModulesPageContent({
               <Suspense fallback={<Button disabled>Loading...</Button>}>
                 <ModuleOperations sessionId={sessionId} />
               </Suspense>
-            ) : (
+            ) : isSignedIn ? (
               <ResourceUploadButton
                 variant="outline"
                 moduleId={preselectedModuleId || undefined}
                 initialOpen={openResourceUpload}
-              ></ResourceUploadButton>
-            )}
+              />
+            ) : null}
           </div>
 
           <TabsContent value="modules" className="mt-2">
@@ -471,7 +365,7 @@ export default function ModulesPageContent({
           </TabsContent>
 
           <TabsContent value="resources" className="mt-2">
-            <ResourcesWrapper searchQuery={searchQuery} />
+            <ResourcesWrapper />
           </TabsContent>
         </Tabs>
       </div>

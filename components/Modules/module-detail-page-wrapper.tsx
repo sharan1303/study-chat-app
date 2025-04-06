@@ -37,9 +37,8 @@ interface Module {
 interface Resource {
   id: string;
   title: string;
-  description: string;
   type: string;
-  url?: string | null;
+  fileUrl: string | null;
   moduleId: string;
   moduleName?: string | null;
   createdAt: string;
@@ -171,19 +170,22 @@ export default function ModuleDetailWrapper({
 
             // Fetch resources only for authenticated users
             if (isSignedIn) {
-              const resourcesResponse = await fetch("/api/resources");
+              const resourcesResponse = await fetch(
+                `/api/modules/${exactModules[0].id}/resources`
+              );
               if (resourcesResponse.status === 401) {
                 // Handle unauthorized gracefully - user is not authenticated
                 console.log("User is not authenticated for resources");
                 setResources([]);
               } else if (resourcesResponse.ok) {
-                const allResources = await resourcesResponse.json();
-                // Filter resources for the current module
-                const moduleResources = allResources.filter(
-                  (resource: Resource) =>
-                    resource.moduleId === exactModules[0].id
+                const responseData = await resourcesResponse.json();
+                // Handle both response formats - direct array or { resources: [] }
+                const moduleResources =
+                  responseData.resources || responseData || [];
+                console.log("Initial resources fetch:", moduleResources);
+                setResources(
+                  Array.isArray(moduleResources) ? moduleResources : []
                 );
-                setResources(moduleResources);
               } else {
                 console.error(
                   "Failed to fetch resources:",
@@ -297,18 +299,41 @@ export default function ModuleDetailWrapper({
 
           // Fetch resources only for authenticated users
           if (isSignedIn) {
-            const resourcesResponse = await fetch("/api/resources");
+            const resourceApiUrl = `/api/modules/${moduleData.id}/resources`;
+            console.log(
+              `Fetching resources from: ${resourceApiUrl}, moduleId=${moduleData.id}`
+            );
+
+            const resourcesResponse = await fetch(resourceApiUrl);
             if (resourcesResponse.status === 401) {
               // Handle unauthorized gracefully - user is not authenticated
               console.log("User is not authenticated for resources");
               setResources([]);
             } else if (resourcesResponse.ok) {
-              const allResources = await resourcesResponse.json();
-              // Filter resources for the current module
-              const moduleResources = allResources.filter(
-                (resource: Resource) => resource.moduleId === moduleData.id
+              const responseData = await resourcesResponse.json();
+              // Handle both response formats - direct array or { resources: [] }
+              const moduleResources =
+                responseData.resources || responseData || [];
+              console.log(
+                `Received ${moduleResources.length} resources from ${resourceApiUrl}`
               );
-              setResources(moduleResources);
+              console.log("Fuzzy match resources fetch:", moduleResources);
+
+              // Double-check if all resources are for this module
+              if (moduleResources.length > 0) {
+                const wrongModuleResources = moduleResources.filter(
+                  (r: Resource) => r.moduleId !== moduleData.id
+                );
+                if (wrongModuleResources.length > 0) {
+                  console.error(
+                    `ERROR: ${wrongModuleResources.length}/${moduleResources.length} resources are for different modules!`
+                  );
+                }
+              }
+
+              setResources(
+                Array.isArray(moduleResources) ? moduleResources : []
+              );
             } else {
               console.error(
                 "Failed to fetch resources:",
@@ -335,6 +360,92 @@ export default function ModuleDetailWrapper({
       fetchModuleDetails();
     }
   }, [moduleName, isSignedIn]);
+
+  // Listen for resource events to refresh the resource list
+  useEffect(() => {
+    if (!isSignedIn || !module) return;
+
+    // Event handlers for resource events
+    const handleResourceCreated = (
+      event: CustomEvent<{ id: string; moduleId: string }>
+    ) => {
+      const resourceData = event.detail;
+      console.log(`Resource event received with data:`, resourceData);
+      console.log(`Current module ID: ${module.id}`);
+
+      // Only refresh resources if this event is for the current module
+      if (resourceData && resourceData.moduleId === module.id) {
+        console.log(
+          `Resource created event detected for module ${module.id}, refreshing resources`
+        );
+        const resourceApiUrl = `/api/modules/${module.id}/resources`;
+        console.log(`Fetching from: ${resourceApiUrl}`);
+
+        fetch(resourceApiUrl)
+          .then((response) => {
+            console.log(`Response status: ${response.status}`);
+            if (!response.ok) return [];
+            return response.json();
+          })
+          .then((responseData) => {
+            // Handle both response formats - direct array or { resources: [] }
+            console.log(`Raw response data:`, responseData);
+            const moduleResources =
+              responseData.resources || responseData || [];
+            console.log(`Processed resources data:`, moduleResources);
+            console.log(
+              `Setting ${moduleResources.length} resources for module ${module.id}`
+            );
+            setResources(Array.isArray(moduleResources) ? moduleResources : []);
+          })
+          .catch((error) => {
+            console.error(
+              "Error refreshing resources after resource creation:",
+              error
+            );
+            setResources([]);
+          });
+      } else {
+        console.log(
+          `Ignoring resource event for different module: ${resourceData?.moduleId}`
+        );
+      }
+    };
+
+    // Use the same handler for updated and deleted resources
+    const handleResourceUpdated = handleResourceCreated;
+    const handleResourceDeleted = handleResourceCreated;
+
+    // Add event listeners for SSE events with CustomEvent type casting
+    window.addEventListener(
+      "resource.created",
+      handleResourceCreated as EventListener
+    );
+    window.addEventListener(
+      "resource.updated",
+      handleResourceUpdated as EventListener
+    );
+    window.addEventListener(
+      "resource.deleted",
+      handleResourceDeleted as EventListener
+    );
+
+    return () => {
+      // Cleanup on unmount
+      window.removeEventListener(
+        "resource.created",
+        handleResourceCreated as EventListener
+      );
+      window.removeEventListener(
+        "resource.updated",
+        handleResourceUpdated as EventListener
+      );
+      window.removeEventListener(
+        "resource.deleted",
+        handleResourceDeleted as EventListener
+      );
+    };
+  }, [isSignedIn, module]);
 
   // Initialize title and description when module data is loaded
   useEffect(() => {
@@ -698,10 +809,10 @@ export default function ModuleDetailWrapper({
               {isLoading ? (
                 <ResourceTableSkeleton showModuleColumn={false} />
               ) : resources.length === 0 && isSignedIn ? (
-                <div className="flex flex-col items-center justify-center h-[150px] text-muted-foreground">
-                  <p className="mb-4">
+                <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+                  <h3 className="font-medium">
                     Access your knowledge base and upload your own resources.
-                  </p>
+                  </h3>
                   <ResourceUploadButton
                     variant="outline"
                     className="text-secondary-foreground"
@@ -710,7 +821,7 @@ export default function ModuleDetailWrapper({
                 </div>
               ) : (
                 <ResourceTable
-                  resources={resources}
+                  resources={Array.isArray(resources) ? resources : []}
                   modules={allModules}
                   onUpdate={(updatedResource) => {
                     if (updatedResource._deleted) {

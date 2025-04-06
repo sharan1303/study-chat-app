@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
+import { broadcastResourceCreated } from "@/lib/events";
 
 /**
  * Validates if the specified module exists and is accessible by the given user.
@@ -84,13 +85,13 @@ type ResourceType = {
  * and timestamps in ISO format.
  *
  * @param props - An object whose `params` promise resolves to an object containing:
- *   - moduleId: The identifier for the module whose resources are being retrieved.
+ *   - id: The identifier for the module whose resources are being retrieved.
  *
  * @returns A JSON response containing an array of formatted resource objects or an error message with an appropriate status code.
  */
 export async function GET(
   request: NextRequest,
-  props: { params: Promise<{ moduleId: string }> }
+  props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
   const { userId } = await auth();
@@ -103,7 +104,9 @@ export async function GET(
     );
   }
 
-  const { moduleId } = params;
+  // Extract moduleId from params - the parameter name should be 'id' not 'moduleId'
+  const moduleId = params.id;
+  console.log(`GET /api/modules/${moduleId}/resources - Parameters:`, params);
 
   // Validate module access
   const accessCheck = await validateModuleAccess(moduleId, userId);
@@ -115,6 +118,9 @@ export async function GET(
   }
 
   try {
+    // Log the query we're about to execute
+    console.log(`Executing query with: moduleId=${moduleId}, userId=${userId}`);
+
     // Fetch resources for the module
     const resources = await prisma.resource.findMany({
       where: {
@@ -133,10 +139,26 @@ export async function GET(
       },
     });
 
+    console.log(`Found ${resources.length} resources for module ${moduleId}`);
+
+    // If we found ALL resources instead of just module-specific ones, log an error
+    if (resources.length > 0) {
+      // Check if all resources are actually for this module
+      const nonMatchingResources = resources.filter(
+        (r) => r.moduleId !== moduleId
+      );
+      if (nonMatchingResources.length > 0) {
+        console.error(
+          `ERROR: Found ${nonMatchingResources.length} resources with moduleId not matching ${moduleId}`
+        );
+        console.error(`First non-matching resource:`, nonMatchingResources[0]);
+      }
+    }
+
     // Format the response
     const formattedResources = resources.map((resource: ResourceType) => ({
       id: resource.id,
-      url: resource.fileUrl, // Map fileUrl from DB to url in API response
+      fileUrl: resource.fileUrl, // Use fileUrl consistently with DB field name
       title: resource.title,
       type: resource.type,
       moduleId: resource.moduleId,
@@ -145,6 +167,10 @@ export async function GET(
       createdAt: resource.createdAt.toISOString(),
       updatedAt: resource.updatedAt.toISOString(),
     }));
+
+    console.log(
+      `Returning ${formattedResources.length} formatted resources for module ${moduleId}`
+    );
 
     return NextResponse.json({ resources: formattedResources });
   } catch (error) {
@@ -167,13 +193,13 @@ export async function GET(
  * - A 500 status if an error occurs during resource creation.
  *
  * @param request - The HTTP request containing the resource data in its JSON body.
- * @param props - An object containing route parameters, including a promise that resolves to an object with the moduleId.
+ * @param props - An object containing route parameters, including a promise that resolves to a module object with the id.
  *
  * @returns A JSON response with either the created resource data or an error message.
  */
 export async function POST(
   request: NextRequest,
-  props: { params: Promise<{ moduleId: string }> }
+  props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
   const { userId } = await auth();
@@ -186,7 +212,11 @@ export async function POST(
     );
   }
 
-  const { moduleId } = params;
+  // Extract moduleId from params
+  const moduleId = params.id;
+  console.log(
+    `POST /api/modules/${moduleId}/resources - Creating resource for module`
+  );
 
   // Validate module access
   const accessCheck = await validateModuleAccess(moduleId, userId);
@@ -227,16 +257,22 @@ export async function POST(
       },
     });
 
+    // Broadcast the resource created event
+    broadcastResourceCreated({
+      id: resource.id,
+      moduleId: resource.moduleId,
+    });
+
     // Get the module name
     const moduleInfo = await prisma.module.findUnique({
       where: { id: moduleId },
       select: { name: true },
     });
 
-    // Map database resource to API response (add url field for backwards compatibility)
+    // Map database resource to API response
     return NextResponse.json({
       id: resource.id,
-      url: resource.fileUrl, // Map 'fileUrl' from DB to 'url' in API
+      fileUrl: resource.fileUrl, // Use fileUrl consistently with DB field name
       title: resource.title,
       type: resource.type,
       fileSize: resource.fileSize || null,

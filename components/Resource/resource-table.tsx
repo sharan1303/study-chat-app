@@ -31,34 +31,36 @@ export function ResourceTable({
   showModuleColumn = true,
 }: ResourceTableProps) {
   return (
-    <div className="overflow-x-auto border rounded-t-md">
-      <table className="w-full min-w-full table-fixed">
-        <thead>
-          <tr className="border-b bg-muted/50 text-xs font-medium text-muted-foreground">
-            <th className="text-left p-2.5 w-4/12">Name</th>
-            <th className="text-left p-2.5 w-2/12">Type</th>
-            {showModuleColumn && (
-              <th className="text-left p-2.5 w-2/12">Module</th>
-            )}
-            <th className="text-left p-2.5 w-2/12">Size</th>
-            <th className="text-left p-2.5 w-2/12">Added</th>
-            <th className="text-right p-2.5 w-1/12"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {resources
-            .filter((resource) => !resource._deleted)
-            .map((resource) => (
-              <ResourceRow
-                key={resource.id}
-                resource={resource}
-                modules={modules}
-                onUpdate={onUpdate}
-                showModuleColumn={showModuleColumn}
-              />
-            ))}
-        </tbody>
-      </table>
+    <div className="border rounded-md overflow-hidden">
+      <div className="overflow-y-auto max-h-[570px] overflow-x-auto">
+        <table className="w-full min-w-full table-fixed">
+          <thead className="sticky top-0 z-10">
+            <tr className="border-b bg-card text-xs font-medium text-muted-foreground">
+              <th className="text-left p-2.5 w-4/12">Name</th>
+              <th className="text-left p-2.5 w-2/12">Type</th>
+              {showModuleColumn && (
+                <th className="text-left p-2.5 w-2/12">Module</th>
+              )}
+              <th className="text-left p-2.5 w-2/12">Size</th>
+              <th className="text-left p-2.5 w-2/12">Added</th>
+              <th className="text-right p-2.5 w-1/12"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {resources
+              .filter((resource) => !resource._deleted)
+              .map((resource) => (
+                <ResourceRow
+                  key={resource.id}
+                  resource={resource}
+                  modules={modules}
+                  onUpdate={onUpdate}
+                  showModuleColumn={showModuleColumn}
+                />
+              ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -39,16 +39,15 @@ import {
 interface Resource {
   id: string;
   title: string;
-  description: string;
   type: string;
-  url?: string | null;
-  fileUrl?: string;
+  fileUrl: string | null;
   moduleId: string;
   moduleName?: string | null;
   createdAt: string;
   updatedAt?: string;
   _deleted?: boolean;
   fileSize?: number;
+  userId?: string | null;
 }
 
 interface Module {
@@ -275,12 +274,12 @@ const ResourceRow = memo(
         return resource.fileUrl;
       }
       if (
-        resource.url &&
-        (resource.url.includes("supabase.co/storage") ||
-          resource.url.includes("/object/sign/") ||
-          resource.url.includes("?token="))
+        resource.fileUrl &&
+        (resource.fileUrl.includes("supabase.co/storage") ||
+          resource.fileUrl.includes("/object/sign/") ||
+          resource.fileUrl.includes("?token="))
       ) {
-        return resource.url;
+        return resource.fileUrl;
       }
       return "";
     })();
@@ -325,12 +324,10 @@ const ResourceRow = memo(
         type: resource.type,
         hasFileUrl: Boolean(resource.fileUrl),
         fileUrl: resource.fileUrl,
-        hasUrl: Boolean(resource.url),
-        url: resource.url,
       });
 
       // Check if the URL is a Supabase storage URL that needs regeneration
-      const urlToCheck = resource.fileUrl || resource.url;
+      const urlToCheck = resource.fileUrl;
       const isSupabaseStorageUrl =
         urlToCheck &&
         (urlToCheck.includes("supabase.co/storage") ||
@@ -475,9 +472,9 @@ const ResourceRow = memo(
         }
       }
       // Second check: Is this a regular URL that can be opened directly?
-      else if (resource.url) {
-        console.log("🌐 Opening regular URL:", resource.url);
-        window.open(resource.url, "_blank");
+      else if (resource.fileUrl) {
+        console.log("🌐 Opening regular URL:", resource.fileUrl);
+        window.open(resource.fileUrl, "_blank");
         setIsUrlLoading(false);
       }
       // Final fallback: Neither URL type is available
@@ -587,7 +584,7 @@ const ResourceRow = memo(
           <ContextMenuTrigger asChild>
             <tr
               className={`border-b hover:bg-muted/50 cursor-pointer text-sm ${
-                resource.url || resource.fileUrl ? "hover:bg-blue-50/30" : ""
+                resource.fileUrl ? "hover:bg-blue-50/30" : ""
               }`}
               onClick={handleViewResource}
             >

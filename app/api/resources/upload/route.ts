@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getSupabaseAdmin, uploadFile } from "@/lib/supabase";
 import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { broadcastResourceCreated } from "@/lib/events";
 
 // Configure Next.js to handle larger uploads
 export const config = {
@@ -14,7 +15,7 @@ export const config = {
 /**
  * Processes a file upload request.
  *
- * This API endpoint verifies that the user is authenticated, then extracts a file and its associated metadata (title, moduleId, type)
+ * This API endpoint verifies that the user is authenticated, then extracts a file and its associated metadata (title, moduleId)
  * from the submitted form data. It ensures that all required fields are present, checks that the referenced module exists and is owned by the user,
  * and validates that the file does not exceed a 50MB size limit.
  *
@@ -42,10 +43,9 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File | null;
     const title = formData.get("title") as string;
     const moduleId = formData.get("moduleId") as string;
-    const type = formData.get("type") as string;
 
     // Validate required fields
-    if (!file || !title || !moduleId || !type) {
+    if (!file || !title || !moduleId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -139,11 +139,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Broadcast the resource created event
+    broadcastResourceCreated({
+      id: resource.id,
+      moduleId: resource.moduleId,
+    });
+
     return NextResponse.json({
       id: resource.id,
       title: resource.title,
       type: resource.type,
-      url: resource.fileUrl,
+      fileUrl: resource.fileUrl,
       fileSize: resource.fileSize,
       moduleId: resource.moduleId,
       createdAt: resource.createdAt.toISOString(),

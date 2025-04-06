@@ -4,7 +4,8 @@ import React from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { dark } from "@clerk/themes";
-import "./clerk-styles.css"; /**
+import "./clerk-styles.css";
+/**
  * Wraps the ClerkProvider with theme customization for authentication UI.
  *
  * This component uses the current UI theme to configure the appearance of Clerk's
@@ -26,7 +27,7 @@ export function ClerkProviderWithTheme({
   const clerkAppearance = {
     // Use dark theme for dark mode, omit baseTheme for light mode (default theme)
     baseTheme: isDarkTheme ? [dark] : undefined,
-    
+
     elements: {
       modalCloseButton: "absolute right-4 top-4",
       formButtonPrimary:
@@ -37,5 +38,12 @@ export function ClerkProviderWithTheme({
     },
   };
 
-  return <ClerkProvider appearance={clerkAppearance}>{children}</ClerkProvider>;
+  return (
+    <ClerkProvider
+      appearance={clerkAppearance}
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+    >
+      {children}
+    </ClerkProvider>
+  );
 }
