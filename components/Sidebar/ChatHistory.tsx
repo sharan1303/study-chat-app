@@ -68,12 +68,9 @@ export default function ChatHistory({
   }, []);
 
   const isActiveChat = (chat: Chat) => {
-    // Special case for welcome chat
-    if (
-      pathname === "/chat/welcome" &&
-      chat.title === "Welcome to Study Chat"
-    ) {
-      return true;
+    // Special case for welcome chat - only check the welcome path
+    if (chat.title === "Welcome to Study Chat") {
+      return pathname === "/chat/welcome";
     }
 
     if (pathname === `/chat/${chat.id}`) {
@@ -169,82 +166,90 @@ export default function ChatHistory({
         ) : (
           <ScrollArea className="h-full max-w-full">
             <div className="space-y-1 p-2">
-              {chats.map((chat) => (
-                <div key={chat.id} className="group/chat max-w-[240px]">
-                  <div
-                    className={cn(
-                      "w-full max-w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
-                      isActiveChat(chat)
-                        ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
-                        : ""
-                    )}
-                  >
-                    <button
-                      className="flex-1 flex items-center justify-between truncate"
-                      onClick={() => {
-                        // Special case for welcome chat
-                        if (chat.title === "Welcome to Study Chat") {
-                          router.push(`/chat/welcome`);
-                        } else if (chat.moduleId && chat.module) {
-                          const encodedName = encodeModuleSlug(
-                            chat.module.name
-                          );
-                          router.push(`/${encodedName}/chat/${chat.id}`);
-                        } else {
-                          router.push(`/chat/${chat.id}`);
-                        }
-                      }}
+              {chats
+                .filter(
+                  (chat, index, self) =>
+                    // Filter out duplicate welcome chats
+                    chat.title !== "Welcome to Study Chat" ||
+                    index ===
+                      self.findIndex((c) => c.title === "Welcome to Study Chat")
+                )
+                .map((chat) => (
+                  <div key={chat.id} className="group/chat max-w-[240px]">
+                    <div
+                      className={cn(
+                        "w-full max-w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
+                        isActiveChat(chat)
+                          ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
+                          : ""
+                      )}
                     >
-                      <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-70px)]">
-                        <MessageSquare
-                          size={14}
-                          className="mr-2 mt-0.5 flex-shrink-0"
-                        />
-                        <span className="truncate">{chat.title}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground hidden group-hover/chat:inline whitespace-nowrap pr-1">
-                        {formatDate(chat.updatedAt)}
-                      </span>
-                    </button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 ml-1 opacity-0 group-hover/chat:opacity-100 hover:bg-red-500 hover:text-white transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setChatToDelete(chat);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Thread</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete &quot;{chat.title}
-                            &quot;? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => {
-                              if (chatToDelete) {
-                                handleDeleteChat(chatToDelete);
-                              }
+                      <button
+                        className="flex-1 flex items-center justify-between truncate"
+                        onClick={() => {
+                          // Modified navigation for welcome chat - always route to /chat/welcome
+                          if (chat.title === "Welcome to Study Chat") {
+                            router.push("/chat/welcome");
+                          } else if (chat.moduleId && chat.module) {
+                            const encodedName = encodeModuleSlug(
+                              chat.module.name
+                            );
+                            router.push(`/${encodedName}/chat/${chat.id}`);
+                          } else {
+                            router.push(`/chat/${chat.id}`);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-70px)]">
+                          <MessageSquare
+                            size={14}
+                            className="mr-2 mt-0.5 flex-shrink-0"
+                          />
+                          <span className="truncate">{chat.title}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground hidden group-hover/chat:inline whitespace-nowrap pr-1">
+                          {formatDate(chat.updatedAt)}
+                        </span>
+                      </button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 ml-1 opacity-0 group-hover/chat:opacity-100 hover:bg-red-500 hover:text-white transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setChatToDelete(chat);
                             }}
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Thread</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete &quot;{chat.title}
+                              &quot;? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => {
+                                if (chatToDelete) {
+                                  handleDeleteChat(chatToDelete);
+                                }
+                              }}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </ScrollArea>
         )}
