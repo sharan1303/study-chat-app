@@ -290,7 +290,7 @@ export default function ClientChatPage({
               className="flex justify-end"
             >
               <div className="flex items-center gap-2 max-w-full flex-row-reverse">
-                <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground break-words">
+                <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words">
                   <div className="whitespace-pre-wrap">{message.content}</div>
                 </div>
               </div>
@@ -516,7 +516,7 @@ export default function ClientChatPage({
       >
         {/* Chat Header - Now inside the scrollable area */}
         {moduleDetails && (
-          <div className="px-3 py-10 flex items-center justify-between sticky top-10 bg-background">
+          <div className="px-3 py-2 flex items-center justify-between sticky top-1 bg-background">
             <Button
               variant="ghost"
               className="flex items-center gap-3 -ml-3 px-1 hover:bg-muted/50 rounded"
@@ -551,7 +551,7 @@ export default function ClientChatPage({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col space-y-8 pt-4 pb-8 pl-8 pr-6">
+                <div className="flex flex-col space-y-8 pt-14 pb-8 pl-8 pr-6">
                   {renderedMessages}
                 </div>
               )}

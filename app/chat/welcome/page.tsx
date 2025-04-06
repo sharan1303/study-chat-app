@@ -66,7 +66,8 @@ async function getOrCreateWelcomeChatId(
     }
 
     // If no existing welcome chat, create one with a very old date
-    const chatId = "welcome-" + generateId().substring(0, 8);
+    // Use a fixed ID of "welcome" for authenticated users
+    const chatId ="welcome";
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
@@ -86,7 +87,7 @@ async function getOrCreateWelcomeChatId(
       return chatId;
     } catch (error) {
       console.error("Error creating welcome chat:", error);
-      return "welcome-chat-fallback";
+      return "welcome";
     }
   }
 
@@ -105,8 +106,8 @@ async function getOrCreateWelcomeChatId(
       return existingWelcomeChat.id;
     }
 
-    // If no existing welcome chat, create one using the same format as the API
-    const chatId = "welcome-" + sessionId.substring(0, 8);
+    // If no existing welcome chat, create one with a fixed ID
+    const chatId = "welcome";
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
@@ -125,12 +126,37 @@ async function getOrCreateWelcomeChatId(
       return chatId;
     } catch (error) {
       console.error("Error creating welcome chat:", error);
-      return "welcome-chat-fallback";
+      // If there's already a welcome chat with this ID (possible with multiple anonymous users),
+      // we need to handle the conflict by using a session-specific ID as fallback
+      if (
+        error instanceof Error &&
+        error.message.includes("Unique constraint")
+      ) {
+        console.log("Welcome chat ID collision, using session-specific ID");
+        const fallbackId = "welcome-" + sessionId.substring(0, 8);
+
+        try {
+          await prisma.chat.create({
+            data: {
+              id: fallbackId,
+              title: "Welcome to Study Chat",
+              messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
+              sessionId: sessionId,
+              createdAt: tenYearsAgo,
+              updatedAt: tenYearsAgo,
+            },
+          });
+          return fallbackId;
+        } catch (innerError) {
+          console.error("Error creating fallback welcome chat:", innerError);
+        }
+      }
+      return "welcome";
     }
   }
 
   // Fallback for edge cases - use a consistent ID
-  return "welcome-chat-fallback";
+  return "welcome";
 }
 
 // Add this export to allow dynamic rendering

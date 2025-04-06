@@ -115,12 +115,12 @@ export default function ModuleList({
             className="justify-start w-40 pl-2 pb-2 text-left"
             asChild
           >
-            <Link href="/modules">Chat Categories</Link>
+            <Link href="/modules">Modules & Resources</Link>
           </Button>
 
           <Dialog open={isCreating} onOpenChange={setIsCreating}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 mr-3">
+              <Button variant="ghost" size="icon" className="h-8 w-8 mr-2.5">
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
@@ -146,10 +146,10 @@ export default function ModuleList({
             </div>
           ) : modules.length === 0 ? (
             !collapsed && (
-              <div className="text-center p-2">
+              <div className="text-center py-2 px-1">
                 <Dialog open={isCreating} onOpenChange={setIsCreating}>
                   <DialogTrigger asChild>
-                    <Button className="mt-2 w-full" size="sm">
+                    <Button className="w-full" size="default">
                       Create your first module
                     </Button>
                   </DialogTrigger>
@@ -173,7 +173,7 @@ export default function ModuleList({
                     collapsed && "justify-center p-1",
                     (currentModule === module.id ||
                       checkIsActive(module.name)) &&
-                      "bg-accent text-accent-foreground"
+                      "bg-accent border-r-4 border-primary text-accent-foreground"
                   )}
                   title={collapsed ? module.name : undefined}
                 >

@@ -28,36 +28,76 @@ export async function POST(request: NextRequest) {
       return Response.json(existingChat);
     }
 
-    // Create a welcome chat with the session ID
+    // Create a welcome chat with a fixed ID
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
-    const chat = await prisma.chat.create({
-      data: {
-        id: "welcome-" + sessionId.substring(0, 8),
-        title: "Welcome to Study Chat",
-        messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
+    try {
+      // Try to create with the fixed "welcome" ID first
+      const chat = await prisma.chat.create({
+        data: {
+          id: "welcome",
+          title: "Welcome to Study Chat",
+          messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
+          sessionId: sessionId,
+          createdAt: tenYearsAgo,
+          updatedAt: tenYearsAgo,
+        },
+      });
+
+      // Broadcast a chat created event for this session
+      const chatEventData = {
+        id: chat.id,
+        title: chat.title,
+        moduleId: null,
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt,
         sessionId: sessionId,
-        createdAt: tenYearsAgo,
-        updatedAt: tenYearsAgo,
-      },
-    });
+      };
 
-    // Broadcast a chat created event for this session
-    const chatEventData = {
-      id: chat.id,
-      title: chat.title,
-      moduleId: null,
-      createdAt: chat.createdAt,
-      updatedAt: chat.updatedAt,
-      sessionId: sessionId,
-    };
+      if (global.broadcastEvent) {
+        global.broadcastEvent("chat.created", chatEventData, [sessionId]);
+      }
 
-    if (global.broadcastEvent) {
-      global.broadcastEvent("chat.created", chatEventData, [sessionId]);
+      return Response.json(chat);
+    } catch (uniqueError) {
+      // If "welcome" ID is already taken, fallback to a session-specific ID
+      if (
+        uniqueError instanceof Error &&
+        uniqueError.message.includes("Unique constraint")
+      ) {
+        console.log("Welcome chat ID collision, using session-specific ID");
+        const fallbackId = "welcome-" + sessionId.substring(0, 8);
+
+        const fallbackChat = await prisma.chat.create({
+          data: {
+            id: fallbackId,
+            title: "Welcome to Study Chat",
+            messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
+            sessionId: sessionId,
+            createdAt: tenYearsAgo,
+            updatedAt: tenYearsAgo,
+          },
+        });
+
+        // Broadcast a chat created event for this session
+        const chatEventData = {
+          id: fallbackChat.id,
+          title: fallbackChat.title,
+          moduleId: null,
+          createdAt: fallbackChat.createdAt,
+          updatedAt: fallbackChat.updatedAt,
+          sessionId: sessionId,
+        };
+
+        if (global.broadcastEvent) {
+          global.broadcastEvent("chat.created", chatEventData, [sessionId]);
+        }
+
+        return Response.json(fallbackChat);
+      }
+      throw uniqueError;
     }
-
-    return Response.json(chat);
   } catch (error) {
     console.error("Error creating welcome chat:", error);
     return new Response("Error creating welcome chat", { status: 500 });

@@ -21,9 +21,9 @@ export const WELCOME_RESPONSE = {
   role: "assistant" as const,
   content:
     "# Study Chat is your personal AI Chat for studying." +
-    "\n# How Study Chat can help you:" +
+    "\n## How Study Chat can help you?" +
     "\n### 1. We are modular." +
-    "\nCreate specialized AI agents for different subjects\n\n" +
+    "\nCreate specialised AI agents for different subjects\n\n" +
     "\n### 2. We bring your notes to life." +
     "\nAsk questions about documents you've uploaded\n\n" +
     "\n### 3. We bring the internet to you." +
