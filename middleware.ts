@@ -17,66 +17,77 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 // This combined middleware handles authentication, welcome chat redirection, and dynamic rendering
-export default clerkMiddleware((auth, req: NextRequest) => {
-  // Redirect users to welcome chat when they visit the root path for the first time
-  if (req.nextUrl.pathname === "/") {
-    // Check if visited cookie exists
-    const visitedCookie = req.cookies.get("study-chat-visited");
+export default clerkMiddleware(
+  (auth, req: NextRequest) => {
+    // Redirect users to welcome chat when they visit the root path for the first time
+    if (req.nextUrl.pathname === "/") {
+      // Check if visited cookie exists
+      const visitedCookie = req.cookies.get("study-chat-visited");
 
-    // If not visited before, redirect to welcome chat
-    if (!visitedCookie) {
-      // Create response with redirect
-      const response = NextResponse.redirect(new URL("/chat/welcome", req.url));
+      // If not visited before, redirect to welcome chat
+      if (!visitedCookie) {
+        // Create response with redirect
+        const response = NextResponse.redirect(
+          new URL("/chat/welcome", req.url)
+        );
 
-      // Set cookie to indicate they've visited
-      response.cookies.set("study-chat-visited", "true", {
-        maxAge: 60 * 60 * 24 * 365, // 1 year
-        path: "/",
-      });
+        // Set cookie to indicate they've visited
+        response.cookies.set("study-chat-visited", "true", {
+          maxAge: 60 * 60 * 24 * 365, // 1 year
+          path: "/",
+        });
 
-      return response;
+        return response;
+      }
     }
-  }
 
-  // The existing chat page redirect should still work too
-  if (req.nextUrl.pathname === "/chat") {
-    // Check if visited cookie exists
-    const visitedCookie = req.cookies.get("study-chat-visited");
+    // The existing chat page redirect should still work too
+    if (req.nextUrl.pathname === "/chat") {
+      // Check if visited cookie exists
+      const visitedCookie = req.cookies.get("study-chat-visited");
 
-    // If not visited before, redirect to welcome chat
-    if (!visitedCookie) {
-      // Create response with redirect
-      const response = NextResponse.redirect(new URL("/chat/welcome", req.url));
+      // If not visited before, redirect to welcome chat
+      if (!visitedCookie) {
+        // Create response with redirect
+        const response = NextResponse.redirect(
+          new URL("/chat/welcome", req.url)
+        );
 
-      // Set cookie to indicate they've visited
-      response.cookies.set("study-chat-visited", "true", {
-        maxAge: 60 * 60 * 24 * 365, // 1 year
-        path: "/",
-      });
+        // Set cookie to indicate they've visited
+        response.cookies.set("study-chat-visited", "true", {
+          maxAge: 60 * 60 * 24 * 365, // 1 year
+          path: "/",
+        });
 
-      return response;
+        return response;
+      }
     }
+
+    // Check if the route is public
+    if (isPublicRoute(req)) {
+      return; // Allow access to public routes without authentication
+    }
+
+    // For protected routes, ensure user is authenticated
+    auth.protect();
+
+    // Handle dynamic rendering after auth check
+    const path = req.nextUrl.pathname;
+    const response = NextResponse.next();
+
+    if (dynamicRoutes.includes(path)) {
+      // Set header for dynamic rendering
+      response.headers.set("x-middleware-cache", "no-cache");
+    }
+
+    return response;
+  },
+  {
+    authorizedParties: [
+      process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || "https://localhost:3000",
+    ],
   }
-
-  // Check if the route is public
-  if (isPublicRoute(req)) {
-    return; // Allow access to public routes without authentication
-  }
-
-  // For protected routes, ensure user is authenticated
-  auth.protect();
-
-  // Handle dynamic rendering after auth check
-  const path = req.nextUrl.pathname;
-  const response = NextResponse.next();
-
-  if (dynamicRoutes.includes(path)) {
-    // Set header for dynamic rendering
-    response.headers.set("x-middleware-cache", "no-cache");
-  }
-
-  return response;
-});
+);
 
 // Export the Clerk matcher config
 export const config = {
