@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import ClientChatPage from "@/components/Main/ClientChatPage";
 import { ChatPageLoading } from "@/components/Main/ClientChatPage";
-import { generateId } from "@/lib/utils";
 import { Message } from "@ai-sdk/react";
 import { WELCOME_PROMPT, WELCOME_RESPONSE } from "@/lib/prompts";
 import prisma from "@/lib/prisma";
@@ -67,7 +66,7 @@ async function getOrCreateWelcomeChatId(
 
     // If no existing welcome chat, create one with a very old date
     // Use a fixed ID of "welcome" for authenticated users
-    const chatId ="welcome";
+    const chatId = "welcome";
     const tenYearsAgo = new Date();
     tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
@@ -133,8 +132,7 @@ async function getOrCreateWelcomeChatId(
         error.message.includes("Unique constraint")
       ) {
         console.log("Welcome chat ID collision, using session-specific ID");
-        const fallbackId = "welcome-" + sessionId.substring(0, 8);
-
+        const fallbackId = `welcome-${sessionId.substring(0, 8)}`;
         try {
           await prisma.chat.create({
             data: {

@@ -185,6 +185,7 @@ export default function ChatHistory({
                       )}
                     >
                       <button
+                        type="button"
                         className="flex-1 flex items-center justify-between truncate"
                         onClick={() => {
                           // Modified navigation for welcome chat - always route to /chat/welcome
