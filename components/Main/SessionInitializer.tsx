@@ -34,7 +34,9 @@ export function SessionInitializer() {
             if (typeof localStorage !== "undefined") {
               const tempSessionId =
                 crypto.randomUUID?.() ||
-                Math.random().toString(36).substring(2, 15);
+                Array.from(new Array(36), () => 
+                  Math.floor(Math.random() * 16).toString(16)
+                ).join('');
               localStorage.setItem(SESSION_ID_KEY, tempSessionId);
               console.log("Manually set session ID:", tempSessionId);
             }

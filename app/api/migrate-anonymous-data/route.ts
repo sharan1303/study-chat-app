@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
       // 3. Find all resources with this sessionId (that weren't already included with modules)
       const orphanedResources = await prismaClient.resource.findMany({
         where: {
-          sessionId,
           moduleId: { equals: undefined }, // Using equals for null check
         },
       });
@@ -84,39 +83,16 @@ export async function POST(request: NextRequest) {
       if (orphanedResources.length > 0) {
         await prismaClient.resource.updateMany({
           where: {
-            sessionId,
             moduleId: { equals: undefined }, // Using equals for null check
           },
           data: {
             userId: effectiveUserId,
-            sessionId: "", // Empty string instead of null
           },
         });
         migratedResources = orphanedResources.length;
         console.log(`API: Migrated ${migratedResources} orphaned resources`);
       }
-
-      // 5. Also update any resources directly associated with the sessionId
-      const directResources = await prismaClient.resource.findMany({
-        where: { sessionId },
-      });
-
-      console.log(
-        `API: Found ${directResources.length} direct resources to migrate`
-      );
-
-      if (directResources.length > 0) {
-        await prismaClient.resource.updateMany({
-          where: { sessionId },
-          data: {
-            userId: effectiveUserId,
-            sessionId: "", // Empty string instead of null
-          },
-        });
-        migratedResources += directResources.length;
-        console.log(`API: Migrated ${directResources.length} direct resources`);
-      }
-
+      
       // 6. Find and migrate all chats associated with this sessionId
       const chats = await prismaClient.chat.findMany({
         where: { sessionId },

@@ -26,10 +26,27 @@ export default function AnonymousDataMigration() {
   const [hasAnonymousData, setHasAnonymousData] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Check if there's anonymous data when user signs in
   useEffect(() => {
     if (!isSignedIn || !sessionId) return;
+
+    // Fetch userId early so it's ready when user wants to migrate
+    const fetchUserId = async () => {
+      try {
+        const { userId } = await fetch("/api/user").then((res) => res.json());
+        if (userId && userId !== "") {
+          setUserId(userId);
+        } else {
+          console.log("Received empty or null userId from /api/user");
+        }
+      } catch (error) {
+        console.error("Error fetching user ID:", error);
+      }
+    };
+
+    fetchUserId();
 
     // Check if user has already skipped the migration dialog
     if (
@@ -111,21 +128,41 @@ export default function AnonymousDataMigration() {
         )}...`
       );
 
-      // Get the current user ID
-      const { userId } = await fetch("/api/user").then((res) => res.json());
+      // Wait a moment for Clerk auth to fully establish if needed
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      if (!userId) {
-        console.error("Migration failed: couldn't get current user ID");
-        toast.error("Failed to migrate your data. Please try again.");
+      // Use the pre-fetched userId or fetch it if not available
+      let currentUserId = userId;
+
+      if (!currentUserId) {
+        const response = await fetch("/api/user").then((res) => res.json());
+        currentUserId = response.userId;
+
+        if (!currentUserId) {
+          console.error("Migration failed: couldn't get current user ID");
+          toast.error("Failed to migrate your data. Please try again.");
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Additional check to ensure userId is not empty string
+      if (currentUserId === "") {
+        console.error("Migration failed: user ID is empty string");
+        toast.error(
+          "Failed to migrate your data. Please try again when fully logged in."
+        );
         setIsLoading(false);
         return;
       }
 
-      console.log(`Got userId for migration: ${userId.substring(0, 8)}...`);
+      console.log(
+        `Got userId for migration: ${currentUserId.substring(0, 8)}...`
+      );
 
       const response = await axios.post("/api/migrate-anonymous-data", {
         sessionId,
-        userId,
+        userId: currentUserId,
       });
 
       if (response.data.success) {

@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
       id: moduleId,
     };
 
-    // Check if module belongs to the authenticated user or the provided session
+    // We only allow fetching module on session id if it is linked to a userid
+    // to only allow for authenticated user
     if (sessionId) {
       whereCondition.OR = [{ userId }, { sessionId }];
     } else {
