@@ -155,7 +155,12 @@ export const api = {
       throw new Error(`Failed to fetch chat history: ${response.statusText}`);
     }
 
-    return response.json();
+    // Get the response as JSON - this returns an array directly
+    const data = await response.json();
+    console.log(`API client received chats:`, data.length || 0);
+
+    // Return the data directly as it's already in the right format (array of chats)
+    return data;
   },
 
   /**

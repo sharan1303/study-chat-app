@@ -44,7 +44,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause based on authentication state
-    const whereClause = userId ? { userId } : { sessionId };
+    // If userId exists, fetch chats for both userId AND sessionId (if provided)
+    const whereClause = userId
+      ? sessionId
+        ? { OR: [{ userId }, { sessionId }] }
+        : { userId }
+      : { sessionId };
+
+    // Log the where clause for debugging
+    console.log(
+      `API: Searching for chats with criteria:`,
+      JSON.stringify(whereClause)
+    );
 
     // Fetch all chats for this user/session
     const chats = await prisma.chat.findMany({
@@ -62,6 +73,8 @@ export async function GET(request: NextRequest) {
         },
       },
     });
+
+    console.log(`API: Raw chat count before filtering: ${chats.length}`);
 
     // Filter to keep only one "Welcome to Study Chat" entry
     let hasWelcomeChat = false;

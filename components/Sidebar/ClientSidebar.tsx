@@ -117,11 +117,20 @@ function ClientSidebarContent({
         // Use the API client instead of direct fetch
         const data = await api.getChatHistory();
 
-        if (data && data.chats) {
-          console.log(`Retrieved ${data.chats.length} chats`);
+        // Log the raw data response
+        console.log("Raw chat data response:", JSON.stringify(data));
+
+        // Check the structure and handle it appropriately
+        if (Array.isArray(data)) {
+          console.log(`Retrieved ${data.length} chats (array format)`);
+          setChats(data);
+        } else if (data && Array.isArray(data.chats)) {
+          console.log(
+            `Retrieved ${data.chats.length} chats (object.chats format)`
+          );
           setChats(data.chats);
         } else {
-          console.log("Retrieved 0 chats");
+          console.log("Retrieved 0 chats", data);
           setChats([]);
         }
       } catch (error) {
@@ -466,28 +475,35 @@ function ClientSidebarContent({
 
   // Initial data fetching
   useEffect(() => {
-    if (!isLoaded) return;
+    // Load modules and chat history on mount
+    if (isLoaded) {
+      setLoading(true);
 
-    // Fetch modules and chats on initial load
-    fetchModules()
-      .then((data) => {
-        if (data.modules) {
-          setModules(data.modules);
+      // Fetch modules data
+      fetchModules()
+        .then((data) => {
+          if (data.modules) {
+            setModules(data.modules);
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching modules:", error);
+          setError("Failed to load modules. Please try again later.");
+        })
+        .finally(() => {
           setLoading(false);
-        }
-      })
-      .catch((err) => {
-        setError(`Failed to load modules: ${err.message}`);
-        setLoading(false);
-      });
+        });
 
-    // Fetch initial chat history
-    refreshChatHistory().then(() => {
-      // For anonymous users, ensure they have a welcome chat
-      if (!isSignedIn) {
-        createWelcomeChatForAnonymousUsers();
-      }
-    });
+      // Fetch chat history with a small delay to ensure auth is settled
+      setTimeout(() => {
+        refreshChatHistory().then(() => {
+          // For anonymous users, ensure they have a welcome chat
+          if (!isSignedIn) {
+            createWelcomeChatForAnonymousUsers();
+          }
+        });
+      }, 300);
+    }
   }, [
     isLoaded,
     fetchModules,
