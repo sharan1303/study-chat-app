@@ -47,6 +47,18 @@ interface Module {
   icon: string;
 }
 
+// Add this interface at the top of the file, after other interfaces
+interface UploadResult {
+  file?: string;
+  error?: {
+    response?: {
+      data?: {
+        error?: string;
+      };
+    };
+  };
+}
+
 interface ResourceUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -106,7 +118,6 @@ export function ResourceUploadDialog({
         setIsLoading(true);
         setModuleLoadError(null);
         console.log("Fetching modules...");
-
         // Get session ID for anonymous users
         const sessionId = getOrCreateSessionIdClient();
 
@@ -116,7 +127,7 @@ export function ResourceUploadDialog({
           url += `?sessionId=${sessionId}`;
           console.log(
             "Using sessionId for module fetch:",
-            sessionId.substring(0, 8) + "..."
+            `${sessionId.substring(0, 8)}...`
           );
         }
 
@@ -204,12 +215,13 @@ export function ResourceUploadDialog({
 
             try {
               // Add sessionId to URL if available
+              // Add sessionId to URL if available
               let url = "/api/resources/upload";
               if (sessionId) {
                 url += `?sessionId=${sessionId}`;
                 console.log(
                   "Using sessionId for upload:",
-                  sessionId.substring(0, 8) + "..."
+                  `${sessionId.substring(0, 8)}...`
                 );
               }
 
@@ -226,22 +238,29 @@ export function ResourceUploadDialog({
         );
 
         const successfulUploads = uploadResults.filter(
-          (result) => result.status === "fulfilled"
+          (result) =>
+            result.status === "fulfilled" && !("error" in result.value)
         );
+
+        // Find both rejected promises and fulfilled promises with errors
         const failedUploads = uploadResults.filter(
-          (result) => result.status === "rejected"
+          (result) =>
+            result.status === "rejected" ||
+            (result.status === "fulfilled" && "error" in result.value)
         );
 
         if (failedUploads.length > 0) {
           const errorMessages = failedUploads
             .map((result) => {
               if (result.status === "rejected") {
-                return result.reason.message || "Unknown error";
+                return result.reason?.message || "Unknown error";
+              } else {
+                // For fulfilled but with error property
+                const error =
+                  (result.value as UploadResult).error?.response?.data?.error ||
+                  "Unknown error";
+                return `${(result.value as UploadResult).file || ""}: ${error}`;
               }
-              // For fulfilled but with error property
-              const error =
-                result.value?.error?.response?.data?.error || "Unknown error";
-              return `${result.value?.file || ""}: ${error}`;
             })
             .join("\n");
           toast.error("Failed to upload resources:\n" + errorMessages);
