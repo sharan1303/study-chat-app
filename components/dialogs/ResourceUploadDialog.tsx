@@ -8,6 +8,7 @@ import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import { broadcastResourceCreated } from "@/lib/events";
+import { getOrCreateSessionIdClient } from "@/lib/session";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -105,7 +106,21 @@ export function ResourceUploadDialog({
         setIsLoading(true);
         setModuleLoadError(null);
         console.log("Fetching modules...");
-        const response = await axios.get("/api/modules");
+
+        // Get session ID for anonymous users
+        const sessionId = getOrCreateSessionIdClient();
+
+        // Add sessionId to the request URL
+        let url = "/api/modules";
+        if (sessionId) {
+          url += `?sessionId=${sessionId}`;
+          console.log(
+            "Using sessionId for module fetch:",
+            sessionId.substring(0, 8) + "..."
+          );
+        }
+
+        const response = await axios.get(url);
         console.log("Modules API response:", response.data);
 
         // Handle the response data format - API returns { modules: [...] }
@@ -174,6 +189,9 @@ export function ResourceUploadDialog({
           return;
         }
 
+        // Get sessionId for anonymous users
+        const sessionId = getOrCreateSessionIdClient();
+
         // For each file, create and submit a FormData object
         const uploadResults = await Promise.allSettled(
           selectedFiles.map(async (file) => {
@@ -185,12 +203,23 @@ export function ResourceUploadDialog({
             formData.append("file", file);
 
             try {
-              return await axios.post("/api/resources/upload", formData, {
+              // Add sessionId to URL if available
+              let url = "/api/resources/upload";
+              if (sessionId) {
+                url += `?sessionId=${sessionId}`;
+                console.log(
+                  "Using sessionId for upload:",
+                  sessionId.substring(0, 8) + "..."
+                );
+              }
+
+              return await axios.post(url, formData, {
                 headers: {
                   "Content-Type": "multipart/form-data",
                 },
               });
             } catch (error) {
+              console.error("Upload error:", error);
               return { file: file.name, error };
             }
           })
@@ -205,9 +234,15 @@ export function ResourceUploadDialog({
 
         if (failedUploads.length > 0) {
           const errorMessages = failedUploads
-            .map(
-              (result) => result.reason.response?.data?.error || "Unknown error"
-            )
+            .map((result) => {
+              if (result.status === "rejected") {
+                return result.reason.message || "Unknown error";
+              }
+              // For fulfilled but with error property
+              const error =
+                result.value?.error?.response?.data?.error || "Unknown error";
+              return `${result.value?.file || ""}: ${error}`;
+            })
             .join("\n");
           toast.error("Failed to upload resources:\n" + errorMessages);
         }

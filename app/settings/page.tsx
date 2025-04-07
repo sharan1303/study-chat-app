@@ -282,6 +282,7 @@ function SettingsContent() {
                         <input
                           type="file"
                           accept=".json"
+                          disabled={true}
                           ref={fileInputRef}
                           onChange={handleFileImport}
                           className="hidden"

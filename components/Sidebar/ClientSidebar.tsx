@@ -102,83 +102,38 @@ function ClientSidebarContent({
     }
   }, [isLoaded]);
 
-  // Fetch chat history function - memoized with useCallback
-  const fetchChats = useCallback(async () => {
-    if (!isLoaded) return;
-
-    console.log("Fetching chats...");
-    try {
-      // Add timestamp to prevent caching
-      const timestamp = new Date().getTime();
-      let url = `/api/chat/history?t=${timestamp}`;
-
-      // For anonymous users, add the sessionId
-      if (!isSignedIn) {
-        const sessionId = getOrCreateSessionIdClient();
-        if (sessionId) {
-          url += `&sessionId=${sessionId}`;
-          console.log(
-            `Requesting chats for anonymous user with sessionId: ${sessionId}`
-          );
-        } else {
-          console.log(
-            "No session ID found for anonymous user, returning empty chats"
-          );
-          return [];
-        }
-      }
-
-      console.log(`Requesting chats from: ${url}`);
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
-
-      if (!response.ok) {
-        console.error(`Chat fetch failed with status: ${response.status}`);
-        return [];
-      }
-
-      const data = await response.json();
-      console.log(`Fetch successful, received ${data.length} chats`);
-
-      // Sort chats by updatedAt date (newest first)
-      const sortedChats = [...data].sort((a, b) => {
-        return (
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
-      });
-
-      console.log("Chats sorted by most recent first");
-      return sortedChats;
-    } catch (error) {
-      console.error("Error fetching chats:", error);
-      return [];
-    }
-  }, [isLoaded, isSignedIn]);
-
-  // Refresh chat history function - memoized with useCallback
+  // Fetch chat history function - refreshes the chat list
   const refreshChatHistory = useCallback(async () => {
-    console.log("Refreshing chat history...");
-    setLoadingChats(true);
     try {
-      const chatData = await fetchChats();
-      if (chatData) {
-        console.log(`Retrieved ${chatData.length} chats`);
-        // Force a new array reference to trigger re-render
-        setChats([...chatData]);
+      console.log("Refreshing chat history...");
+
+      // Use the API client
+      if (!isLoaded) return;
+
+      try {
+        setLoadingChats(true);
+        console.log("Fetching chats...");
+
+        // Use the API client instead of direct fetch
+        const data = await api.getChatHistory();
+
+        if (data && data.chats) {
+          console.log(`Retrieved ${data.chats.length} chats`);
+          setChats(data.chats);
+        } else {
+          console.log("Retrieved 0 chats");
+          setChats([]);
+        }
+      } catch (error) {
+        console.error("Error fetching chat history:", error);
+        setChats([]);
+      } finally {
+        setLoadingChats(false);
       }
     } catch (error) {
       console.error("Error refreshing chat history:", error);
-    } finally {
-      setLoadingChats(false);
     }
-  }, [fetchChats]);
+  }, [isLoaded]);
 
   // Set up Server-Sent Events (SSE) for real-time updates
   useEffect(() => {

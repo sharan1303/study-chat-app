@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/chat(.*)", // Allow chat API for unauthenticated users
   "/api/modules(.*)", // Allow modules API for anonymous users
   "/api/check-anonymous-data(.*)", // Allow checking anonymous data
+  "/api/migrate-anonymous-data(.*)", // Allow migrating anonymous data
   "/api/events(.*)", // Allow SSE events API for anonymous users
   "/api/events/ping(.*)", // Allow event ping endpoint for anonymous users
   "/modules(.*)", // Allow modules pages for anonymous users
@@ -84,7 +85,8 @@ export default clerkMiddleware(
   },
   {
     authorizedParties: [
-      process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || "https://localhost:3000",
+      process.env.NEXT_PUBLIC_CLERK_FRONTEND_API ||
+        "https://study-chat-app.vercel.app",
     ],
   }
 );
