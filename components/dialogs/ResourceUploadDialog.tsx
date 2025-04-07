@@ -8,6 +8,7 @@ import { Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 import { broadcastResourceCreated } from "@/lib/events";
+import { getOrCreateSessionIdClient } from "@/lib/session";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +45,18 @@ interface Module {
   name: string;
   description: string | null;
   icon: string;
+}
+
+// Add this interface at the top of the file, after other interfaces
+interface UploadResult {
+  file?: string;
+  error?: {
+    response?: {
+      data?: {
+        error?: string;
+      };
+    };
+  };
 }
 
 interface ResourceUploadDialogProps {
@@ -105,7 +118,20 @@ export function ResourceUploadDialog({
         setIsLoading(true);
         setModuleLoadError(null);
         console.log("Fetching modules...");
-        const response = await axios.get("/api/modules");
+        // Get session ID for anonymous users
+        const sessionId = getOrCreateSessionIdClient();
+
+        // Add sessionId to the request URL
+        let url = "/api/modules";
+        if (sessionId) {
+          url += `?sessionId=${sessionId}`;
+          console.log(
+            "Using sessionId for module fetch:",
+            `${sessionId.substring(0, 8)}...`
+          );
+        }
+
+        const response = await axios.get(url);
         console.log("Modules API response:", response.data);
 
         // Handle the response data format - API returns { modules: [...] }
@@ -174,6 +200,9 @@ export function ResourceUploadDialog({
           return;
         }
 
+        // Get sessionId for anonymous users
+        const sessionId = getOrCreateSessionIdClient();
+
         // For each file, create and submit a FormData object
         const uploadResults = await Promise.allSettled(
           selectedFiles.map(async (file) => {
@@ -185,29 +214,54 @@ export function ResourceUploadDialog({
             formData.append("file", file);
 
             try {
-              return await axios.post("/api/resources/upload", formData, {
+              // Add sessionId to URL if available
+              // Add sessionId to URL if available
+              let url = "/api/resources/upload";
+              if (sessionId) {
+                url += `?sessionId=${sessionId}`;
+                console.log(
+                  "Using sessionId for upload:",
+                  `${sessionId.substring(0, 8)}...`
+                );
+              }
+
+              return await axios.post(url, formData, {
                 headers: {
                   "Content-Type": "multipart/form-data",
                 },
               });
             } catch (error) {
+              console.error("Upload error:", error);
               return { file: file.name, error };
             }
           })
         );
 
         const successfulUploads = uploadResults.filter(
-          (result) => result.status === "fulfilled"
+          (result) =>
+            result.status === "fulfilled" && !("error" in result.value)
         );
+
+        // Find both rejected promises and fulfilled promises with errors
         const failedUploads = uploadResults.filter(
-          (result) => result.status === "rejected"
+          (result) =>
+            result.status === "rejected" ||
+            (result.status === "fulfilled" && "error" in result.value)
         );
 
         if (failedUploads.length > 0) {
           const errorMessages = failedUploads
-            .map(
-              (result) => result.reason.response?.data?.error || "Unknown error"
-            )
+            .map((result) => {
+              if (result.status === "rejected") {
+                return result.reason?.message || "Unknown error";
+              } else {
+                // For fulfilled but with error property
+                const error =
+                  (result.value as UploadResult).error?.response?.data?.error ||
+                  "Unknown error";
+                return `${(result.value as UploadResult).file || ""}: ${error}`;
+              }
+            })
             .join("\n");
           toast.error("Failed to upload resources:\n" + errorMessages);
         }
