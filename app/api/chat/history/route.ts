@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { SESSION_ID_KEY } from "@/lib/session";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
@@ -12,8 +13,18 @@ export async function GET(request: NextRequest) {
   const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
   const sessionId = sessionIdFromParam || sessionIdFromKey;
 
+  // Log authentication information for debugging
+  console.log(
+    `API: Chat history request - userId: ${userId || "none"}, sessionId: ${
+      sessionId ? `${sessionId.substring(0, 8)}...` : "none"
+    }`
+  );
+
   // Require either userId or sessionId
   if (!userId && !sessionId) {
+    console.error(
+      `API: Unauthorized chat history request - no userId or sessionId`
+    );
     return new Response("Session ID or authentication required", {
       status: 401,
     });
@@ -21,15 +32,20 @@ export async function GET(request: NextRequest) {
 
   try {
     if (userId) {
-      console.log(`Fetching chat history for authenticated user: ${userId}`);
+      console.log(
+        `API: Fetching chat history for authenticated user: ${userId}`
+      );
     } else if (sessionId) {
       console.log(
-        `Fetching chat history for anonymous user with session: ${sessionId}`
+        `API: Fetching chat history for anonymous user with session: ${sessionId.substring(
+          0,
+          8
+        )}...`
       );
     }
 
     // Build where clause based on authentication state
-    const where = {};
+    const where: Prisma.ChatWhereInput = {};
     if (userId) {
       // For authenticated users, find by userId
       const user = await prisma.user.findUnique({
@@ -40,10 +56,10 @@ export async function GET(request: NextRequest) {
         return new Response("User not found", { status: 404 });
       }
 
-      where["userId"] = user.id;
+      where.userId = user.id;
     } else if (sessionId) {
       // For anonymous users, find by sessionId
-      where["sessionId"] = sessionId;
+      where.sessionId = sessionId;
     }
 
     // Fetch all chats for this user/session

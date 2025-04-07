@@ -6,13 +6,14 @@ import { broadcastResourceCreated } from "@/lib/events";
 /**
  * Validates if the specified module exists and is accessible by the given user.
  *
- * This function ensures that a valid user ID is provided and verifies that the module with the given
+ * This function ensures that a valid user ID or session ID is provided and verifies that the module with the given
  * moduleId belongs to that user by querying the database. It returns an object indicating success if
  * access is confirmed, or an error object with the appropriate HTTP status code if authentication fails,
  * the module doesn't exist, or an internal error occurs.
  *
  * @param moduleId - The identifier of the module.
  * @param userId - The authenticated user's identifier. If null, authentication is considered missing.
+ * @param sessionId - The anonymous session identifier. Used as fallback if userId is null.
  *
  * @returns An object with:
  * - { success: true } if the module exists and the user is authorized,
@@ -21,21 +22,39 @@ import { broadcastResourceCreated } from "@/lib/events";
  *   - 404 if the module is not found or access is denied,
  *   - 500 if a database error occurs.
  */
-async function validateModuleAccess(moduleId: string, userId: string | null) {
-  // Require authentication with userId
-  if (!userId) {
+async function validateModuleAccess(
+  moduleId: string,
+  userId: string | null,
+  sessionId: string | null
+) {
+  // Require authentication with userId or sessionId
+  if (!userId && !sessionId) {
+    console.error("Authentication required: No userId or sessionId provided");
     return {
-      error: "Authentication required",
+      error: "Authentication required - no userId or sessionId",
       status: 401,
     };
   }
 
   try {
     // Build the query to find the module
-    const whereCondition = {
+    const whereCondition: any = {
       id: moduleId,
-      userId,
     };
+
+    // Add user ID or session ID to the condition
+    if (userId) {
+      whereCondition.userId = userId;
+    } else if (sessionId) {
+      whereCondition.sessionId = sessionId;
+    }
+
+    console.log("Validating module access with:", {
+      moduleId,
+      userId: userId ? `${userId.substring(0, 8)}...` : null,
+      sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null,
+      whereCondition,
+    });
 
     // Check if the module exists and belongs to the user
     const moduleExists = await prisma.module.findFirst({
@@ -43,12 +62,18 @@ async function validateModuleAccess(moduleId: string, userId: string | null) {
     });
 
     if (!moduleExists) {
+      console.error("Module not found or access denied:", {
+        moduleId,
+        userId: userId ? `${userId.substring(0, 8)}...` : null,
+        sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null,
+      });
       return {
         error: "Module not found or access denied",
         status: 404,
       };
     }
 
+    console.log("Module access validated successfully");
     return { success: true };
   } catch (error) {
     console.error("Error validating module access:", error);
@@ -95,9 +120,18 @@ export async function GET(
 ) {
   const params = await props.params;
   const { userId } = await auth();
+  const searchParams = request.nextUrl.searchParams;
+  const sessionId = searchParams.get("sessionId");
 
-  // Require authentication with userId
-  if (!userId) {
+  // Log authentication details
+  console.log(`GET /api/modules/${params.id}/resources auth:`, {
+    userId,
+    sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null,
+  });
+
+  // Require authentication with userId or sessionId
+  if (!userId && !sessionId) {
+    console.error("Authentication required - no userId or sessionId");
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
@@ -109,7 +143,7 @@ export async function GET(
   console.log(`GET /api/modules/${moduleId}/resources - Parameters:`, params);
 
   // Validate module access
-  const accessCheck = await validateModuleAccess(moduleId, userId);
+  const accessCheck = await validateModuleAccess(moduleId, userId, sessionId);
   if (!accessCheck.success) {
     return NextResponse.json(
       { error: accessCheck.error },
@@ -203,9 +237,18 @@ export async function POST(
 ) {
   const params = await props.params;
   const { userId } = await auth();
+  const searchParams = request.nextUrl.searchParams;
+  const sessionId = searchParams.get("sessionId");
 
-  // Require authentication with userId
-  if (!userId) {
+  // Log authentication details
+  console.log(`POST /api/modules/${params.id}/resources auth:`, {
+    userId,
+    sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null,
+  });
+
+  // Require authentication with userId or sessionId
+  if (!userId && !sessionId) {
+    console.error("Authentication required - no userId or sessionId");
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
@@ -219,7 +262,7 @@ export async function POST(
   );
 
   // Validate module access
-  const accessCheck = await validateModuleAccess(moduleId, userId);
+  const accessCheck = await validateModuleAccess(moduleId, userId, sessionId);
   if (!accessCheck.success) {
     return NextResponse.json(
       { error: accessCheck.error },

@@ -4,6 +4,7 @@ import { getSupabaseAdmin, uploadFile } from "@/lib/supabase";
 import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { broadcastResourceCreated } from "@/lib/events";
+import { Prisma } from "@prisma/client";
 
 // Configure Next.js to handle larger uploads
 export const config = {
@@ -31,9 +32,16 @@ export const config = {
  */
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
+  const searchParams = request.nextUrl.searchParams;
+  const sessionId = searchParams.get("sessionId");
 
+  // Authentication required for resource uploads
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    console.error("No userId provided for resource upload");
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 }
+    );
   }
 
   try {
@@ -52,15 +60,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build the query condition based on user ID or sessionId
+    const whereCondition: Prisma.ModuleWhereInput = {
+      id: moduleId,
+    };
+
+    // We only allow fetching module on session id if it is linked to a userid
+    // to only allow for authenticated user
+    if (sessionId) {
+      whereCondition.OR = [{ userId }, { sessionId }];
+    } else {
+      whereCondition.userId = userId;
+    }
+
     // Check if the module exists and belongs to the user
-    const moduleRecord = await prisma.module.findUnique({
-      where: {
-        id: moduleId,
-        userId,
-      },
+    const moduleRecord = await prisma.module.findFirst({
+      where: whereCondition,
     });
 
     if (!moduleRecord) {
+      console.error("Module not found or access denied:", {
+        moduleId,
+        userId,
+        sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null,
+        whereCondition,
+      });
       return NextResponse.json(
         { error: "Module not found or access denied" },
         { status: 404 }
@@ -106,7 +130,7 @@ export async function POST(request: NextRequest) {
     // Get the signed URL - make sure to use the 'sign' path format
     const { data: signedUrlData, error: signUrlError } = await supabase.storage
       .from("resources")
-      .createSignedUrl(filePath, 60 * 60 * 24); // 24 hours for initial URL
+      .createSignedUrl(filePath, 60 * 60 * 24);
 
     if (signUrlError) {
       console.error("Error creating signed URL:", signUrlError);
@@ -127,16 +151,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create data object for resource with appropriate IDs
+    const resourceData: Prisma.ResourceCreateInput = {
+      title,
+      type: fileType,
+      fileUrl: normalizedFileUrl,
+      module: { connect: { id: moduleId } },
+      fileSize: file.size,
+      user: { connect: { id: userId } },
+    };
+
     // Create the resource record in the database
     const resource = await prisma.resource.create({
-      data: {
-        title,
-        type: fileType,
-        fileUrl: normalizedFileUrl,
-        moduleId,
-        userId,
-        fileSize: file.size,
-      },
+      data: resourceData,
     });
 
     // Broadcast the resource created event

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { getOrCreateSessionIdClient } from "@/lib/session";
+import { getOrCreateSessionIdClient, SESSION_ID_KEY } from "@/lib/session";
 
 // Client component to initialize session on page load
 export function SessionInitializer() {
@@ -11,20 +11,55 @@ export function SessionInitializer() {
       try {
         // Try to get or create session ID
         const sessionId = getOrCreateSessionIdClient();
-        console.log("Session initialized:", sessionId);
+        console.log("Session initialized with ID:", sessionId);
 
-        // Verify the session was stored
-        const storedSessionId = localStorage.getItem("anonymous_session_id");
-        if (!storedSessionId) {
-          console.error("Failed to store session ID in localStorage");
-          // Retry once
-          const retrySessionId = getOrCreateSessionIdClient();
-          console.log("Retried session initialization:", retrySessionId);
+        if (!sessionId) {
+          console.error(
+            "Session initialization failed - no session ID returned"
+          );
+
+          // Check if localStorage is available
+          try {
+            if (typeof localStorage !== "undefined") {
+              console.log("localStorage is available");
+            } else {
+              console.error("localStorage is not available");
+            }
+          } catch (storageError) {
+            console.error("Error checking localStorage:", storageError);
+          }
+
+          // Try to manually set a session ID
+          try {
+            if (typeof localStorage !== "undefined") {
+              const tempSessionId =
+                crypto.randomUUID?.() ||
+                Array.from(new Array(36), () => 
+                  Math.floor(Math.random() * 16).toString(16)
+                ).join('');
+              localStorage.setItem(SESSION_ID_KEY, tempSessionId);
+              console.log("Manually set session ID:", tempSessionId);
+            }
+          } catch (manualSetError) {
+            console.error("Error manually setting session ID:", manualSetError);
+          }
         }
 
-        // Verify we can read the session ID
-        const verifySessionId = localStorage.getItem("anonymous_session_id");
-        console.log("Verified stored session ID:", verifySessionId);
+        // Verify the session was stored
+        let storedSessionId;
+        try {
+          storedSessionId = localStorage.getItem(SESSION_ID_KEY);
+          console.log("Stored session ID:", storedSessionId);
+
+          if (!storedSessionId) {
+            console.error("Failed to store session ID in localStorage");
+            // Retry once
+            const retrySessionId = getOrCreateSessionIdClient();
+            console.log("Retried session initialization:", retrySessionId);
+          }
+        } catch (verifyError) {
+          console.error("Error verifying session ID:", verifyError);
+        }
       } catch (error) {
         console.error("Error initializing session:", error);
       }
