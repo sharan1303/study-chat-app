@@ -13,7 +13,7 @@ export default async function ChatPage(props: {
   const userId = session.userId;
   const isAuthenticated = !!userId;
 
-  // For unauthenticated users, show the chat UI but with empty history
+  // For completely unauthenticated users without cookies, show empty chat UI
   if (!isAuthenticated) {
     return (
       <Suspense fallback={<ChatPageLoading />}>

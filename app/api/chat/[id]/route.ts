@@ -11,27 +11,35 @@ export async function GET(
 ) {
   const params = await props.params;
   const { userId } = await auth();
+  const url = new URL(request.url);
+  const sessionId = url.searchParams.get("sessionId");
 
-  if (!userId) {
-    return new Response("Unauthorized", { status: 401 });
+  if (!userId && !sessionId) {
+    return new Response("Unauthorized - No userId or sessionId provided", {
+      status: 401,
+    });
   }
 
   try {
-    // Find the user by Clerk ID
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
+    // Build the where clause based on authentication state
+    const whereClause: Prisma.ChatWhereInput = {
+      id: params.id,
+    };
 
-    if (!user) {
-      return new Response("User not found", { status: 404 });
+    // If userId exists, check for both userId and sessionId (if provided)
+    if (userId) {
+      if (sessionId) {
+        whereClause.OR = [{ userId }, { sessionId }];
+      } else {
+        whereClause.userId = userId;
+      }
+    } else if (sessionId) {
+      whereClause.sessionId = sessionId;
     }
 
     // Get chat if it exists
     const chat = await prisma.chat.findFirst({
-      where: {
-        id: params.id,
-        userId: user.id,
-      },
+      where: whereClause,
       include: {
         module: {
           select: {
