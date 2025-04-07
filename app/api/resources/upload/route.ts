@@ -4,6 +4,7 @@ import { getSupabaseAdmin, uploadFile } from "@/lib/supabase";
 import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { broadcastResourceCreated } from "@/lib/events";
+import { Prisma } from "@prisma/client";
 
 // Configure Next.js to handle larger uploads
 export const config = {
@@ -34,17 +35,9 @@ export async function POST(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const sessionId = searchParams.get("sessionId");
 
-  // Log auth state for debugging
-  console.log("POST /api/resources/upload auth:", {
-    userId,
-    sessionId: sessionId ? sessionId.substring(0, 8) + "..." : null,
-    hasUserId: !!userId,
-    hasSessionId: !!sessionId,
-  });
-
-  // Require either userId or sessionId
-  if (!userId && !sessionId) {
-    console.error("No userId or sessionId provided for resource upload");
+  // Authentication required for resource uploads
+  if (!userId) {
+    console.error("No userId provided for resource upload");
     return NextResponse.json(
       { error: "Authentication required" },
       { status: 401 }
@@ -67,18 +60,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Build the query condition based on user or session ID
-    const whereCondition: any = {
+    // Build the query condition based on user ID or sessionId
+    const whereCondition: Prisma.ModuleWhereInput = {
       id: moduleId,
     };
 
-    if (userId) {
+    // Check if module belongs to the authenticated user or the provided session
+    if (sessionId) {
+      whereCondition.OR = [{ userId }, { sessionId }];
+    } else {
       whereCondition.userId = userId;
-    } else if (sessionId) {
-      whereCondition.sessionId = sessionId;
     }
 
-    // Check if the module exists and belongs to the user/session
+    // Check if the module exists and belongs to the user
     const moduleRecord = await prisma.module.findFirst({
       where: whereCondition,
     });
@@ -87,7 +81,7 @@ export async function POST(request: NextRequest) {
       console.error("Module not found or access denied:", {
         moduleId,
         userId,
-        sessionId,
+        sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null,
         whereCondition,
       });
       return NextResponse.json(
@@ -114,22 +108,13 @@ export async function POST(request: NextRequest) {
     const fileExt = fileName.split(".").pop();
     const uniqueFileName = `${uuidv4()}.${fileExt}`;
 
-    // Define owner ID for storage path - use userId if available, otherwise use sessionId
-    const ownerId = userId || sessionId;
-
-    // Define the path in Supabase storage (resources/ownerId/moduleId/filename)
-    const filePath = `${ownerId}/${moduleId}/${uniqueFileName}`;
+    // Define the path in Supabase storage (resources/userId/moduleId/filename)
+    const filePath = `${userId}/${moduleId}/${uniqueFileName}`;
 
     // Upload the file to Supabase
-    const uploadResult = await uploadFile(
-      "resources",
-      filePath,
-      file,
-      ownerId,
-      {
-        contentType: fileType,
-      }
-    );
+    const uploadResult = await uploadFile("resources", filePath, file, userId, {
+      contentType: fileType,
+    });
 
     if (!uploadResult) {
       return NextResponse.json(
@@ -166,20 +151,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create data object for resource with appropriate IDs
-    const resourceData: any = {
+    const resourceData: Prisma.ResourceCreateInput = {
       title,
       type: fileType,
       fileUrl: normalizedFileUrl,
-      moduleId,
+      module: { connect: { id: moduleId } },
       fileSize: file.size,
+      user: { connect: { id: userId } },
     };
-
-    // Add either userId or sessionId
-    if (userId) {
-      resourceData.userId = userId;
-    } else if (sessionId) {
-      resourceData.sessionId = sessionId;
-    }
 
     // Create the resource record in the database
     const resource = await prisma.resource.create({

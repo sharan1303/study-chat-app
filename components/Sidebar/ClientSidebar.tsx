@@ -108,8 +108,10 @@ function ClientSidebarContent({
       console.log("Refreshing chat history...");
 
       // Use the API client
-      if (!isLoaded) return;
-
+      if (!isLoaded) {
+        console.log("Skipping chat history fetch - auth not loaded yet");
+        return;
+      }
       try {
         setLoadingChats(true);
         console.log("Fetching chats...");
@@ -494,6 +496,9 @@ function ClientSidebarContent({
           setLoading(false);
         });
 
+      // Use shorter timeout for signed-in users, longer for anonymous
+      const timeoutMs = isSignedIn ? 100 : 300;
+
       // Fetch chat history with a small delay to ensure auth is settled
       setTimeout(() => {
         refreshChatHistory().then(() => {
@@ -502,7 +507,7 @@ function ClientSidebarContent({
             createWelcomeChatForAnonymousUsers();
           }
         });
-      }, 300);
+      }, timeoutMs);
     }
   }, [
     isLoaded,

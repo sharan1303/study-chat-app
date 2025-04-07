@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { SESSION_ID_KEY } from "@/lib/session";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
@@ -44,22 +45,26 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause based on authentication state
-    // If userId exists, fetch chats for both userId AND sessionId (if provided)
-    const whereClause = userId
-      ? sessionId
-        ? { OR: [{ userId }, { sessionId }] }
-        : { userId }
-      : { sessionId };
+    const where: Prisma.ChatWhereInput = {};
+    if (userId) {
+      // For authenticated users, find by userId
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
 
-    // Log the where clause for debugging
-    console.log(
-      `API: Searching for chats with criteria:`,
-      JSON.stringify(whereClause)
-    );
+      if (!user) {
+        return new Response("User not found", { status: 404 });
+      }
+
+      where.userId = user.id;
+    } else if (sessionId) {
+      // For anonymous users, find by sessionId
+      where.sessionId = sessionId;
+    }
 
     // Fetch all chats for this user/session
     const chats = await prisma.chat.findMany({
-      where: whereClause,
+      where,
       orderBy: {
         updatedAt: "desc",
       },
@@ -74,8 +79,6 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log(`API: Raw chat count before filtering: ${chats.length}`);
-
     // Filter to keep only one "Welcome to Study Chat" entry
     let hasWelcomeChat = false;
     const filteredChats = chats.filter((chat) => {
@@ -89,28 +92,17 @@ export async function GET(request: NextRequest) {
     });
 
     if (userId) {
-      console.log(
-        `API: Found ${filteredChats.length} chats for user ${userId}`
-      );
+      console.log(`Found ${chats.length} chats for user ${userId}`);
     } else {
       console.log(
-        `API: Found ${
-          filteredChats.length
-        } chats for anonymous session ${sessionId?.substring(0, 8)}...`
+        `Found ${chats.length} chats for anonymous session ${sessionId}`
       );
     }
 
     return Response.json(filteredChats);
   } catch (error) {
-    console.error("API: Error fetching chat history:", error);
-    return new Response(
-      `Error fetching chat history: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`,
-      {
-        status: 500,
-      }
-    );
+    console.error("Error fetching chat history:", error);
+    return new Response("Error fetching chat history", { status: 500 });
   }
 }
 
