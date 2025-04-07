@@ -27,6 +27,14 @@ async function processModulesRequest(
   exactMatch?: boolean
 ) {
   try {
+    // Debug the auth state
+    console.log("API processModulesRequest auth state:", {
+      userId,
+      sessionId,
+      hasUserId: !!userId,
+      hasSessionId: !!sessionId,
+    });
+
     // Either userId or sessionId must be provided
     if (!userId && !sessionId) {
       return NextResponse.json(
@@ -109,8 +117,18 @@ export async function GET(request: NextRequest) {
   const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
   const sessionId = sessionIdFromParam || sessionIdFromKey;
 
+  // Debug the request params
+  console.log("GET /api/modules params:", {
+    userId,
+    sessionId,
+    name,
+    exactMatch,
+    searchParams: Object.fromEntries(searchParams.entries()),
+  });
+
   // If no userId and no sessionId was provided in the URL, return error
   if (!userId && !sessionId) {
+    console.error("Neither userId nor sessionId provided");
     return NextResponse.json(
       { error: "Session ID or authentication required" },
       { status: 401 }

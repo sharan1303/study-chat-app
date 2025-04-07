@@ -12,6 +12,9 @@ export const api = {
     // Always ensure we have a session ID by using getOrCreate
     const sessionId = getOrCreateSessionIdClient();
 
+    // Debug: Log session ID
+    console.log("API getModules using sessionId:", sessionId);
+
     const params = new URLSearchParams();
 
     if (sessionId) {
@@ -31,7 +34,62 @@ export const api = {
     const response = await fetch(`/api/modules${queryString}`);
 
     if (!response.ok) {
+      console.error(
+        `Failed to fetch modules: ${response.status} ${response.statusText}`
+      );
       throw new Error(`Failed to fetch modules: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get a specific module by ID
+   */
+  async getModule(moduleId: string) {
+    const sessionId = getOrCreateSessionIdClient();
+    console.log("API getModule using sessionId:", sessionId);
+
+    const params = new URLSearchParams();
+    if (sessionId) {
+      params.append("sessionId", sessionId);
+    }
+
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(`/api/modules/${moduleId}${queryString}`);
+
+    if (!response.ok) {
+      console.error(
+        `Failed to fetch module: ${response.status} ${response.statusText}`
+      );
+      throw new Error(`Failed to fetch module: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  /**
+   * Get all resources for a module
+   */
+  async getModuleResources(moduleId: string) {
+    const sessionId = getOrCreateSessionIdClient();
+    console.log("API getModuleResources using sessionId:", sessionId);
+
+    const params = new URLSearchParams();
+    if (sessionId) {
+      params.append("sessionId", sessionId);
+    }
+
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(
+      `/api/modules/${moduleId}/resources${queryString}`
+    );
+
+    if (!response.ok) {
+      console.error(
+        `Failed to fetch resources: ${response.status} ${response.statusText}`
+      );
+      throw new Error(`Failed to fetch resources: ${response.statusText}`);
     }
 
     return response.json();
@@ -45,68 +103,59 @@ export const api = {
     description?: string;
     icon?: string;
   }) {
-    // Always ensure we have a session ID by using getOrCreate
     const sessionId = getOrCreateSessionIdClient();
-    console.log("Client: Using session ID for createModule:", sessionId);
+    console.log("API createModule using sessionId:", sessionId);
 
-    // Add retry logic for session ID
-    let retryCount = 0;
-    while (!sessionId && retryCount < 3) {
-      console.log(`Retrying to get session ID (attempt ${retryCount + 1})`);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const newSessionId = getOrCreateSessionIdClient();
-      if (newSessionId) {
-        console.log("Successfully got session ID after retry");
-        break;
-      }
-      retryCount++;
+    const params = new URLSearchParams();
+    if (sessionId) {
+      params.append("sessionId", sessionId);
     }
 
-    // Ensure we have a valid session ID
-    if (!sessionId) {
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(`/api/modules${queryString}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
       console.error(
-        "No session ID available for module creation after retries"
+        `Failed to create module: ${response.status} ${response.statusText}`
       );
-      throw new Error("Failed to get session ID");
+      throw new Error(`Failed to create module: ${response.statusText}`);
     }
 
-    const queryString = `?sessionId=${sessionId}`;
-    console.log(`Client: Making request to /api/modules${queryString}`);
+    return response.json();
+  },
 
-    try {
-      const response = await fetch(`/api/modules${queryString}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "same-origin", // Add this to ensure cookies are sent
-      });
+  /**
+   * Get chat history
+   */
+  async getChatHistory() {
+    const sessionId = getOrCreateSessionIdClient();
+    console.log("API getChatHistory using sessionId:", sessionId);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error response from createModule:", {
-          status: response.status,
-          statusText: response.statusText,
-          errorData,
-          sessionId,
-        });
-        throw new Error(
-          errorData.error || `Failed to create module: ${response.statusText}`
-        );
-      }
-
-      const responseData = await response.json();
-      console.log("Module created successfully:", responseData);
-      return responseData;
-    } catch (error) {
-      console.error("Exception in createModule:", {
-        error,
-        sessionId,
-        data,
-      });
-      throw error;
+    const params = new URLSearchParams();
+    if (sessionId) {
+      params.append("sessionId", sessionId);
     }
+
+    // Add a timestamp to avoid caching
+    params.append("t", Date.now().toString());
+
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    const response = await fetch(`/api/chat/history${queryString}`);
+
+    if (!response.ok) {
+      console.error(
+        `Failed to fetch chat history: ${response.status} ${response.statusText}`
+      );
+      throw new Error(`Failed to fetch chat history: ${response.statusText}`);
+    }
+
+    return response.json();
   },
 
   /**

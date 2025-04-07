@@ -7,20 +7,29 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
 
-  // Require authentication
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   // Get the sessionId from the query
   const searchParams = request.nextUrl.searchParams;
   const sessionId = searchParams.get("sessionId");
 
-  if (!sessionId) {
+  // Either userId or sessionId is required, but not both
+  // Anonymous users will only have sessionId
+  if (!userId && !sessionId) {
     return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 }
+      { error: "Either authentication or session ID is required" },
+      { status: 401 }
     );
+  }
+
+  // If we have a userId but no sessionId, there's nothing to migrate (no anonymous data)
+  if (userId && !sessionId) {
+    return NextResponse.json({
+      hasData: false,
+      counts: {
+        modules: 0,
+        resources: 0,
+        chats: 0,
+      },
+    });
   }
 
   try {
@@ -45,10 +54,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Skip the resource count since it doesn't have sessionId field
-    // according to the linter error
-
     const hasData = moduleCount > 0 || chatCount > 0;
+
+    console.log(
+      `API: Check anonymous data for sessionId=${sessionId?.substring(
+        0,
+        8
+      )}..., userId=${userId || "none"} - hasData=${hasData}`
+    );
 
     return NextResponse.json({
       hasData,
@@ -67,8 +80,8 @@ export async function GET(request: NextRequest) {
     console.error("Error details:", {
       message: errorMessage,
       stack: errorStack,
-      sessionId: `${sessionId.substring(0, 8)}...`, // Log partial sessionId for debugging
-      userId: `${userId.substring(0, 8)}...`, // Log partial userId for debugging
+      sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : "none", // Log partial sessionId for debugging
+      userId: userId ? `${userId.substring(0, 8)}...` : "none", // Log partial userId for debugging
     });
 
     return NextResponse.json(

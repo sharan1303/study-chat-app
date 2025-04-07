@@ -41,13 +41,39 @@ export default function AnonymousDataMigration() {
 
     const checkAnonymousData = async () => {
       try {
+        console.log(
+          `Checking anonymous data for sessionId: ${sessionId.substring(
+            0,
+            8
+          )}...`
+        );
         const response = await axios.get(
-          `/api/check-anonymous-data?sessionId=${sessionId}`
+          `/api/check-anonymous-data?sessionId=${sessionId}`,
+          {
+            validateStatus: function (status) {
+              // Consider 401 as a valid response - it means the user is not authenticated yet
+              return (status >= 200 && status < 300) || status === 401;
+            },
+          }
         );
 
+        // If we got a 401 but we have a session ID, the user isn't authenticated yet,
+        // which is expected when a user has just signed in but the session is still anonymous
+        if (response.status === 401) {
+          console.log(
+            "Received 401 from check-anonymous-data - user not authenticated yet"
+          );
+          return;
+        }
+
         if (response.data.hasData) {
+          console.log(
+            `Found anonymous data: ${JSON.stringify(response.data.counts)}`
+          );
           setHasAnonymousData(true);
           setIsDialogOpen(true);
+        } else {
+          console.log("No anonymous data found to migrate");
         }
       } catch (error) {
         console.error("Error checking anonymous data:", error);
@@ -78,11 +104,34 @@ export default function AnonymousDataMigration() {
 
     setIsLoading(true);
     try {
+      console.log(
+        `Migrating anonymous data for sessionId: ${sessionId.substring(
+          0,
+          8
+        )}...`
+      );
+
+      // Get the current user ID
+      const { userId } = await fetch("/api/user").then((res) => res.json());
+
+      if (!userId) {
+        console.error("Migration failed: couldn't get current user ID");
+        toast.error("Failed to migrate your data. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log(`Got userId for migration: ${userId.substring(0, 8)}...`);
+
       const response = await axios.post("/api/migrate-anonymous-data", {
         sessionId,
+        userId,
       });
 
       if (response.data.success) {
+        console.log(
+          `Migration successful: ${JSON.stringify(response.data.migrated)}`
+        );
         toast.success(
           "Your chats have been successfully migrated to your account!"
         );
@@ -97,6 +146,16 @@ export default function AnonymousDataMigration() {
       }
     } catch (error) {
       console.error("Error migrating data:", error);
+
+      // Log more details for axios errors
+      if (axios.isAxiosError(error)) {
+        console.error(
+          `Migration error - Status: ${error.response?.status}, Message: ${
+            error.response?.data?.error || error.message
+          }`
+        );
+      }
+
       toast.error("Failed to migrate your data. Please try again.");
     } finally {
       setIsLoading(false);

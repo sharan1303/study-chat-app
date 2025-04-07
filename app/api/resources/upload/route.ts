@@ -31,9 +31,24 @@ export const config = {
  */
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
+  const searchParams = request.nextUrl.searchParams;
+  const sessionId = searchParams.get("sessionId");
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Log auth state for debugging
+  console.log("POST /api/resources/upload auth:", {
+    userId,
+    sessionId: sessionId ? sessionId.substring(0, 8) + "..." : null,
+    hasUserId: !!userId,
+    hasSessionId: !!sessionId,
+  });
+
+  // Require either userId or sessionId
+  if (!userId && !sessionId) {
+    console.error("No userId or sessionId provided for resource upload");
+    return NextResponse.json(
+      { error: "Authentication required" },
+      { status: 401 }
+    );
   }
 
   try {
@@ -52,15 +67,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if the module exists and belongs to the user
-    const moduleRecord = await prisma.module.findUnique({
-      where: {
-        id: moduleId,
-        userId,
-      },
+    // Build the query condition based on user or session ID
+    const whereCondition: any = {
+      id: moduleId,
+    };
+
+    if (userId) {
+      whereCondition.userId = userId;
+    } else if (sessionId) {
+      whereCondition.sessionId = sessionId;
+    }
+
+    // Check if the module exists and belongs to the user/session
+    const moduleRecord = await prisma.module.findFirst({
+      where: whereCondition,
     });
 
     if (!moduleRecord) {
+      console.error("Module not found or access denied:", {
+        moduleId,
+        userId,
+        sessionId,
+        whereCondition,
+      });
       return NextResponse.json(
         { error: "Module not found or access denied" },
         { status: 404 }
@@ -85,13 +114,22 @@ export async function POST(request: NextRequest) {
     const fileExt = fileName.split(".").pop();
     const uniqueFileName = `${uuidv4()}.${fileExt}`;
 
-    // Define the path in Supabase storage (resources/userId/moduleId/filename)
-    const filePath = `${userId}/${moduleId}/${uniqueFileName}`;
+    // Define owner ID for storage path - use userId if available, otherwise use sessionId
+    const ownerId = userId || sessionId;
+
+    // Define the path in Supabase storage (resources/ownerId/moduleId/filename)
+    const filePath = `${ownerId}/${moduleId}/${uniqueFileName}`;
 
     // Upload the file to Supabase
-    const uploadResult = await uploadFile("resources", filePath, file, userId, {
-      contentType: fileType,
-    });
+    const uploadResult = await uploadFile(
+      "resources",
+      filePath,
+      file,
+      ownerId,
+      {
+        contentType: fileType,
+      }
+    );
 
     if (!uploadResult) {
       return NextResponse.json(
@@ -106,7 +144,7 @@ export async function POST(request: NextRequest) {
     // Get the signed URL - make sure to use the 'sign' path format
     const { data: signedUrlData, error: signUrlError } = await supabase.storage
       .from("resources")
-      .createSignedUrl(filePath, 60 * 60 * 24); // 24 hours for initial URL
+      .createSignedUrl(filePath, 60 * 60 * 24);
 
     if (signUrlError) {
       console.error("Error creating signed URL:", signUrlError);
@@ -127,16 +165,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create data object for resource with appropriate IDs
+    const resourceData: any = {
+      title,
+      type: fileType,
+      fileUrl: normalizedFileUrl,
+      moduleId,
+      fileSize: file.size,
+    };
+
+    // Add either userId or sessionId
+    if (userId) {
+      resourceData.userId = userId;
+    } else if (sessionId) {
+      resourceData.sessionId = sessionId;
+    }
+
     // Create the resource record in the database
     const resource = await prisma.resource.create({
-      data: {
-        title,
-        type: fileType,
-        fileUrl: normalizedFileUrl,
-        moduleId,
-        userId,
-        fileSize: file.size,
-      },
+      data: resourceData,
     });
 
     // Broadcast the resource created event

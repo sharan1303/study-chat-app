@@ -12,8 +12,18 @@ export async function GET(request: NextRequest) {
   const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
   const sessionId = sessionIdFromParam || sessionIdFromKey;
 
+  // Log authentication information for debugging
+  console.log(
+    `API: Chat history request - userId: ${userId || "none"}, sessionId: ${
+      sessionId ? `${sessionId.substring(0, 8)}...` : "none"
+    }`
+  );
+
   // Require either userId or sessionId
   if (!userId && !sessionId) {
+    console.error(
+      `API: Unauthorized chat history request - no userId or sessionId`
+    );
     return new Response("Session ID or authentication required", {
       status: 401,
     });
@@ -21,34 +31,24 @@ export async function GET(request: NextRequest) {
 
   try {
     if (userId) {
-      console.log(`Fetching chat history for authenticated user: ${userId}`);
+      console.log(
+        `API: Fetching chat history for authenticated user: ${userId}`
+      );
     } else if (sessionId) {
       console.log(
-        `Fetching chat history for anonymous user with session: ${sessionId}`
+        `API: Fetching chat history for anonymous user with session: ${sessionId.substring(
+          0,
+          8
+        )}...`
       );
     }
 
     // Build where clause based on authentication state
-    const where = {};
-    if (userId) {
-      // For authenticated users, find by userId
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      if (!user) {
-        return new Response("User not found", { status: 404 });
-      }
-
-      where["userId"] = user.id;
-    } else if (sessionId) {
-      // For anonymous users, find by sessionId
-      where["sessionId"] = sessionId;
-    }
+    const whereClause = userId ? { userId } : { sessionId };
 
     // Fetch all chats for this user/session
     const chats = await prisma.chat.findMany({
-      where,
+      where: whereClause,
       orderBy: {
         updatedAt: "desc",
       },
@@ -76,17 +76,28 @@ export async function GET(request: NextRequest) {
     });
 
     if (userId) {
-      console.log(`Found ${chats.length} chats for user ${userId}`);
+      console.log(
+        `API: Found ${filteredChats.length} chats for user ${userId}`
+      );
     } else {
       console.log(
-        `Found ${chats.length} chats for anonymous session ${sessionId}`
+        `API: Found ${
+          filteredChats.length
+        } chats for anonymous session ${sessionId?.substring(0, 8)}...`
       );
     }
 
     return Response.json(filteredChats);
   } catch (error) {
-    console.error("Error fetching chat history:", error);
-    return new Response("Error fetching chat history", { status: 500 });
+    console.error("API: Error fetching chat history:", error);
+    return new Response(
+      `Error fetching chat history: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
+      {
+        status: 500,
+      }
+    );
   }
 }
 
