@@ -7,8 +7,13 @@ import { Edit, Loader2, Trash } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/Modules/module-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ModuleForm } from "@/components/dialogs/ModuleForm";
 import {
   AlertDialog,
   AlertDialogAction,

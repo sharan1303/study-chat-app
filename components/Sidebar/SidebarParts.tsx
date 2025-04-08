@@ -126,6 +126,7 @@ export const SidebarTrigger = React.forwardRef<
         state === "collapsed" ? "mx-auto" : "",
         className
       )}
+      title={state === "expanded" ? "Collapse Sidebar" : "Expand Sidebar"}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
