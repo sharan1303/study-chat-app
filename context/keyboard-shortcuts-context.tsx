@@ -3,6 +3,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+// Custom event name for opening the resource upload dialog
+const OPEN_RESOURCE_UPLOAD_DIALOG_EVENT = "open-resource-upload-dialog";
+
 /**
  * Keyboard Shortcuts Context provides a centralized way to handle keyboard shortcuts
  * across the application. It includes functionality for handling common actions like
@@ -63,6 +66,14 @@ export function KeyboardShortcutsProvider({
 
       // Command/Ctrl + J: New Module is now handled by GlobalModuleDialog component
       // We removed the navigation code here to avoid conflicts
+
+      // Command/Ctrl + U: Upload Resource
+      if ((event.metaKey || event.ctrlKey) && event.key === "u") {
+        event.preventDefault();
+        // Dispatch custom event to open resource upload dialog
+        const customEvent = new CustomEvent(OPEN_RESOURCE_UPLOAD_DIALOG_EVENT);
+        document.dispatchEvent(customEvent);
+      }
 
       // Execute any registered custom handlers
       const shortcutKey = `${event.metaKey || event.ctrlKey ? "cmd+" : ""}${
