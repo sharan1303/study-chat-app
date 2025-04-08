@@ -44,8 +44,8 @@ export function ResourceUploadButton({
       <Button onClick={handleButtonClick} {...props}>
         {children || (
           <>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload
+            <Upload className="h-4 w-4 mr-0 sm:mr-2" />
+            <span className="hidden sm:inline">Upload</span>
           </>
         )}
       </Button>

@@ -38,7 +38,7 @@ export default function ModuleDetailsLoading() {
       <div className="space-y-6 px-3">
         {/* Description section skeleton */}
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold mb-2">Description</h2>
+          <h2 className="text-lg font-semibold mb-2">Content</h2>
           <div className="text-muted-foreground p-4 rounded min-h-[158px] bg-muted">
           </div>
         </div>

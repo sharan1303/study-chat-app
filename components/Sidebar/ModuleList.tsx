@@ -114,6 +114,7 @@ export default function ModuleList({
             variant={pathname?.startsWith("/modules") ? "secondary" : "ghost"}
             className="justify-start hover:bg-accent w-40 pl-2 pb-2 text-left"
             asChild
+            title="Open Dashboard"
           >
             <Link href="/modules">Modules & Resources</Link>
           </Button>
