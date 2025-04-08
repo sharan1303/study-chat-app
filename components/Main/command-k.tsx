@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/command";
 import { DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
-import { encodeModuleSlug } from "@/lib/utils";
+import { encodeModuleSlug, getModifierKey } from "@/lib/utils";
 
 // Custom event name for opening the module dialog
 const OPEN_MODULE_DIALOG_EVENT = "open-module-dialog";
@@ -47,7 +47,13 @@ export function CommandK() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [modKey, setModKey] = useState("Ctrl/⌘"); // Default for SSR
   const router = useRouter();
+
+  // Set the correct modifier key based on platform
+  useEffect(() => {
+    setModKey(getModifierKey());
+  }, []);
 
   // Fetch modules and chats when the command palette opens
   useEffect(() => {
@@ -145,7 +151,7 @@ export function CommandK() {
     <CommandDialog open={open} onOpenChange={setOpen}>
       <DialogTitle className="sr-only">Command Menu</DialogTitle>
       <CommandInput
-        placeholder="Type a command or search for modules and chats..."
+        placeholder={`Type a command or search for modules and chats... (${modKey}+K)`}
         value={searchQuery}
         onValueChange={setSearchQuery}
         className="bg-transparent border-none focus:ring-0"
@@ -160,14 +166,14 @@ export function CommandK() {
             <CommandGroup heading="Suggestions">
               <CommandItem onSelect={handleCreateChat} value="create-new-chat">
                 <span>Create New Chat</span>
-                <CommandShortcut>⌘I</CommandShortcut>
+                <CommandShortcut>{modKey}I</CommandShortcut>
               </CommandItem>
               <CommandItem
                 onSelect={handleCreateModule}
                 value="create-new-module"
               >
                 <span>Create New Module</span>
-                <CommandShortcut>⌘J</CommandShortcut>
+                <CommandShortcut>{modKey}J</CommandShortcut>
               </CommandItem>
 
               <CommandItem value="upload-resource">
