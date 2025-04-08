@@ -258,6 +258,15 @@ function SettingsContent() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
+                  <span className="text-sm">Upload Resource</span>
+                  <div className="flex gap-1">
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      {modKey}
+                    </kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">U</kbd>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-sm">Toggle Sidebar</span>
                   <div className="flex gap-1">
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">

@@ -42,7 +42,7 @@ export default function SettingsLoading() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="flex justify-between items-center">
                     <Skeleton className="h-4 w-20" />
                     <div className="flex gap-1">
@@ -86,7 +86,7 @@ export default function SettingsLoading() {
                       <h3 className="text-lg font-medium">Email addresses</h3>
                     </div>
                     <div className="space-y-3">
-                      {[1, 2].map((i) => (
+                      {[1].map((i) => (
                         <div
                           key={i}
                           className="flex items-center justify-between"

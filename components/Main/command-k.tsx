@@ -19,6 +19,8 @@ import { encodeModuleSlug, getModifierKey } from "@/lib/utils";
 
 // Custom event name for opening the module dialog
 const OPEN_MODULE_DIALOG_EVENT = "open-module-dialog";
+// Custom event name for opening the resource upload dialog
+const OPEN_RESOURCE_UPLOAD_DIALOG_EVENT = "open-resource-upload-dialog";
 
 // Interface for module objects
 interface Module {
@@ -128,6 +130,14 @@ export function CommandK() {
     document.dispatchEvent(event);
   };
 
+  // Handler for opening the resource upload dialog
+  const handleResourceUpload = () => {
+    setOpen(false);
+    // Dispatch a custom event to open the resource upload dialog
+    const event = new CustomEvent(OPEN_RESOURCE_UPLOAD_DIALOG_EVENT);
+    document.dispatchEvent(event);
+  };
+
   // Handler for creating a new chat
   const handleCreateChat = () => {
     setOpen(false);
@@ -176,8 +186,12 @@ export function CommandK() {
                 <CommandShortcut>{modKey}J</CommandShortcut>
               </CommandItem>
 
-              <CommandItem value="upload-resource">
+              <CommandItem
+                onSelect={handleResourceUpload}
+                value="upload-resource"
+              >
                 <span>Upload Resource</span>
+                <CommandShortcut>{modKey}U</CommandShortcut>
               </CommandItem>
             </CommandGroup>
 
