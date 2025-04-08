@@ -9,13 +9,16 @@ import ClientSidebar from "@/components/Sidebar/ClientSidebar";
 import { Providers as AppProviders } from "@/context/providers";
 import { SidebarProvider } from "@/context/sidebar-context";
 import { SessionProvider } from "@/context/session-context";
+import { KeyboardShortcutsProvider } from "@/context/keyboard-shortcuts-context";
 
 import AnonymousDataMigration from "@/components/dialogs/AnonymousDataMigration";
 import PrivacyConsentBar from "@/components/dialogs/PrivacyConsentBar";
 import Header from "@/components/Main/Header";
 import { ClerkProviderWithTheme } from "@/components/Clerk/ClerkProviderWithTheme";
+import { GlobalModuleDialog } from "@/components/dialogs/GlobalModuleCreationDialog";
 
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Session initializer - client component
 import { SessionInitializer } from "@/components/Main/SessionInitializer";
@@ -43,7 +46,8 @@ export const viewport: Viewport = {
  * 1. AppProviders - Sets up global app configuration and utilities
  * 2. ClerkProviderWithTheme - Handles authentication and user management with theme support
  * 3. SessionProvider - Manages user session state and persistence
- * 4. SidebarProvider - Controls sidebar state (open/closed) and related functionality
+ * 4. KeyboardShortcutsProvider - Manages global keyboard shortcuts
+ * 5. SidebarProvider - Controls sidebar state (open/closed) and related functionality
  *
  * Additional Components:
  * - SessionInitializer: Client-side component that initializes session data
@@ -63,16 +67,20 @@ export default function RootLayout({
         <AppProviders>
           <ClerkProviderWithTheme>
             <SessionProvider>
-              <SidebarProvider defaultOpen={true}>
-                <ClientSidebar />
-                <main className="flex-1 pl-7 pt-0.5 relative">
-                  <Header />
-                  {children}
-                  <Analytics />
-                  <AnonymousDataMigration />
-                </main>
-                <PrivacyConsentBar />
-              </SidebarProvider>
+              <KeyboardShortcutsProvider>
+                <SidebarProvider defaultOpen={true}>
+                  <ClientSidebar />
+                  <main className="flex-1 pl-7 pt-0.5 relative">
+                    <Header />
+                    {children}
+                    <Analytics />
+                    <SpeedInsights />
+                    <AnonymousDataMigration />
+                  </main>
+                  <PrivacyConsentBar />
+                  <GlobalModuleDialog />
+                </SidebarProvider>
+              </KeyboardShortcutsProvider>
               <SessionInitializer />
             </SessionProvider>
           </ClerkProviderWithTheme>

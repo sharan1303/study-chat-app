@@ -12,7 +12,7 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/Modules/module-form";
+import { ModuleForm } from "@/components/dialogs/ModuleForm";
 import { Plus } from "lucide-react";
 
 // Define the Module type here instead of importing from Sidebar
@@ -120,7 +120,12 @@ export default function ModuleList({
 
           <Dialog open={isCreating} onOpenChange={setIsCreating}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent h-8 w-8 mr-2.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-accent h-8 w-8 mr-2.5"
+                title="Create New Module"
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>

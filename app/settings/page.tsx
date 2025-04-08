@@ -234,6 +234,13 @@ function SettingsContent() {
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">I</kbd>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">New Module</span>
+                  <div className="flex gap-1">
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">J</kbd>
                   </div>
                 </div>
