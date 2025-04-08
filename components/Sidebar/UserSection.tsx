@@ -55,7 +55,7 @@ export default function UserSection() {
             }}
             showName
           />
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild title="Settings">
             <Link href="/settings">
               <Settings className="h-4 w-4" />
             </Link>

@@ -3,12 +3,11 @@
 import React, { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -202,7 +201,7 @@ export default function ModulesPageContent({
   // Updated ResourcesWrapper using the resources from our custom hook
   function ResourcesWrapper() {
     return (
-      <div className="mt-6">
+      <div>
         <div className="flex items-center justify-between mb-4">
           {searchQuery && (
             <p className="text-muted-foreground">
@@ -213,15 +212,33 @@ export default function ModulesPageContent({
 
         {/* Use the ResourceTable component */}
         <div className="min-h-[300px]">
-          {resourcesLoading ? (
-            <ResourceTableSkeleton showModuleColumn={true} />
-          ) : filteredResources.length === 0 && isSignedIn ? (
+          {!isSignedIn ? (
             <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-              <h3 className="font-medium">
-                Access your knowledge base and upload your own resources.
+              <h3 className="text-lg font-medium">
+                Sign in to view and upload resources.
               </h3>
+              <SignInButton mode="modal">
+                <Button>Sign in</Button>
+              </SignInButton>
             </div>
-          ) : isSignedIn ? (
+          ) : resourcesLoading ? (
+            <ResourceTableSkeleton showModuleColumn={true} />
+          ) : filteredResources.length === 0 ? (
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+              {searchQuery ? (
+                <>
+                  <h3 className="text-xl font-medium">No resources found</h3>
+                  <p className="text-muted-foreground">
+                    Try a different search term
+                  </p>
+                </>
+              ) : (
+                <h3 className="font-medium">
+                  Access your knowledge base and upload your own resources.
+                </h3>
+              )}
+            </div>
+          ) : (
             <ResourceTable
               resources={filteredResources.map((resource) => ({
                 ...resource,
@@ -231,12 +248,6 @@ export default function ModulesPageContent({
               onUpdate={handleResourceUpdate}
               showModuleColumn={true}
             />
-          ) : (
-            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-              <h3 className="font-medium">
-                You need to be signed in to view and upload resources.
-              </h3>
-            </div>
           )}
         </div>
       </div>
@@ -246,7 +257,7 @@ export default function ModulesPageContent({
   // Return the main UI
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <div className="flex-1 space-y-4">
+      <div className="flex-1 space-y-4 mr-8">
         <div className="flex items-center justify-between px-3 py-3.5">
           <h1 className="font-bold text-xl">Dashboard</h1>
         </div>
@@ -278,93 +289,97 @@ export default function ModulesPageContent({
               />
             </div>
             {/* Contextual button that changes based on active tab */}
-            {activeTab === "modules" ? (
-              <Suspense fallback={<Button disabled>Loading...</Button>}>
-                <ModuleOperations sessionId={sessionId} />
-              </Suspense>
-            ) : isSignedIn ? (
-              <ResourceUploadButton
-                variant="outline"
-                moduleId={preselectedModuleId || undefined}
-                initialOpen={openResourceUpload}
-              />
-            ) : null}
+            <div className="flex-shrink-0">
+              {activeTab === "modules" ? (
+                <Suspense fallback={<Button disabled>Loading...</Button>}>
+                  <ModuleOperations sessionId={sessionId} />
+                </Suspense>
+              ) : isSignedIn ? (
+                <ResourceUploadButton
+                  variant="outline"
+                  moduleId={preselectedModuleId || undefined}
+                  initialOpen={openResourceUpload}
+                />
+              ) : null}
+            </div>
           </div>
 
           <TabsContent value="modules" className="mt-2">
             {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {/* No skeleton cards as requested */}
+              <div className="flex items-center justify-center pt-10">
+                <Loader2 className="animate-spin" />
               </div>
             ) : filteredModules.length === 0 ? (
               <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-                <h3 className="text-xl font-medium">No modules found</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-lg font-medium">
                   {searchQuery
-                    ? "Try a different search term"
-                    : "Create your first module to get started"}
+                    ? "No modules found"
+                    : "Modules are a way to organise your conversations and uploaded resources."}
+                </h3>
+                <p className="text-lg text-muted-foreground">
+                  {searchQuery
+                    ? "Try a different search term" : "Create a module to get started."}
                 </p>
                 {!searchQuery}
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredModules.map((module) => {
-                  // Make sure module name exists and is not empty before encoding
-                  if (!module.name) {
-                    console.error("Module name is missing", module);
-                    return null;
-                  }
+              <div className="h-[calc(100vh-230px)] overflow-y-auto pb-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredModules.map((module) => {
+                    // Make sure module name exists and is not empty before encoding
+                    if (!module.name) {
+                      console.error("Module name is missing", module);
+                      return null;
+                    }
 
-                  const moduleSlug = encodeModuleSlug(module.name);
-                  console.log(
-                    `Creating link for "${module.name}" → "${moduleSlug}"`
-                  );
-
-                  // Ensure moduleSlug is not empty
-                  if (!moduleSlug) {
-                    console.error(
-                      "Failed to encode module slug for",
-                      module.name
+                    const moduleSlug = encodeModuleSlug(module.name);
+                    console.log(
+                      `Creating link for "${module.name}" → "${moduleSlug}"`
                     );
-                    return null;
-                  }
 
-                  return (
-                    <Link
-                      href={`/modules/${moduleSlug}`}
-                      key={module.id || module.name}
-                      prefetch={true}
-                    >
-                      <Card className="hover:bg-muted/50 transition-colors">
-                        <CardHeader>
-                          <CardTitle>
-                            <span className="mr-2">{module.icon}</span>
-                            {module.name}
-                          </CardTitle>
-                          <CardDescription>
-                            {module.description || "No description"}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-sm text-muted-foreground">
-                            {module.resourceCount}{" "}
-                            {module.resourceCount === 1
-                              ? "resource"
-                              : "resources"}
-                          </div>
-                        </CardContent>
-                        <CardFooter className="text-xs text-muted-foreground">
-                          Updated {formatDate(module.updatedAt)}
-                        </CardFooter>
-                      </Card>
-                    </Link>
-                  );
-                })}
+                    // Ensure moduleSlug is not empty
+                    if (!moduleSlug) {
+                      console.error(
+                        "Failed to encode module slug for",
+                        module.name
+                      );
+                      return null;
+                    }
+
+                    return (
+                      <Link
+                        href={`/modules/${moduleSlug}`}
+                        key={module.id || module.name}
+                        prefetch={true}
+                      >
+                        <Card className="hover:bg-muted/50 transition-colors">
+                          <CardHeader>
+                            <CardTitle>
+                              <span className="mr-2">{module.icon}</span>
+                              {module.name}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-sm text-muted-foreground">
+                              {module.resourceCount}{" "}
+                              {module.resourceCount === 1
+                                ? "resource"
+                                : "resources"}
+                            </div>
+                          </CardContent>
+                          <CardFooter className="text-xs text-muted-foreground">
+                            Updated {formatDate(module.updatedAt)}
+                          </CardFooter>
+                        </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="resources" className="mt-2">
+          <TabsContent value="resources">
             <ResourcesWrapper />
           </TabsContent>
         </Tabs>

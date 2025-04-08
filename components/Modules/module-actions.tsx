@@ -116,7 +116,7 @@ export default function ModuleActions({
         onOpenChange={(open) => !open && setIsEditing(false)}
       >
         <DialogTrigger asChild>
-          <Button variant="ghost" size="icon" onClick={handleEdit}>
+          <Button variant="ghost" size="icon" onClick={handleEdit} title="Edit Module">
             <Edit className="h-4 w-4" />
           </Button>
         </DialogTrigger>
@@ -140,6 +140,7 @@ export default function ModuleActions({
           size="icon"
           onClick={() => setShowDeleteAlert(true)}
           disabled={isDeleting}
+          title="Delete Module"
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
