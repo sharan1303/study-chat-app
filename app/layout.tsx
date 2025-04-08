@@ -5,6 +5,7 @@ import "./globals.css";
 import localFont from "next/font/local";
 
 import ClientSidebar from "@/components/Sidebar/ClientSidebar";
+import { CommandK } from "@/components/Main/command-k";
 
 import { Providers as AppProviders } from "@/context/providers";
 import { SidebarProvider } from "@/context/sidebar-context";
@@ -79,6 +80,7 @@ export default function RootLayout({
                   </main>
                   <PrivacyConsentBar />
                   <GlobalModuleDialog />
+                  <CommandK />
                 </SidebarProvider>
               </KeyboardShortcutsProvider>
               <SessionInitializer />
