@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -42,6 +42,7 @@ import { useRouter } from "next/navigation";
 import React, { useRef } from "react";
 import CustomUserProfile from "@/components/Settings/CustomUserProfile";
 import EditableProfileImage from "@/components/Settings/EditableProfileImage";
+import { getModifierKey } from "@/lib/utils";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -50,6 +51,12 @@ function SettingsContent() {
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [modKey, setModKey] = useState<string>("Ctrl/⌘"); // Default value for SSR
+
+  useEffect(() => {
+    // Set the correct modifier key based on the user's OS
+    setModKey(getModifierKey());
+  }, []);
 
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -226,28 +233,36 @@ function SettingsContent() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Search</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      {modKey}
+                    </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">K</kbd>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">New Chat</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      {modKey}
+                    </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">I</kbd>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">New Module</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      {modKey}
+                    </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">J</kbd>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Toggle Sidebar</span>
                   <div className="flex gap-1">
-                    <kbd className="px-2 py-1 rounded bg-muted text-xs">⌘</kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      {modKey}
+                    </kbd>
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">B</kbd>
                   </div>
                 </div>

@@ -137,3 +137,14 @@ export function formatChatTitle(message: string): string {
   const title = message.substring(0, 50);
   return title + (message.length > 50 ? "..." : "");
 }
+
+/**
+ * Get the appropriate keyboard modifier key based on operating system
+ * @returns The correct modifier key symbol/text for the current platform
+ */
+export function getModifierKey(): string {
+  if (typeof navigator === "undefined") return "Ctrl/⌘"; // Default for SSR
+
+  const isMac = /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
+  return isMac ? "⌘" : "Ctrl";
+}
