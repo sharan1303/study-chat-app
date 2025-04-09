@@ -2,11 +2,69 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/context/sidebar-context";
 import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 // For mobile we'll need a sliding sheet component
-import { Sheet, SheetContent, SheetTitle } from "../ui/sheet";
+import { Sheet, SheetTitle, SheetPortal, SheetOverlay } from "../ui/sheet";
+import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { PanelLeft, Edit } from "lucide-react";
+
+// Create a custom navigation provider that closes sidebar on navigation
+export function useNavigation() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { setOpenMobile, isMobile } = useSidebar();
+  const [currentPath, setCurrentPath] = React.useState(pathname);
+
+  // Watch for path changes to auto-close sidebar
+  React.useEffect(() => {
+    if (pathname !== currentPath) {
+      setCurrentPath(pathname);
+      if (isMobile) {
+        // Close the sidebar when path changes on mobile
+        setOpenMobile(false);
+      }
+    }
+  }, [pathname, currentPath, setOpenMobile, isMobile]);
+
+  // Create a navigation wrapper that closes the sidebar
+  const navigate = React.useCallback(
+    (path: string) => {
+      if (isMobile) {
+        setOpenMobile(false);
+      }
+      router.push(path);
+    },
+    [router, setOpenMobile, isMobile]
+  );
+
+  return { navigate, currentPath };
+}
+
+// Custom SheetContent without the close button
+const SheetContentNoClose = React.forwardRef<
+  React.ElementRef<typeof SheetPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> & {
+    side?: "top" | "right" | "bottom" | "left";
+  }
+>(({ side = "left", className, children, ...props }, ref) => (
+  <SheetPortal>
+    <SheetOverlay />
+    <SheetPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed z-50 gap-4 bg-[hsl(var(--sidebar-background))] p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+        side === "left" &&
+          "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </SheetPrimitive.Content>
+  </SheetPortal>
+));
+SheetContentNoClose.displayName = "SheetContentNoClose";
 
 export const Sidebar = React.forwardRef<
   HTMLDivElement,
@@ -28,7 +86,7 @@ export const Sidebar = React.forwardRef<
     ref
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
-    const router = useRouter();
+    const { navigate } = useNavigation();
 
     // Fixed sidebar (non-collapsible)
     if (collapsible === "none") {
@@ -67,7 +125,7 @@ export const Sidebar = React.forwardRef<
               </button>
               <button
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-                onClick={() => router.push("/chat")}
+                onClick={() => navigate("/chat")}
                 aria-label="New Chat"
                 title="New Chat"
               >
@@ -77,7 +135,7 @@ export const Sidebar = React.forwardRef<
           )}
 
           <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-            <SheetContent
+            <SheetContentNoClose
               data-sidebar="sidebar"
               data-mobile="true"
               className="w-[--sidebar-width-mobile] bg-background p-0"
@@ -85,7 +143,7 @@ export const Sidebar = React.forwardRef<
             >
               <SheetTitle className="sr-only">Sidebar Navigation</SheetTitle>
               <div className="flex h-full w-full flex-col">{children}</div>
-            </SheetContent>
+            </SheetContentNoClose>
           </Sheet>
         </>
       );
