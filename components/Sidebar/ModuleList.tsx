@@ -58,7 +58,6 @@ interface ModuleListProps {
 export default function ModuleList({
   modules = [],
   loading = false,
-
   isActive,
   handleModuleClick,
   pathname: pathnameFromProps,

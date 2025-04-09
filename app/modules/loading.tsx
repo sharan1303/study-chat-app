@@ -14,7 +14,7 @@ export default function Loading() {
   return (
     <div className="flex-1 space-y-4">
       <div className="flex items-center justify-between py-3.5">
-        <h1 className="font-bold text-xl">Dashboard</h1>
+        <h1 className="addmarginforheaders font-bold text-xl">Dashboard</h1>
       </div>
 
       {/* Tabs with static labels */}
@@ -25,7 +25,7 @@ export default function Loading() {
           </div>
           <div className="flex items-center justify-center mt-1 h-7 w-auto rounded-sm">
             <span className="font-medium text-sm text-muted-foreground">
-              All Resources
+              Resources
             </span>
           </div>
         </div>

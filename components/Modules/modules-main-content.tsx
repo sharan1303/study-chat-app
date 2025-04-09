@@ -259,7 +259,7 @@ export default function ModulesPageContent({
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4">
         <div className="flex items-center justify-between py-3.5">
-          <h1 className="font-bold text-xl sticky">Dashboard</h1>
+          <h1 className="font-bold text-xl addmarginforheaders">Dashboard</h1>
         </div>
 
         {/* Tabs for Module and Resources - now at the top */}

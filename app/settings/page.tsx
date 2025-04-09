@@ -163,10 +163,13 @@ function SettingsContent() {
   const email = user?.primaryEmailAddress?.emailAddress || "";
 
   return (
-    <div className="h-full flex flex-col py-2.5">
+    <div className="h-full flex flex-col py-3">
       {/* Top navigation bar */}
-      <div className="flex justify-between items-center pr-6">
-        <Button variant="ghost" size="sm" asChild className="sticky flex items-center">
+      <div className="flex justify-between items-center ml-5 pr-6">
+        <Button
+          variant="ghost"
+          size="sm" asChild
+          className="flex addmarginforheaders items-center p-2">
           <Link href="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Chat

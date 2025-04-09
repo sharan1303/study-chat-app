@@ -5,7 +5,7 @@ import "./globals.css";
 import localFont from "next/font/local";
 
 import ClientSidebar from "@/components/Sidebar/ClientSidebar";
-import { CommandK } from "@/components/Main/command-k";
+import { CommandK } from "@/components/dialogs/command-k";
 
 import { Providers as AppProviders } from "@/context/providers";
 import { SidebarProvider } from "@/context/sidebar-context";

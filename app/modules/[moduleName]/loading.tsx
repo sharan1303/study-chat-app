@@ -14,7 +14,7 @@ export default function ModuleDetailsLoading() {
       <div className="flex items-center justify-between py-2">
         <div className="flex items-center">
           {/* Title skeleton */}
-          <div className="h-8 w-48 bg-muted rounded ml-2 mb-2"></div>
+          <div className="h-8 w-48 addmarginforheaders bg-muted rounded ml-2 mb-2"></div>
         </div>
 
         {/* Action buttons skeleton */}
