@@ -318,7 +318,8 @@ export default function ModulesPageContent({
                 </h3>
                 <p className="text-lg text-muted-foreground">
                   {searchQuery
-                    ? "Try a different search term" : "Create a module to get started."}
+                    ? "Try a different search term"
+                    : "Create a module to get started."}
                 </p>
                 {!searchQuery}
               </div>

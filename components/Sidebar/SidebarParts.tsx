@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/context/sidebar-context";
+import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
 
 // For mobile we'll need a sliding sheet component
 import { Sheet, SheetContent } from "../ui/sheet";
@@ -116,6 +117,12 @@ export const SidebarTrigger = React.forwardRef<
   React.ComponentProps<"button">
 >(({ className, onClick, ...props }, ref) => {
   const { toggleSidebar, state } = useSidebar();
+  const [modifierKey, setModifierKey] = React.useState("⌘");
+
+  React.useEffect(() => {
+    // Set the modifier key based on OS
+    setModifierKey(getOSModifierKey());
+  }, []);
 
   return (
     <button
@@ -126,7 +133,11 @@ export const SidebarTrigger = React.forwardRef<
         state === "collapsed" ? "mx-auto" : "",
         className
       )}
-      title={state === "expanded" ? "Collapse Sidebar" : "Expand Sidebar"}
+      title={
+        state === "expanded"
+          ? `Collapse Sidebar (${modifierKey}+${SHORTCUTS.TOGGLE_SIDEBAR})`
+          : `Expand Sidebar (${modifierKey}+${SHORTCUTS.TOGGLE_SIDEBAR})`
+      }
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
@@ -148,6 +159,12 @@ export const SidebarRail = React.forwardRef<
   React.ComponentProps<"button">
 >(({ className, ...props }, ref) => {
   const { toggleSidebar, state } = useSidebar();
+  const [modifierKey, setModifierKey] = React.useState("⌘");
+
+  React.useEffect(() => {
+    // Set the modifier key based on OS
+    setModifierKey(getOSModifierKey());
+  }, []);
 
   return (
     <button
@@ -156,7 +173,7 @@ export const SidebarRail = React.forwardRef<
       aria-label="Toggle Sidebar"
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      title={`Toggle Sidebar (${modifierKey}+${SHORTCUTS.TOGGLE_SIDEBAR})`}
       className={cn(
         "absolute inset-y-0 z-20 w-4 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-border group-data-[side=left]:right-0 group-data-[side=right]:left-0",
         "cursor-pointer",

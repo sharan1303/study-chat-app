@@ -18,7 +18,7 @@ export default function ModuleDetailsLoading() {
         </div>
 
         {/* Action buttons skeleton */}
-        <div className="flex items-center gap-2 pr-16">
+        <div className="flex items-center gap-2 mr-[90px]">
           <ButtonSkeleton variant="outline" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             <span>Go to Chat</span>

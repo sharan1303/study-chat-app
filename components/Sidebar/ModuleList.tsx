@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/dialogs/ModuleForm";
 import { Plus } from "lucide-react";
+import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
 
 // Define the Module type here instead of importing from Sidebar
 export interface Module {
@@ -125,7 +126,9 @@ export default function ModuleList({
                 variant="ghost"
                 size="icon"
                 className="hover:bg-accent h-8 w-8 mr-2.5"
-                title="Create New Module"
+                title={`Create New Module (${getOSModifierKey()}+${
+                  SHORTCUTS.NEW_MODULE
+                })`}
               >
                 <Plus className="h-4 w-4" />
               </Button>

@@ -50,6 +50,20 @@ function SearchParamsWrapper({
   return <>{children(searchParams)}</>;
 }
 
+// Helper function to determine the OS shortcut key
+export function getOSModifierKey() {
+  if (typeof navigator === "undefined") return "⌘"; // Default to Mac on SSR
+  return /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform) ? "⌘" : "Ctrl";
+}
+
+// Keyboard shortcut keys
+export const SHORTCUTS = {
+  NEW_CHAT: "N",
+  TOGGLE_SIDEBAR: "B",
+  NEW_MODULE: "J",
+  UPLOAD_RESOURCE: "U",
+};
+
 /**
  * Renders the sidebar for the Study Chat application.
  *
@@ -520,12 +534,16 @@ function ClientSidebarContent({
   // Get header height for positioning expand button
   const headerRef = useRef<HTMLDivElement>(null);
   const [, setHeaderHeight] = useState(0);
+  const [modifierKey, setModifierKey] = useState("⌘");
 
   // Measure header height on mount and resize
   useEffect(() => {
     if (headerRef.current) {
       setHeaderHeight(headerRef.current.offsetHeight / 2);
     }
+
+    // Set the modifier key based on OS
+    setModifierKey(getOSModifierKey());
 
     const updateHeaderHeight = () => {
       if (headerRef.current) {
@@ -656,7 +674,7 @@ function ClientSidebarContent({
               variant="ghost"
               size="icon"
               onClick={() => router.push("/chat")}
-              title="New chat"
+              title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
               className={cn(
                 "h-9 w-9",
                 state === "collapsed" && "bg-[hsl(var(--sidebar-background))]"
