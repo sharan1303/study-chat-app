@@ -58,7 +58,7 @@ export function getOSModifierKey() {
 
 // Keyboard shortcut keys
 export const SHORTCUTS = {
-  NEW_CHAT: "N",
+  NEW_CHAT: "I",
   TOGGLE_SIDEBAR: "B",
   NEW_MODULE: "J",
   UPLOAD_RESOURCE: "U",
@@ -650,51 +650,49 @@ function ClientSidebarContent({
       collapsible="offcanvas"
       className="peer bg-[hsl(var(--sidebar-background))]"
     >
-      {!isMobile && (
-        <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
+      <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
+        <div
+          className={cn(
+            "flex items-center relative z-50",
+            state === "expanded" ? "justify-between" : "justify-center"
+          )}
+        >
+          {state === "expanded" && !isMobile && (
+            <Link href="/chat" className="text-xl font-bold">
+              Study Chat
+            </Link>
+          )}
+          {isMobile && (
+            <Link href="/chat" className="text-xl font-bold">
+              Study Chat
+            </Link>
+          )}
           <div
             className={cn(
-              "flex items-center relative z-50",
-              state === "expanded" ? "justify-between" : "justify-center"
+              "flex items-center gap-1",
+              state === "collapsed" &&
+                !isMobile &&
+                "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
             )}
           >
-            {state === "expanded" && !isMobile && (
-              <Link href="/chat" className="text-xl font-bold">
-                Study Chat
-              </Link>
-            )}
-            {isMobile && (
-              <Link href="/chat" className="text-xl font-bold">
-                Study Chat
-              </Link>
-            )}
-            <div
+            <SidebarTrigger />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/chat")}
+              title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
               className={cn(
-                "flex items-center gap-1",
+                "h-9 w-9",
                 state === "collapsed" &&
                   !isMobile &&
-                  "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
+                  "bg-[hsl(var(--sidebar-background))]"
               )}
             >
-              <SidebarTrigger />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push("/chat")}
-                title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
-                className={cn(
-                  "h-9 w-9",
-                  state === "collapsed" &&
-                    !isMobile &&
-                    "bg-[hsl(var(--sidebar-background))]"
-                )}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
+              <Edit className="h-4 w-4" />
+            </Button>
           </div>
-        </SidebarHeader>
-      )}
+        </div>
+      </SidebarHeader>
 
       <SidebarContent className="p-0">
         {/* Show error message if there is one */}
