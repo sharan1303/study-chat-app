@@ -6,8 +6,6 @@ import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
 // For mobile we'll need a sliding sheet component
 import { Sheet, SheetContent, SheetTitle } from "../ui/sheet";
 import { PanelLeft, Edit } from "lucide-react";
-import { Button } from "../ui/button";
-import Link from "next/link";
 
 export const Sidebar = React.forwardRef<
   HTMLDivElement,
@@ -84,10 +82,7 @@ export const Sidebar = React.forwardRef<
               side={side}
             >
               <SheetTitle className="sr-only">Sidebar Navigation</SheetTitle>
-              <div className="flex h-full w-full flex-col">
-                <SidebarMobileHeader />
-                <div className="flex-1 overflow-auto">{children}</div>
-              </div>
+              <div className="flex h-full w-full flex-col">{children}</div>
             </SheetContent>
           </Sheet>
         </>
@@ -282,53 +277,3 @@ export const SidebarFooter = React.forwardRef<
 });
 
 SidebarFooter.displayName = "SidebarFooter";
-
-export const SidebarMobileHeader = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div">
->(({ className, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar();
-  const [modifierKey, setModifierKey] = React.useState("⌘");
-
-  React.useEffect(() => {
-    // Set the modifier key based on OS
-    setModifierKey(getOSModifierKey());
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      data-sidebar="mobile-header"
-      className={cn(
-        "flex items-center justify-between p-4 border-b",
-        className
-      )}
-      {...props}
-    >
-      <Link href="/chat" className="text-xl font-bold">
-        Study Chat
-      </Link>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9"
-          onClick={toggleSidebar}
-        >
-          <PanelLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9"
-          onClick={() => (window.location.href = "/chat")}
-          title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-  );
-});
-
-SidebarMobileHeader.displayName = "SidebarMobileHeader";

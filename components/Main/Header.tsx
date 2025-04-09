@@ -31,7 +31,7 @@ export default function Header() {
           variant="ghost"
           size="icon"
           onClick={handleSearchClick}
-          title={`Search (${getOSModifierKey()}K)`}
+          title={`Search (${getOSModifierKey()}+K)`}
         >
           <Search className="h-4 w-4" />
         </Button>
