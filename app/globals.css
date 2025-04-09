@@ -235,7 +235,7 @@ div[contenteditable="true"] {
 
 /* Add margin to main content when sidebar is collapsed */
 .peer[data-state="collapsed"] ~ * {
-  margin-left: 4rem;
+  margin-left: 5rem;
   transition: margin-left 0.2s ease-in-out;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { MessageSquare, X } from "lucide-react";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getOrCreateSessionIdClient } from "@/lib/session";
 import { useNavigation } from "./SidebarParts";
-import { useSidebar } from "@/context/sidebar-context";
 
 export interface Chat {
   id: string;
@@ -45,12 +44,10 @@ export default function ChatHistory({
   chats: Chat[];
   loading: boolean;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const { navigate } = useNavigation();
-  const { isMobile, setOpenMobile } = useSidebar();
 
   // Debug: Log when chat data changes
   React.useEffect(() => {
@@ -194,7 +191,7 @@ export default function ChatHistory({
                   <div key={chat.id} className="group/chat max-w-[240px]">
                     <div
                       className={cn(
-                        "w-full max-w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
+                        "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
                         isActiveChat(chat)
                           ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
                           : ""

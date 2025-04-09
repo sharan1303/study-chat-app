@@ -70,10 +70,10 @@ export default function RootLayout({
           <ClerkProviderWithTheme>
             <SessionProvider>
               <KeyboardShortcutsProvider>
-                <SidebarProvider defaultOpen={true}>
+                <SidebarProvider>
                   <ClientSidebar />
 
-                  <main className="flex-1 pl-7 pt-0.5 relative">
+                  <main className="flex-1 pt-0.5 relative">
                     <Header />
                     {children}
                     <Analytics />

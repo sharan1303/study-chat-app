@@ -1,12 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/context/sidebar-context";
-import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
+import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
 
 // For mobile we'll need a sliding sheet component
-import { Sheet, SheetTitle, SheetPortal, SheetOverlay } from "../ui/sheet";
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import { Sheet, SheetTitle, SheetContent } from "../ui/sheet";
 import { PanelLeft, Edit } from "lucide-react";
 
 // Create a custom navigation provider that closes sidebar on navigation
@@ -41,31 +40,6 @@ export function useNavigation() {
   return { navigate, currentPath };
 }
 
-// Custom SheetContent without the close button
-const SheetContentNoClose = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> & {
-    side?: "top" | "right" | "bottom" | "left";
-  }
->(({ side = "left", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed z-50 gap-4 bg-[hsl(var(--sidebar-background))] p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
-        side === "left" &&
-          "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-));
-SheetContentNoClose.displayName = "SheetContentNoClose";
-
 export const Sidebar = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
@@ -87,6 +61,12 @@ export const Sidebar = React.forwardRef<
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
     const { navigate } = useNavigation();
+    const [isClient, setIsClient] = React.useState(false);
+
+    // Ensure we only run client-specific code after hydration
+    React.useEffect(() => {
+      setIsClient(true);
+    }, []);
 
     // Fixed sidebar (non-collapsible)
     if (collapsible === "none") {
@@ -104,8 +84,9 @@ export const Sidebar = React.forwardRef<
       );
     }
 
-    // Mobile implementation using a sliding sheet
-    if (isMobile) {
+    // For SSR, always render the desktop version first
+    // Only show mobile implementation after client-side hydration
+    if (isClient && isMobile) {
       return (
         <>
           {/* Fixed mobile trigger that's always visible when sheet is closed */}
@@ -116,7 +97,7 @@ export const Sidebar = React.forwardRef<
               style={{ pointerEvents: "auto" }}
             >
               <button
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-muted hover:text-accent-foreground"
                 onClick={() => setOpenMobile(true)}
                 aria-label="Open Sidebar"
                 title="Open Sidebar"
@@ -124,7 +105,8 @@ export const Sidebar = React.forwardRef<
                 <PanelLeft className="h-4 w-4" />
               </button>
               <button
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-muted hover:text-accent-foreground"
                 onClick={() => navigate("/chat")}
                 aria-label="New Chat"
                 title="New Chat"
@@ -135,15 +117,16 @@ export const Sidebar = React.forwardRef<
           )}
 
           <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-            <SheetContentNoClose
+            <SheetContent
               data-sidebar="sidebar"
               data-mobile="true"
               className="w-[--sidebar-width-mobile] bg-background p-0"
               side={side}
+              showClose={false}
             >
               <SheetTitle className="sr-only">Sidebar Navigation</SheetTitle>
               <div className="flex h-full w-full flex-col">{children}</div>
-            </SheetContentNoClose>
+            </SheetContent>
           </Sheet>
         </>
       );
@@ -207,15 +190,18 @@ export const SidebarTrigger = React.forwardRef<
 >(({ className, onClick, ...props }, ref) => {
   const { toggleSidebar, state, isMobile, setOpenMobile } = useSidebar();
   const [modifierKey, setModifierKey] = React.useState("⌘");
+  const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
+    // Set client state
+    setIsClient(true);
     // Set the modifier key based on OS
     setModifierKey(getOSModifierKey());
   }, []);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     onClick?.(event);
-    if (isMobile) {
+    if (isClient && isMobile) {
       setOpenMobile(true);
     } else {
       toggleSidebar();
@@ -227,7 +213,7 @@ export const SidebarTrigger = React.forwardRef<
       ref={ref}
       data-sidebar="trigger"
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-muted hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         state === "collapsed" ? "mx-auto" : "",
         className
       )}
@@ -240,9 +226,6 @@ export const SidebarTrigger = React.forwardRef<
       {...props}
     >
       <PanelLeft className="h-4 w-4" />
-      <span className="sr-only">
-        {state === "expanded" ? "Collapse" : "Expand"} Sidebar
-      </span>
     </button>
   );
 });

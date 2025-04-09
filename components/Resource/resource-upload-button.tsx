@@ -5,7 +5,7 @@ import { ResourceUploadDialog } from "@/components/dialogs/ResourceUploadDialog"
 import { LoginRequiredDialog } from "@/components/dialogs/LoginRequiredDialog";
 import { useUser } from "@clerk/nextjs";
 import { ShortcutIndicator } from "@/components/ui/shortcut-indicator";
-import { SHORTCUTS } from "@/components/Sidebar/ClientSidebar";
+import { SHORTCUTS } from "@/lib/utils";
 
 interface ResourceUploadButtonProps extends ButtonProps {
   moduleId?: string;

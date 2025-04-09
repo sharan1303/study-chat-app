@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/dialogs/ModuleForm";
 import { Plus } from "lucide-react";
-import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
+import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { useNavigation } from "./SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
 

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/command";
 import { DialogTitle } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
-import { encodeModuleSlug, getModifierKey } from "@/lib/utils";
+import { encodeModuleSlug, getOSModifierKey } from "@/lib/utils";
 
 // Custom event name for opening the module dialog
 const OPEN_MODULE_DIALOG_EVENT = "open-module-dialog";
@@ -54,7 +54,7 @@ export function CommandK() {
 
   // Set the correct modifier key based on platform
   useEffect(() => {
-    setModKey(getModifierKey());
+    setModKey(getOSModifierKey());
   }, []);
 
   // Fetch modules and chats when the command palette opens
