@@ -732,7 +732,7 @@ export default function ModuleDetailWrapper({
               </h1>
             )}
           </div>
-          <div className="flex items-center gap-2 pr-16">
+          <div className="flex items-center gap-2 mr-[90px]">
             <Button
               className="flex items-center gap-2"
               variant="outline"
@@ -743,7 +743,7 @@ export default function ModuleDetailWrapper({
               <MessageSquare className="h-5 w-5" />
               Go to Chat
             </Button>
-            <ModuleActions moduleId={module.id} moduleName={module.name} />
+            <ModuleActions moduleId={module.id} moduleName={module.name}/>
           </div>
         </div>
 

@@ -176,14 +176,14 @@ export function CommandK() {
             <CommandGroup heading="Suggestions">
               <CommandItem onSelect={handleCreateChat} value="create-new-chat">
                 <span>Create New Chat</span>
-                <CommandShortcut>{modKey}I</CommandShortcut>
+                <CommandShortcut>{modKey} I</CommandShortcut>
               </CommandItem>
               <CommandItem
                 onSelect={handleCreateModule}
                 value="create-new-module"
               >
                 <span>Create New Module</span>
-                <CommandShortcut>{modKey}J</CommandShortcut>
+                <CommandShortcut>{modKey} J</CommandShortcut>
               </CommandItem>
 
               <CommandItem
@@ -191,7 +191,7 @@ export function CommandK() {
                 value="upload-resource"
               >
                 <span>Upload Resource</span>
-                <CommandShortcut>{modKey}U</CommandShortcut>
+                <CommandShortcut>{modKey} U</CommandShortcut>
               </CommandItem>
             </CommandGroup>
 
