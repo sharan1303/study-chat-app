@@ -15,5 +15,5 @@ export default function ModulesLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="flex min-h-screen px-5 flex-col">{children}</div>;
+  return <div className="flex min-h-screen px-6 flex-col">{children}</div>;
 }

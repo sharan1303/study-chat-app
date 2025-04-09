@@ -659,6 +659,7 @@ export default function ModuleDetailWrapper({
             <Button
               variant="ghost"
               size="icon"
+              className="sticky"
               onClick={() => router.back()}
               aria-label="Go back"
             >
@@ -671,7 +672,7 @@ export default function ModuleDetailWrapper({
                 <Button
                   variant="ghost"
                   className="text-xl cursor-pointer hover:bg-muted h-10 w-10"
-                  aria-label="Module icon picker"
+                  aria-label="Module-icon-picker"
                 >
                   {module.icon}
                 </Button>

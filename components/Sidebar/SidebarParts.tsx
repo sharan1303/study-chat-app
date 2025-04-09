@@ -120,7 +120,7 @@ export const Sidebar = React.forwardRef<
             <SheetContent
               data-sidebar="sidebar"
               data-mobile="true"
-              className="w-[--sidebar-width-mobile] bg-background p-0"
+              className="w-[--sidebar-width-mobile] bg-[hsl(var(--sidebar-background))] p-0"
               side={side}
               showClose={false}
             >
