@@ -659,7 +659,7 @@ export default function ModuleDetailWrapper({
             <Button
               variant="ghost"
               size="icon"
-              className="sticky"
+              className="addmarginforheaders"
               onClick={() => router.back()}
               aria-label="Go back"
             >
@@ -672,7 +672,7 @@ export default function ModuleDetailWrapper({
                 <Button
                   variant="ghost"
                   className="text-xl cursor-pointer hover:bg-muted h-10 w-10"
-                  aria-label="Module-icon-picker"
+                  aria-label="Module icon picker"
                 >
                   {module.icon}
                 </Button>
@@ -683,7 +683,7 @@ export default function ModuleDetailWrapper({
                     <Button
                       key={icon}
                       variant={module.icon === icon ? "default" : "outline"}
-                      className="h-10 w-10 p-0 text-xl"
+                      className="h-10 w-10 text-xl"
                       onClick={() => handleIconChange(icon)}
                     >
                       {icon}
@@ -695,7 +695,7 @@ export default function ModuleDetailWrapper({
 
             {/* Editable title */}
             {isEditingTitle ? (
-              <div className="flex items-center" ref={titleEditRef}>
+              <div className="flex items-center flex-shrink" ref={titleEditRef}>
                 <Input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
@@ -727,13 +727,14 @@ export default function ModuleDetailWrapper({
             ) : (
               <h1
                 className="text-xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1.5 rounded"
+                ref={titleEditRef}
                 onClick={() => setIsEditingTitle(true)}
               >
-                {module.name}
+                <span className="flex-shrink">{module.name}</span>
               </h1>
             )}
           </div>
-          <div className="flex items-center gap-2 mr-[90px]">
+          <div className="flex items-center gap-1 mr-16">
             <Button
               className="flex items-center gap-2"
               variant="outline"
@@ -742,13 +743,13 @@ export default function ModuleDetailWrapper({
               }
             >
               <MessageSquare className="h-5 w-5" />
-              Go to Chat
+              <span className="hidden sm:inline">Go to Chat</span>
             </Button>
-            <ModuleActions moduleId={module.id} moduleName={module.name}/>
+            <ModuleActions moduleId={module.id} moduleName={module.name} />
           </div>
         </div>
 
-        <div className="space-y-6 px-3 mr-8">
+        <div className="space-y-6 px-3">
           <div>
             <h2 className="text-lg font-semibold mb-2">Content</h2>
             {/* Editable description */}

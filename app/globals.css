@@ -233,22 +233,24 @@ div[contenteditable="true"] {
   animation: slide-in-right 0.3s ease-out;
 }
 
+.addmarginforheaders {
+  align-self: normal;
+}
+
 /* Add margin to main heading when sidebar is collapsed - Desktop */
-.peer[data-state="collapsed"] ~ * .sticky {
+.peer[data-state="collapsed"] ~ * .addmarginforheaders {
   margin-left: 5rem;
   transition: margin-left 0.2s ease-in-out;
 }
 
-.peer[data-state="expanded"] ~ * .pl-12,
-.peer[data-state="expanded"] ~ * .Button.text-xl.cursor-pointer {
+.peer[data-state="expanded"] ~ * .addmarginforheaders {
   margin-left: 0;
   transition: margin-left 0.2s ease-in-out;
 }
 
 /* Add margin to main content when sidebar is closed - Mobile */
 @media (max-width: 768px) {
-  [data-sidebar="mobile-trigger-fixed"] ~ * .pl-12,
-  [data-sidebar="mobile-trigger-fixed"] ~ * h1.font-bold.text-xl {
+  [data-sidebar="mobile-trigger-fixed"] ~ * .addmarginforheaders {
     margin-left: 5rem;
     transition: margin-left 0.2s ease-in-out;
   }

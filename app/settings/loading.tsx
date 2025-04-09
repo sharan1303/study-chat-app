@@ -8,24 +8,24 @@ export default function SettingsLoading() {
   return (
     <div className="h-full flex flex-col py-3">
       {/* Top navigation bar */}
-      <div className="flex justify-between items-center mr-6">
+      <div className="flex justify-between items-center ml-5 pr-6">
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center opacity-50"
+          className="flex items-center addmarginforheaders p-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Chat
         </Button>
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8 rounded" />
-          <Skeleton className="h-8 w-[69px]" />
+          <Skeleton className="h-8 w-[68px]" />
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto pt-1 mx-1">
-        <div className="flex flex-col p-5 md:flex-row gap-8 max-w-6xl mx-auto">
+      <div className="flex-1 overflow-auto pt-1">
+        <div className="flex flex-col py-5 md:flex-row gap-8 max-w-6xl mx-auto">
           {/* Left sidebar with user info */}
           <div className="w-full md:w-1/3">
             <div className="flex flex-col items-center text-center mb-6 mt-10">
