@@ -15,6 +15,8 @@ import {
 import { ModuleForm } from "@/components/dialogs/ModuleForm";
 import { Plus } from "lucide-react";
 import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
+import { useNavigation } from "./SidebarParts";
+import { useSidebar } from "@/context/sidebar-context";
 
 // Define the Module type here instead of importing from Sidebar
 export interface Module {
@@ -64,14 +66,21 @@ export default function ModuleList({
   const [isCreating, setIsCreating] = useState(false);
   const nextRouter = useRouter();
   const nextPathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const { navigate } = useNavigation();
 
   const router = React.useMemo(
     () =>
       routerFromProps || {
-        push: (url: string) => nextRouter.push(url),
+        push: (url: string) => {
+          if (isMobile) {
+            setOpenMobile(false);
+          }
+          nextRouter.push(url);
+        },
         refresh: () => nextRouter.refresh(),
       },
-    [routerFromProps, nextRouter]
+    [routerFromProps, nextRouter, isMobile, setOpenMobile]
   );
 
   const pathname = pathnameFromProps || nextPathname;
@@ -101,9 +110,12 @@ export default function ModuleList({
   const onModuleClick = (moduleId: string, moduleName: string) => {
     if (handleModuleClick) {
       handleModuleClick(moduleId, moduleName);
+      if (isMobile) {
+        setOpenMobile(false);
+      }
     } else {
       const encodedName = encodeModuleSlug(moduleName);
-      router.push(`/modules/${encodedName}`);
+      navigate(`/modules/${encodedName}`);
     }
   };
 
@@ -116,6 +128,11 @@ export default function ModuleList({
             className="justify-start hover:bg-accent w-40 pl-2 pb-2 text-left"
             asChild
             title="Open Dashboard"
+            onClick={() => {
+              if (isMobile) {
+                setOpenMobile(false);
+              }
+            }}
           >
             <Link href="/modules">Modules & Resources</Link>
           </Button>

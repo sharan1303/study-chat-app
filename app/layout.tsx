@@ -72,7 +72,7 @@ export default function RootLayout({
               <KeyboardShortcutsProvider>
                 <SidebarProvider defaultOpen={true}>
                   <ClientSidebar />
-                  
+
                   <main className="flex-1 pl-7 pt-0.5 relative">
                     <Header />
                     {children}

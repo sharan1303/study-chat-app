@@ -21,6 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getOrCreateSessionIdClient } from "@/lib/session";
+import { useNavigation } from "./SidebarParts";
+import { useSidebar } from "@/context/sidebar-context";
 
 export interface Chat {
   id: string;
@@ -47,6 +49,8 @@ export default function ChatHistory({
   const pathname = usePathname();
   const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
+  const { navigate } = useNavigation();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   // Debug: Log when chat data changes
   React.useEffect(() => {
@@ -83,6 +87,18 @@ export default function ChatHistory({
     }
 
     return false;
+  };
+
+  const navigateToChat = (chat: Chat) => {
+    // Modified navigation for welcome chat - always route to /chat/welcome
+    if (chat.title === "Welcome to Study Chat") {
+      navigate("/chat/welcome");
+    } else if (chat.moduleId && chat.module) {
+      const encodedName = encodeModuleSlug(chat.module.name);
+      navigate(`/${encodedName}/chat/${chat.id}`);
+    } else {
+      navigate(`/chat/${chat.id}`);
+    }
   };
 
   const handleDeleteChat = async (chat: Chat) => {
@@ -131,7 +147,7 @@ export default function ChatHistory({
 
       // If we're on the deleted chat's page, redirect to /chat
       if (isActiveChat(chat)) {
-        router.push("/chat");
+        navigate("/chat");
       }
     } catch (error) {
       console.error("Error deleting chat:", error);
@@ -188,17 +204,7 @@ export default function ChatHistory({
                         type="button"
                         className="flex-1 flex items-center justify-between truncate"
                         onClick={() => {
-                          // Modified navigation for welcome chat - always route to /chat/welcome
-                          if (chat.title === "Welcome to Study Chat") {
-                            router.push("/chat/welcome");
-                          } else if (chat.moduleId && chat.module) {
-                            const encodedName = encodeModuleSlug(
-                              chat.module.name
-                            );
-                            router.push(`/${encodedName}/chat/${chat.id}`);
-                          } else {
-                            router.push(`/chat/${chat.id}`);
-                          }
+                          navigateToChat(chat);
                         }}
                       >
                         <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-70px)]">
