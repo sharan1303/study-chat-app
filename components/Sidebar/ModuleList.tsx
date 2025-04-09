@@ -38,6 +38,7 @@ interface ModuleListProps {
   pathname?: string | null | undefined;
   router?: { push: (url: string) => void; refresh: () => void };
   collapsed?: boolean;
+  maxWidth?: string;
 }
 
 /**
@@ -52,16 +53,18 @@ interface ModuleListProps {
  * @param handleModuleClick - Optional callback invoked when a module is clicked; if absent, navigation to the module detail page is performed.
  * @param pathname - An optional pathname used to assess active state; if not provided, the current URL path is used.
  * @param collapsed - When true, renders the module list in a compact format.
+ * @param maxWidth - Optional maximum width for module items.
  */
 export default function ModuleList({
   modules = [],
   loading = false,
-  currentModule = null,
+
   isActive,
   handleModuleClick,
   pathname: pathnameFromProps,
   router: routerFromProps,
   collapsed = false,
+  maxWidth,
 }: ModuleListProps) {
   const [isCreating, setIsCreating] = useState(false);
   const nextRouter = useRouter();
@@ -194,14 +197,14 @@ export default function ModuleList({
                 <button
                   key={module.id}
                   onClick={() => onModuleClick(module.id, module.name)}
+                  style={{ maxWidth: maxWidth }}
                   className={cn(
-                    "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground max-w-[240px] text-left",
-                    collapsed && "justify-center p-1",
-                    (currentModule === module.id ||
-                      checkIsActive(module.name)) &&
-                      "bg-accent border-r-4 border-primary text-accent-foreground"
+                    "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2",
+                    checkIsActive(`/modules/${encodeModuleSlug(module.name)}`)
+                      ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
+                      : "",
+                    collapsed && "justify-center"
                   )}
-                  title={collapsed ? module.name : undefined}
                 >
                   <span>{module.icon}</span>
                   {!collapsed && (

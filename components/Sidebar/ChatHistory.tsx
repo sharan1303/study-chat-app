@@ -40,9 +40,11 @@ export interface Chat {
 export default function ChatHistory({
   chats,
   loading,
+  maxWidth,
 }: {
   chats: Chat[];
   loading: boolean;
+  maxWidth?: string;
 }) {
   const pathname = usePathname();
   const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
@@ -188,7 +190,11 @@ export default function ChatHistory({
                       self.findIndex((c) => c.title === "Welcome to Study Chat")
                 )
                 .map((chat) => (
-                  <div key={chat.id} className="group/chat max-w-[240px]">
+                  <div
+                    key={chat.id}
+                    className="group/chat"
+                    style={{ maxWidth: maxWidth }}
+                  >
                     <div
                       className={cn(
                         "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",

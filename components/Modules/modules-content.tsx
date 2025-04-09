@@ -182,7 +182,7 @@ export default function ModulesPageContent({
       <div className="flex min-h-screen w-full flex-col">
         <div className="flex-1 space-y-4">
           <div className="flex p-5 items-center">
-            <h1 className="font-bold text-xl">Categories</h1>
+            <h1 className="font-bold text-xl">Dashboard</h1>
           </div>
           <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
             <h3 className="text-xl font-medium">Please sign in</h3>
@@ -258,16 +258,12 @@ export default function ModulesPageContent({
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between px-3 py-3.5">
-          <h1 className="font-bold text-xl">Dashboard</h1>
+        <div className="flex items-center justify-between py-3.5">
+          <h1 className="font-bold text-xl sticky">Dashboard</h1>
         </div>
 
         {/* Tabs for Module and Resources - now at the top */}
-        <Tabs
-          defaultValue={activeTab}
-          className="px-3"
-          onValueChange={setActiveTab}
-        >
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full max-w-lg grid-cols-2">
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
@@ -324,8 +320,8 @@ export default function ModulesPageContent({
                 {!searchQuery}
               </div>
             ) : (
-              <div className="h-[calc(100vh-230px)] overflow-y-auto pb-6">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="h-[calc(100vh-10px)] overflow-y-auto">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-min">
                   {filteredModules.map((module) => {
                     // Make sure module name exists and is not empty before encoding
                     if (!module.name) {
@@ -352,12 +348,15 @@ export default function ModulesPageContent({
                         href={`/modules/${moduleSlug}`}
                         key={module.id || module.name}
                         prefetch={true}
+                        className="min-w-md max-w-md w-full"
                       >
-                        <Card className="hover:bg-muted/50 transition-colors">
+                        <Card className="hover:bg-muted/50 transition-colors h-full">
                           <CardHeader>
-                            <CardTitle>
-                              <span className="mr-2">{module.icon}</span>
-                              {module.name}
+                            <CardTitle className="flex items-center gap-2">
+                              <span className="flex-shrink-0">
+                                {module.icon}
+                              </span>
+                              <span className="truncate">{module.name}</span>
                             </CardTitle>
                           </CardHeader>
                           <CardContent>

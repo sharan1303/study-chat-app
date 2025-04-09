@@ -638,9 +638,7 @@ function ClientSidebarContent({
       className="peer bg-[hsl(var(--sidebar-background))]"
     >
       <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
-        <div
-          className="flex items-center relative z-50 justify-between"
-        >
+        <div className="flex items-center relative z-50 justify-between">
           {/* Always render the Link, control visibility with CSS */}
           <Link
             href="/chat"
@@ -701,13 +699,18 @@ function ClientSidebarContent({
             collapsed={state === "collapsed" && !isMobile}
             router={{ push: router.push, refresh: router.refresh }}
             pathname={pathname}
+            maxWidth={isMobile ? "270px" : "240px"}
           />
         </div>
 
         {/* Chat History Section - always visible on mobile */}
         {(state === "expanded" || isMobile) && (
           <div className="h-2/3 min-h-[200px]">
-            <ChatHistory chats={chats} loading={loadingChats} />
+            <ChatHistory
+              chats={chats}
+              loading={loadingChats}
+              maxWidth={isMobile ? "270px" : "240px"}
+            />
           </div>
         )}
       </SidebarContent>
