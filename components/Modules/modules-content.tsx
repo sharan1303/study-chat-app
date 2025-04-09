@@ -257,7 +257,7 @@ export default function ModulesPageContent({
   // Return the main UI
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <div className="flex-1 space-y-4 mr-8">
+      <div className="flex-1 space-y-4">
         <div className="flex items-center justify-between px-3 py-3.5">
           <h1 className="font-bold text-xl">Dashboard</h1>
         </div>
@@ -268,9 +268,9 @@ export default function ModulesPageContent({
           className="px-3"
           onValueChange={setActiveTab}
         >
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-lg grid-cols-2">
             <TabsTrigger value="modules">Modules</TabsTrigger>
-            <TabsTrigger value="resources">All Resources</TabsTrigger>
+            <TabsTrigger value="resources">Resources</TabsTrigger>
           </TabsList>
 
           {/* Search bar with contextual button - now below tabs */}

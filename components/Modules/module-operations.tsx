@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { ModuleForm } from "@/components/dialogs/ModuleForm";
 import { ShortcutIndicator } from "@/components/ui/shortcut-indicator";
-import { SHORTCUTS } from "@/components/Sidebar/ClientSidebar";
+import { SHORTCUTS } from "@/lib/utils";
 
 interface ModuleOperationsProps {
   showLarge?: boolean;

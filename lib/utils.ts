@@ -142,9 +142,18 @@ export function formatChatTitle(message: string): string {
  * Get the appropriate keyboard modifier key based on operating system
  * @returns The correct modifier key symbol/text for the current platform
  */
-export function getModifierKey(): string {
-  if (typeof navigator === "undefined") return "Ctrl/⌘"; // Default for SSR
 
+export function getOSModifierKey() {
+  if (typeof navigator === "undefined") return "⌘"; // Default to Mac on SSR
+  
   const isMac = /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
   return isMac ? "⌘" : "Ctrl";
 }
+
+// Keyboard shortcut keys
+export const SHORTCUTS = {
+  NEW_CHAT: "I",
+  TOGGLE_SIDEBAR: "B",
+  NEW_MODULE: "J",
+  UPLOAD_RESOURCE: "U",
+};

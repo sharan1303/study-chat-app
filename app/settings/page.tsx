@@ -42,7 +42,7 @@ import { useRouter } from "next/navigation";
 import React, { useRef } from "react";
 import CustomUserProfile from "@/components/Settings/CustomUserProfile";
 import EditableProfileImage from "@/components/Settings/EditableProfileImage";
-import { getModifierKey } from "@/lib/utils";
+import { getOSModifierKey } from "@/lib/utils";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -55,7 +55,7 @@ function SettingsContent() {
 
   useEffect(() => {
     // Set the correct modifier key based on the user's OS
-    setModKey(getModifierKey());
+    setModKey(getOSModifierKey());
   }, []);
 
   const handleFileImport = (event: React.ChangeEvent<HTMLInputElement>) => {

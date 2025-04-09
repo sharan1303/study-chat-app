@@ -4,7 +4,7 @@ import ThemeToggle from "../ui/theme-toggle";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import { getOSModifierKey } from "../Sidebar/ClientSidebar";
+import { getOSModifierKey } from "@/lib/utils";
 
 export default function Header() {
   const pathname = usePathname();

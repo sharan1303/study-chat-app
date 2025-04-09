@@ -29,6 +29,7 @@ import { Edit } from "lucide-react";
 import { api } from "@/lib/api";
 import { EVENT_TYPES } from "@/lib/events";
 import { getOrCreateSessionIdClient } from "@/lib/session";
+import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 
 // Define module type
 export interface Module {
@@ -49,20 +50,6 @@ function SearchParamsWrapper({
   const searchParams = useSearchParams();
   return <>{children(searchParams)}</>;
 }
-
-// Helper function to determine the OS shortcut key
-export function getOSModifierKey() {
-  if (typeof navigator === "undefined") return "⌘"; // Default to Mac on SSR
-  return /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform) ? "⌘" : "Ctrl";
-}
-
-// Keyboard shortcut keys
-export const SHORTCUTS = {
-  NEW_CHAT: "I",
-  TOGGLE_SIDEBAR: "B",
-  NEW_MODULE: "J",
-  UPLOAD_RESOURCE: "U",
-};
 
 /**
  * Renders the sidebar for the Study Chat application.
@@ -652,21 +639,18 @@ function ClientSidebarContent({
     >
       <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
         <div
-          className={cn(
-            "flex items-center relative z-50",
-            state === "expanded" ? "justify-between" : "justify-center"
-          )}
+          className="flex items-center relative z-50 justify-between"
         >
-          {state === "expanded" && !isMobile && (
-            <Link href="/chat" className="text-xl font-bold">
-              Study Chat
-            </Link>
-          )}
-          {isMobile && (
-            <Link href="/chat" className="text-xl font-bold">
-              Study Chat
-            </Link>
-          )}
+          {/* Always render the Link, control visibility with CSS */}
+          <Link
+            href="/chat"
+            className={cn(
+              "text-xl font-bold",
+              state === "expanded" || isMobile ? "block" : "hidden"
+            )}
+          >
+            Study Chat
+          </Link>
           <div
             className={cn(
               "flex items-center gap-1",

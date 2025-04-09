@@ -1,4 +1,4 @@
-import { getOSModifierKey } from "@/components/Sidebar/ClientSidebar";
+import { getOSModifierKey } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import React from "react";
 
