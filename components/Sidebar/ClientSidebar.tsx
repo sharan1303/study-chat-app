@@ -79,7 +79,7 @@ function ClientSidebarContent({
   searchParams: URLSearchParams;
 }) {
   const { isLoaded, isSignedIn, userId } = useAuth();
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -650,41 +650,51 @@ function ClientSidebarContent({
       collapsible="offcanvas"
       className="peer bg-[hsl(var(--sidebar-background))]"
     >
-      <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
-        <div
-          className={cn(
-            "flex items-center relative z-50",
-            state === "expanded" ? "justify-between" : "justify-center"
-          )}
-        >
-          {state === "expanded" && (
-            <Link href="/chat" className="text-xl font-bold">
-              Study Chat
-            </Link>
-          )}
+      {!isMobile && (
+        <SidebarHeader className="px-4 py-3 border-b" ref={headerRef}>
           <div
             className={cn(
-              "flex items-center gap-1",
-              state === "collapsed" &&
-                "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
+              "flex items-center relative z-50",
+              state === "expanded" ? "justify-between" : "justify-center"
             )}
           >
-            <SidebarTrigger />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push("/chat")}
-              title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
+            {state === "expanded" && !isMobile && (
+              <Link href="/chat" className="text-xl font-bold">
+                Study Chat
+              </Link>
+            )}
+            {isMobile && (
+              <Link href="/chat" className="text-xl font-bold">
+                Study Chat
+              </Link>
+            )}
+            <div
               className={cn(
-                "h-9 w-9",
-                state === "collapsed" && "bg-[hsl(var(--sidebar-background))]"
+                "flex items-center gap-1",
+                state === "collapsed" &&
+                  !isMobile &&
+                  "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
               )}
             >
-              <Edit className="h-4 w-4" />
-            </Button>
+              <SidebarTrigger />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.push("/chat")}
+                title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
+                className={cn(
+                  "h-9 w-9",
+                  state === "collapsed" &&
+                    !isMobile &&
+                    "bg-[hsl(var(--sidebar-background))]"
+                )}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </SidebarHeader>
+        </SidebarHeader>
+      )}
 
       <SidebarContent className="p-0">
         {/* Show error message if there is one */}
@@ -696,27 +706,31 @@ function ClientSidebarContent({
         )}
 
         {/* Module List */}
-        <div className={state === "expanded" ? "h-1/3 min-h-[150px]" : ""}>
+        <div
+          className={
+            state === "expanded" || isMobile ? "h-1/3 min-h-[150px]" : ""
+          }
+        >
           <ModuleList
             modules={modules}
             loading={loading}
             currentModule={currentModule || activeModuleId}
             handleModuleClick={handleModuleClick}
-            collapsed={state === "collapsed"}
+            collapsed={state === "collapsed" && !isMobile}
             router={{ push: router.push, refresh: router.refresh }}
             pathname={pathname}
           />
         </div>
 
-        {/* Chat History Section */}
-        {state === "expanded" && (
+        {/* Chat History Section - always visible on mobile */}
+        {(state === "expanded" || isMobile) && (
           <div className="h-2/3 min-h-[200px]">
             <ChatHistory chats={chats} loading={loadingChats} />
           </div>
         )}
       </SidebarContent>
 
-      {state === "expanded" && (
+      {(state === "expanded" || isMobile) && (
         <SidebarFooter className="p-0">
           <UserSection />
         </SidebarFooter>

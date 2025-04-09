@@ -4,8 +4,10 @@ import { useSidebar } from "@/context/sidebar-context";
 import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
 
 // For mobile we'll need a sliding sheet component
-import { Sheet, SheetContent } from "../ui/sheet";
-import { PanelLeft } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle } from "../ui/sheet";
+import { PanelLeft, Edit } from "lucide-react";
+import { Button } from "../ui/button";
+import Link from "next/link";
 
 export const Sidebar = React.forwardRef<
   HTMLDivElement,
@@ -47,16 +49,48 @@ export const Sidebar = React.forwardRef<
     // Mobile implementation using a sliding sheet
     if (isMobile) {
       return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-          <SheetContent
-            data-sidebar="sidebar"
-            data-mobile="true"
-            className="w-[--sidebar-width-mobile] bg-background p-0 [&>button]:hidden"
-            side={side}
-          >
-            <div className="flex h-full w-full flex-col">{children}</div>
-          </SheetContent>
-        </Sheet>
+        <>
+          {/* Fixed mobile trigger that's always visible when sheet is closed */}
+          {!openMobile && (
+            <div
+              className="fixed left-[0.75rem] top-3 z-[100] flex items-center bg-[hsl(var(--sidebar-background))] rounded-md gap-1 shadow-md"
+              data-sidebar="mobile-trigger-fixed"
+              style={{ pointerEvents: "auto" }}
+            >
+              <button
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={() => setOpenMobile(true)}
+                aria-label="Open Sidebar"
+                title="Open Sidebar"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </button>
+              <button
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                onClick={() => (window.location.href = "/chat")}
+                aria-label="New Chat"
+                title="New Chat"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+            <SheetContent
+              data-sidebar="sidebar"
+              data-mobile="true"
+              className="w-[--sidebar-width-mobile] bg-background p-0"
+              side={side}
+            >
+              <SheetTitle className="sr-only">Sidebar Navigation</SheetTitle>
+              <div className="flex h-full w-full flex-col">
+                <SidebarMobileHeader />
+                <div className="flex-1 overflow-auto">{children}</div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
       );
     }
 
@@ -116,13 +150,22 @@ export const SidebarTrigger = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, state } = useSidebar();
+  const { toggleSidebar, state, isMobile, setOpenMobile } = useSidebar();
   const [modifierKey, setModifierKey] = React.useState("⌘");
 
   React.useEffect(() => {
     // Set the modifier key based on OS
     setModifierKey(getOSModifierKey());
   }, []);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    if (isMobile) {
+      setOpenMobile(true);
+    } else {
+      toggleSidebar();
+    }
+  };
 
   return (
     <button
@@ -138,10 +181,7 @@ export const SidebarTrigger = React.forwardRef<
           ? `Collapse Sidebar (${modifierKey}+${SHORTCUTS.TOGGLE_SIDEBAR})`
           : `Expand Sidebar (${modifierKey}+${SHORTCUTS.TOGGLE_SIDEBAR})`
       }
-      onClick={(event) => {
-        onClick?.(event);
-        toggleSidebar();
-      }}
+      onClick={handleClick}
       {...props}
     >
       <PanelLeft className="h-4 w-4" />
@@ -242,3 +282,53 @@ export const SidebarFooter = React.forwardRef<
 });
 
 SidebarFooter.displayName = "SidebarFooter";
+
+export const SidebarMobileHeader = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div">
+>(({ className, ...props }, ref) => {
+  const { toggleSidebar } = useSidebar();
+  const [modifierKey, setModifierKey] = React.useState("⌘");
+
+  React.useEffect(() => {
+    // Set the modifier key based on OS
+    setModifierKey(getOSModifierKey());
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      data-sidebar="mobile-header"
+      className={cn(
+        "flex items-center justify-between p-4 border-b",
+        className
+      )}
+      {...props}
+    >
+      <Link href="/chat" className="text-xl font-bold">
+        Study Chat
+      </Link>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={toggleSidebar}
+        >
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => (window.location.href = "/chat")}
+          title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+SidebarMobileHeader.displayName = "SidebarMobileHeader";
