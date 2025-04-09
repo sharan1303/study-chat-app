@@ -4,6 +4,7 @@ import ThemeToggle from "../ui/theme-toggle";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
+import { getOSModifierKey } from "../Sidebar/ClientSidebar";
 
 export default function Header() {
   const pathname = usePathname();
@@ -30,7 +31,7 @@ export default function Header() {
           variant="ghost"
           size="icon"
           onClick={handleSearchClick}
-          title="Search (⌘K)"
+          title={`Search (${getOSModifierKey()}K)`}
         >
           <Search className="h-4 w-4" />
         </Button>
