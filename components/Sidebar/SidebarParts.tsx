@@ -2,6 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/context/sidebar-context";
 import { getOSModifierKey, SHORTCUTS } from "./ClientSidebar";
+import { useRouter } from "next/navigation";
 
 // For mobile we'll need a sliding sheet component
 import { Sheet, SheetContent, SheetTitle } from "../ui/sheet";
@@ -27,6 +28,7 @@ export const Sidebar = React.forwardRef<
     ref
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    const router = useRouter();
 
     // Fixed sidebar (non-collapsible)
     if (collapsible === "none") {
@@ -65,7 +67,7 @@ export const Sidebar = React.forwardRef<
               </button>
               <button
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-                onClick={() => (window.location.href = "/chat")}
+                onClick={() => router.push("/chat")}
                 aria-label="New Chat"
                 title="New Chat"
               >
