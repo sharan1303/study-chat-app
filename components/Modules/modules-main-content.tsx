@@ -28,6 +28,7 @@ import { useResources } from "@/lib/hooks/useResources";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
+import Header from "../Main/Header";
 
 // Define interfaces for the module data
 interface Module {
@@ -256,22 +257,28 @@ export default function ModulesPageContent({
 
   // Return the main UI
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between py-3.5">
-          <h1 className="font-bold text-xl addmarginforheaders">Dashboard</h1>
-        </div>
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Header at the top */}
+      <div className="flex items-center justify-between px-6 py-4">
+        <h1 className="text-xl addmarginforheaders">Dashboard</h1>
+        <Header />
+      </div>
 
-        {/* Tabs for Module and Resources - now at the top */}
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-lg grid-cols-2">
+      <Tabs
+        defaultValue={activeTab}
+        onValueChange={setActiveTab}
+        className="flex flex-col flex-1 overflow-hidden"
+      >
+        {/* Fixed tabs header */}
+        <div className="px-6">
+          <TabsList className="grid max-w-xl grid-cols-2">
             <TabsTrigger value="modules">Modules</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
           </TabsList>
 
-          {/* Search bar with contextual button - now below tabs */}
-          <div className="relative flex items-center gap-2 mt-4 mb-6">
-            <div className="relative flex-1 max-w-md">
+          {/* Search bar with contextual button */}
+          <div className="flex items-center gap-2 pl-0.5 mt-4 mb-6 max-w-xl">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder={
@@ -299,8 +306,11 @@ export default function ModulesPageContent({
               ) : null}
             </div>
           </div>
+        </div>
 
-          <TabsContent value="modules" className="mt-2">
+        {/* Scrollable content area (only this part scrolls) */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth scrollbar-smooth pb-6 pl-6 pr-3">
+          <TabsContent value="modules" className="h-full">
             {isLoading ? (
               <div className="flex items-center justify-center pt-10">
                 <Loader2 className="animate-spin" />
@@ -320,70 +330,66 @@ export default function ModulesPageContent({
                 {!searchQuery}
               </div>
             ) : (
-              <div className="h-[calc(100vh-10px)] overflow-y-auto">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-min">
-                  {filteredModules.map((module) => {
-                    // Make sure module name exists and is not empty before encoding
-                    if (!module.name) {
-                      console.error("Module name is missing", module);
-                      return null;
-                    }
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-min">
+                {filteredModules.map((module) => {
+                  // Make sure module name exists and is not empty before encoding
+                  if (!module.name) {
+                    console.error("Module name is missing", module);
+                    return null;
+                  }
 
-                    const moduleSlug = encodeModuleSlug(module.name);
-                    console.log(
-                      `Creating link for "${module.name}" → "${moduleSlug}"`
+                  const moduleSlug = encodeModuleSlug(module.name);
+                  console.log(
+                    `Creating link for "${module.name}" → "${moduleSlug}"`
+                  );
+
+                  // Ensure moduleSlug is not empty
+                  if (!moduleSlug) {
+                    console.error(
+                      "Failed to encode module slug for",
+                      module.name
                     );
+                    return null;
+                  }
 
-                    // Ensure moduleSlug is not empty
-                    if (!moduleSlug) {
-                      console.error(
-                        "Failed to encode module slug for",
-                        module.name
-                      );
-                      return null;
-                    }
-
-                    return (
-                      <Link
-                        href={`/modules/${moduleSlug}`}
-                        key={module.id || module.name}
-                        prefetch={true}
-                        className="min-w-md max-w-md w-full"
-                      >
-                        <Card className="hover:bg-muted/50 transition-colors h-full">
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                              <span className="flex-shrink-0">
-                                {module.icon}
-                              </span>
-                              <span className="truncate">{module.name}</span>
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-sm text-muted-foreground">
-                              {module.resourceCount}{" "}
-                              {module.resourceCount === 1
-                                ? "resource"
-                                : "resources"}
-                            </div>
-                          </CardContent>
-                          <CardFooter className="text-xs text-muted-foreground">
-                            Updated {formatDate(module.updatedAt)}
-                          </CardFooter>
-                        </Card>
-                      </Link>
-                    );
-                  })}
-                </div>
+                  return (
+                    <Link
+                      href={`/modules/${moduleSlug}`}
+                      key={module.id || module.name}
+                      prefetch={true}
+                      className="min-w-md max-w-xl w-full"
+                    >
+                      <Card className="hover:bg-muted/50 transition-colors h-full">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <span className="flex-shrink-0">{module.icon}</span>
+                            <span className="truncate">{module.name}</span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm text-muted-foreground">
+                            {module.resourceCount}{" "}
+                            {module.resourceCount === 1
+                              ? "resource"
+                              : "resources"}
+                          </div>
+                        </CardContent>
+                        <CardFooter className="text-xs text-muted-foreground">
+                          Updated {formatDate(module.updatedAt)}
+                        </CardFooter>
+                      </Card>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="resources">
+          <TabsContent value="resources" className="h-full">
             <ResourcesWrapper />
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
   );
 }

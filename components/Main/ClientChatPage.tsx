@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { encodeModuleSlug } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "next-themes";
+import Header from "./Header";
 
 // Loading component for Suspense fallback
 export function ChatPageLoading() {
@@ -519,6 +520,9 @@ export default function ClientChatPage({
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
+      {/* Header component */}
+      <Header />
+
       {/* Main Content Area with Scrollbar - Make it span the full page */}
       <div
         ref={scrollContainerRef}
@@ -528,15 +532,17 @@ export default function ClientChatPage({
       >
         {/* Chat Header - Now inside the scrollable area */}
         {moduleDetails && (
-          <div className="px-3 py-2 pl-12 flex items-center justify-between addmarginforheaders top-1 bg-background">
+          <div className="py-2 pl-1 pr-24 flex addmarginforheaders top-1 bg-background">
             <Button
               variant="ghost"
-                className="flex items-center gap-3 pt-4 -ml-3 px-1 hover:bg-muted/50 rounded"
+              className="flex items-center gap-3 pt-4 hover:bg-muted/50 rounded flex-shrink max-w-[85%]"
               onClick={navigateToModuleDetails}
             >
-              <span className="text-2xl">{moduleDetails.icon}</span>
-              <div>
-                <h1 className="font-bold text-xl">{moduleDetails.name}</h1>
+              <span className="text-2xl flex-shrink-0">
+                {moduleDetails.icon}
+              </span>
+              <div className="min-w-0 overflow-hidden">
+                <h1 className="text-xl truncate">{moduleDetails.name}</h1>
               </div>
             </Button>
           </div>
@@ -551,7 +557,7 @@ export default function ClientChatPage({
               {messages.length === 0 ? (
                 <div className="text-center flex items-center justify-center h-screen z-20">
                   <div className="flex flex-col items-center space-y-2">
-                    <div className="w-[200px] h-[200px] relative">
+                    <div className="w-[200px] h-[175px] relative">
                       {!showLogo ? (
                         ""
                       ) : (
@@ -571,7 +577,8 @@ export default function ClientChatPage({
                       Welcome to Study Chat!
                     </h3>
                     <p className="text-muted-foreground">
-                      Create a module to provide context for your chat
+                      Create individual modules and provide context to your chat
+                      threads
                     </p>
                   </div>
                 </div>

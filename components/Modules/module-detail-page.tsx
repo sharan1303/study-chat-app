@@ -24,6 +24,7 @@ import { ResourceUploadButton } from "@/components/Resource/resource-upload-butt
 import { ResourceTable } from "@/components/Resource/resource-table";
 import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 import ModuleDetailsLoading from "@/app/modules/[moduleName]/loading";
+import Header from "../Main/Header";
 
 interface Module {
   id: string;
@@ -653,8 +654,9 @@ export default function ModuleDetailWrapper({
   return (
     <div className="flex flex-col min-h-screen w-full">
       <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between py-2">
+        <div className="flex items-center justify-between py-3">
           <div className="flex items-center">
+            <Header />
             {/* Back button */}
             <Button
               variant="ghost"
