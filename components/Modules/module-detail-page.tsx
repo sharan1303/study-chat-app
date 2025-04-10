@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
-import { Check, MessageSquare, X } from "lucide-react";
+import { Check, MessageSquare, X, ChevronLeft } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useAuth } from "@clerk/nextjs";
@@ -655,6 +655,17 @@ export default function ModuleDetailWrapper({
       <div className="flex-1 space-y-4">
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center">
+            {/* Back button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="addmarginforheaders"
+              onClick={() => router.back()}
+              aria-label="Go back"
+            >
+              <ChevronLeft className="h-10 w-10" />
+            </Button>
+
             {/* Module icon with popover for changing */}
             <Popover>
               <PopoverTrigger asChild>
@@ -672,7 +683,7 @@ export default function ModuleDetailWrapper({
                     <Button
                       key={icon}
                       variant={module.icon === icon ? "default" : "outline"}
-                      className="h-10 w-10 p-0 text-xl"
+                      className="h-10 w-10 text-xl"
                       onClick={() => handleIconChange(icon)}
                     >
                       {icon}
@@ -684,7 +695,7 @@ export default function ModuleDetailWrapper({
 
             {/* Editable title */}
             {isEditingTitle ? (
-              <div className="flex items-center" ref={titleEditRef}>
+              <div className="flex items-center flex-shrink" ref={titleEditRef}>
                 <Input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
@@ -715,14 +726,15 @@ export default function ModuleDetailWrapper({
               </div>
             ) : (
               <h1
-                className="text-xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
+                className="text-xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1.5 rounded"
+                ref={titleEditRef}
                 onClick={() => setIsEditingTitle(true)}
               >
-                {module.name}
+                <span className="flex-shrink">{module.name}</span>
               </h1>
             )}
           </div>
-          <div className="flex items-center gap-2 pr-16">
+          <div className="flex items-center gap-1 mr-16">
             <Button
               className="flex items-center gap-2"
               variant="outline"
@@ -731,7 +743,7 @@ export default function ModuleDetailWrapper({
               }
             >
               <MessageSquare className="h-5 w-5" />
-              Go to Chat
+              <span className="hidden sm:inline">Go to Chat</span>
             </Button>
             <ModuleActions moduleId={module.id} moduleName={module.name} />
           </div>
@@ -739,7 +751,7 @@ export default function ModuleDetailWrapper({
 
         <div className="space-y-6 px-3">
           <div>
-            <h2 className="text-lg font-semibold mb-2">Description</h2>
+            <h2 className="text-lg font-semibold mb-2">Content</h2>
             {/* Editable description */}
             {isEditingDescription ? (
               <div className="flex flex-col gap-2" ref={descriptionEditRef}>
@@ -747,7 +759,7 @@ export default function ModuleDetailWrapper({
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   className="min-h-[158px]"
-                  placeholder="Add a description..."
+                  placeholder="Give context to your agent..."
                   autoFocus
                   onKeyDown={(e) => {
                     // Save on Enter
@@ -789,8 +801,7 @@ export default function ModuleDetailWrapper({
                 className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[158px]"
                 onClick={() => setIsEditingDescription(true)}
               >
-                {module.description ||
-                  "No description provided. Click to add one."}
+                {module.description || "Give context to your agent..."}
               </p>
             )}
           </div>

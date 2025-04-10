@@ -14,11 +14,11 @@ export default function ModuleDetailsLoading() {
       <div className="flex items-center justify-between py-2">
         <div className="flex items-center">
           {/* Title skeleton */}
-          <div className="h-8 w-48 bg-muted rounded ml-2 mb-2"></div>
+          <div className="h-8 w-48 addmarginforheaders bg-muted rounded ml-2 mb-2"></div>
         </div>
 
         {/* Action buttons skeleton */}
-        <div className="flex items-center gap-2 pr-16">
+        <div className="flex items-center gap-2 mr-[90px]">
           <ButtonSkeleton variant="outline" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             <span>Go to Chat</span>
@@ -38,7 +38,7 @@ export default function ModuleDetailsLoading() {
       <div className="space-y-6 px-3">
         {/* Description section skeleton */}
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold mb-2">Description</h2>
+          <h2 className="text-lg font-semibold mb-2">Content</h2>
           <div className="text-muted-foreground p-4 rounded min-h-[158px] bg-muted">
           </div>
         </div>

@@ -30,7 +30,7 @@ import {
 import { toast } from "sonner";
 import axios from "axios";
 import { useResourceUrl } from "@/lib/hooks/useResourceUrl";
-import { DeleteConfirmationDialog } from "@/components/dialogs/DeleteConfirmationDialog";
+import { DeleteConfirmationDialog } from "@/components/dialogs/ResourceDeleteConfirmationDialog";
 import {
   getFileTypeFromExtension,
   getFileTypeFromMimeType,

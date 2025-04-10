@@ -12,8 +12,11 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ModuleForm } from "@/components/Modules/module-form";
+import { ModuleForm } from "@/components/dialogs/ModuleForm";
 import { Plus } from "lucide-react";
+import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
+import { useNavigation } from "./SidebarParts";
+import { useSidebar } from "@/context/sidebar-context";
 
 // Define the Module type here instead of importing from Sidebar
 export interface Module {
@@ -35,6 +38,7 @@ interface ModuleListProps {
   pathname?: string | null | undefined;
   router?: { push: (url: string) => void; refresh: () => void };
   collapsed?: boolean;
+  maxWidth?: string;
 }
 
 /**
@@ -49,28 +53,36 @@ interface ModuleListProps {
  * @param handleModuleClick - Optional callback invoked when a module is clicked; if absent, navigation to the module detail page is performed.
  * @param pathname - An optional pathname used to assess active state; if not provided, the current URL path is used.
  * @param collapsed - When true, renders the module list in a compact format.
+ * @param maxWidth - Optional maximum width for module items.
  */
 export default function ModuleList({
   modules = [],
   loading = false,
-  currentModule = null,
   isActive,
   handleModuleClick,
   pathname: pathnameFromProps,
   router: routerFromProps,
   collapsed = false,
+  maxWidth,
 }: ModuleListProps) {
   const [isCreating, setIsCreating] = useState(false);
   const nextRouter = useRouter();
   const nextPathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const { navigate } = useNavigation();
 
   const router = React.useMemo(
     () =>
       routerFromProps || {
-        push: (url: string) => nextRouter.push(url),
+        push: (url: string) => {
+          if (isMobile) {
+            setOpenMobile(false);
+          }
+          nextRouter.push(url);
+        },
         refresh: () => nextRouter.refresh(),
       },
-    [routerFromProps, nextRouter]
+    [routerFromProps, nextRouter, isMobile, setOpenMobile]
   );
 
   const pathname = pathnameFromProps || nextPathname;
@@ -100,9 +112,12 @@ export default function ModuleList({
   const onModuleClick = (moduleId: string, moduleName: string) => {
     if (handleModuleClick) {
       handleModuleClick(moduleId, moduleName);
+      if (isMobile) {
+        setOpenMobile(false);
+      }
     } else {
       const encodedName = encodeModuleSlug(moduleName);
-      router.push(`/modules/${encodedName}`);
+      navigate(`/modules/${encodedName}`);
     }
   };
 
@@ -114,13 +129,26 @@ export default function ModuleList({
             variant={pathname?.startsWith("/modules") ? "secondary" : "ghost"}
             className="justify-start hover:bg-accent w-40 pl-2 pb-2 text-left"
             asChild
+            title="Open Dashboard"
+            onClick={() => {
+              if (isMobile) {
+                setOpenMobile(false);
+              }
+            }}
           >
             <Link href="/modules">Modules & Resources</Link>
           </Button>
 
           <Dialog open={isCreating} onOpenChange={setIsCreating}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent h-8 w-8 mr-2.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:bg-accent h-8 w-8 mr-2.5"
+                title={`Create New Module (${getOSModifierKey()}+${
+                  SHORTCUTS.NEW_MODULE
+                })`}
+              >
                 <Plus className="h-4 w-4" />
               </Button>
             </DialogTrigger>
@@ -168,14 +196,14 @@ export default function ModuleList({
                 <button
                   key={module.id}
                   onClick={() => onModuleClick(module.id, module.name)}
+                  style={{ maxWidth: maxWidth }}
                   className={cn(
-                    "flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground max-w-[240px] text-left",
-                    collapsed && "justify-center p-1",
-                    (currentModule === module.id ||
-                      checkIsActive(module.name)) &&
-                      "bg-accent border-r-4 border-primary text-accent-foreground"
+                    "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2",
+                    checkIsActive(`/modules/${encodeModuleSlug(module.name)}`)
+                      ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
+                      : "",
+                    collapsed && "justify-center"
                   )}
-                  title={collapsed ? module.name : undefined}
                 >
                   <span>{module.icon}</span>
                   {!collapsed && (

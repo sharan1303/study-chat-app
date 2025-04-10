@@ -13,19 +13,19 @@ import { Search } from "lucide-react";
 export default function Loading() {
   return (
     <div className="flex-1 space-y-4">
-      <div className="flex items-center justify-between px-3 py-3.5">
-        <h1 className="font-bold text-xl">Categories</h1>
+      <div className="flex items-center justify-between py-3.5">
+        <h1 className="addmarginforheaders font-bold text-xl">Dashboard</h1>
       </div>
 
       {/* Tabs with static labels */}
-      <div className="px-3">
+      <div>
         <div className="grid w-full max-w-md grid-cols-2 h-9 bg-muted rounded-lg">
-          <div className="flex items-center justify-center mt-1 ml-1 h-7 bg-background rounded-lg">
+          <div className="flex items-center justify-center mt-1 h-7 bg-background rounded-lg">
             <span className="font-medium text-sm">Modules</span>
           </div>
-          <div className="flex items-center justify-center mt-1 mr-1 h-7 w-auto rounded-sm">
+          <div className="flex items-center justify-center mt-1 h-7 w-auto rounded-sm">
             <span className="font-medium text-sm text-muted-foreground">
-              All Resources
+              Resources
             </span>
           </div>
         </div>
