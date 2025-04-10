@@ -13,8 +13,8 @@ import { SessionProvider } from "@/context/session-context";
 import { KeyboardShortcutsProvider } from "@/context/keyboard-shortcuts-context";
 
 import AnonymousDataMigration from "@/components/dialogs/AnonymousDataMigration";
+
 import PrivacyConsentBar from "@/components/dialogs/PrivacyConsentBar";
-import Header from "@/components/Main/Header";
 import { ClerkProviderWithTheme } from "@/components/Clerk/ClerkProviderWithTheme";
 import { GlobalModuleDialog } from "@/components/dialogs/GlobalModuleCreationDialog";
 import { GlobalResourceUploadDialog } from "@/components/Main/GlobalResourceUploadDialog";
@@ -73,8 +73,7 @@ export default function RootLayout({
                 <SidebarProvider>
                   <ClientSidebar />
 
-                  <main className="flex-1 pt-0.5 relative">
-                    <Header />
+                  <main className="flex-1 relative">
                     {children}
                     <Analytics />
                     <SpeedInsights />

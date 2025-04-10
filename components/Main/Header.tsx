@@ -1,19 +1,9 @@
-"use client";
-
 import ThemeToggle from "../ui/theme-toggle";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { getOSModifierKey } from "@/lib/utils";
 
 export default function Header() {
-  const pathname = usePathname();
-
-  // Don't render the header on the settings page
-  if (pathname === "/settings") {
-    return null;
-  }
-
   const handleSearchClick = () => {
     // Trigger Command+K dialog by simulating the keyboard shortcut
     const event = new KeyboardEvent("keydown", {
@@ -25,7 +15,7 @@ export default function Header() {
   };
 
   return (
-    <div className="absolute top-3 right-2 z-[30]">
+    <div className="absolute top-3 right-2 flex-shrink-0 z-50">
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
