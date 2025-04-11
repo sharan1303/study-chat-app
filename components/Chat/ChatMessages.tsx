@@ -69,7 +69,14 @@ const AssistantMessage: React.FC<{
                 {...(props as React.HTMLAttributes<HTMLParagraphElement>)}
               />
             ),
-            code: (props) => <CodeBlock {...props} />,
+            // @ts-expect-error - ReactMarkdown types don't include inline
+            code: ({ inline, className, children, ...props }) => {
+              return (
+                <CodeBlock inline={inline} className={className} {...props}>
+                  {children}
+                </CodeBlock>
+              );
+            },
           }}
         >
           {message.content}
@@ -117,34 +124,20 @@ export default function ChatMessages({
   return (
     <>
       {messages.map((message, index) => {
-        if (message.role === "user") {
-          const nextMessage = messages[index + 1];
-          return (
-            <React.Fragment key={message.id || index}>
+        return (
+          <React.Fragment key={message.id || index}>
+            {message.role === "user" ? (
               <UserMessage message={message} />
-              {nextMessage && nextMessage.role === "assistant" && (
-                <AssistantMessage
-                  message={nextMessage}
-                  copyToClipboard={copyToClipboard}
-                  copiedMessageId={copiedMessageId}
-                  modelName={modelName}
-                />
-              )}
-            </React.Fragment>
-          );
-        }
-        if (index === 0 && message.role === "assistant") {
-          return (
-            <AssistantMessage
-              key={message.id || index}
-              message={message}
-              copyToClipboard={copyToClipboard}
-              copiedMessageId={copiedMessageId}
-              modelName={modelName}
-            />
-          );
-        }
-        return null;
+            ) : message.role === "assistant" ? (
+              <AssistantMessage
+                message={message}
+                copyToClipboard={copyToClipboard}
+                copiedMessageId={copiedMessageId}
+                modelName={modelName}
+              />
+            ) : null}
+          </React.Fragment>
+        );
       })}
     </>
   );
