@@ -9,15 +9,15 @@ import { Loader2, MessageSquare, Search, Trash } from "lucide-react";
  */
 export default function ModuleDetailsLoading() {
   return (
-    <div className="flex-1 space-y-4 px-4">
-      <div className="flex items-center justify-between py-3">
+    <div className="flex-1 space-y-4">
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center px-3">
           {/* Title skeleton */}
           <div className="h-8 w-48 addmarginforheaders bg-muted rounded mb-2" />
         </div>
 
         {/* Action buttons skeleton */}
-        <div className="flex items-center gap-3 mr-9">
+        <div className="flex items-center gap-3 pr-2">
           <ButtonSkeleton variant="outline" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             <span className="hidden sm:inline">Go to Chat</span>
@@ -32,11 +32,14 @@ export default function ModuleDetailsLoading() {
             <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
               <Search className="h-4 w-4" />
             </ButtonSkeleton>
+
           </div>
+
+          <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       </div>
 
-      <div className="space-y-6 px-3">
+      <div className="space-y-6 px-7">
         {/* Description section skeleton */}
         <div className="space-y-2">
           <h2 className="text-lg mb-2">Content</h2>

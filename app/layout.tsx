@@ -17,7 +17,7 @@ import AnonymousDataMigration from "@/components/dialogs/AnonymousDataMigration"
 import PrivacyConsentBar from "@/components/dialogs/PrivacyConsentBar";
 import { ClerkProviderWithTheme } from "@/components/Clerk/ClerkProviderWithTheme";
 import { GlobalModuleDialog } from "@/components/dialogs/GlobalModuleCreationDialog";
-import { GlobalResourceUploadDialog } from "@/components/Main/GlobalResourceUploadDialog";
+import { GlobalResourceUploadDialog } from "@/components/dialogs/GlobalResourceUploadDialog";
 
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
