@@ -14,104 +14,37 @@ import { encodeModuleSlug } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "next-themes";
 import Header from "./Header";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { dracula, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Components } from "react-markdown/lib/ast-to-react";
+
+// Define a reusable type for the code component props
+type CodeComponentProps = Parameters<Components["code"]>[0];
 
 // Create a reusable code component for ReactMarkdown
-const CodeBlock = ({
-  inline,
-  className,
-  children,
-  ...props
-}: React.HTMLAttributes<HTMLElement> & {
-  inline?: boolean;
-  className?: string;
-}) => {
-  const { resolvedTheme } = useTheme();
+const CodeBlock = ({ inline, className, children, ...props }: any) => {
   const match = /language-(\w+)/.exec(className || "");
   const language = match ? match[1] : "";
-  const content = String(children).replace(/\n$/, "");
-
-  // Check if this is a shell-related language for shell styling
-  const isShellLanguage = [
-    "bash",
-    "shell",
-    "sh",
-    "zsh",
-    "dos",
-    "powershell",
-    "cmd",
-    "bat",
-  ].includes(language);
-
-  if (inline) {
-    return (
-      <code
-        className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 font-mono px-1.5 py-0.5 border border-gray-200 dark:border-gray-700 rounded text-xs"
-        {...props}
-      >
-        {isShellLanguage && <span className="text-gray-400 mr-1">$</span>}
-        {children}
-      </code>
-    );
-  }
-
-  // Only treat as a code block if it has a language or className
-  if (language || (className && className.trim() !== "")) {
-    return (
-      <div
-        className={`my-3 overflow-hidden rounded-md ${
-          isShellLanguage
-            ? "shadow-[0_4px_8px_rgba(0,0,0,0.3)] dark:shadow-gray-950/70"
-            : "shadow-md"
-        }`}
-      >
-        <div
-          className={`flex items-center justify-between ${
-            isShellLanguage
-              ? "bg-gray-700 text-gray-100 dark:bg-gray-950"
-              : "bg-gray-800 text-gray-200 dark:bg-gray-900"
-          } px-4 py-2 text-xs`}
-        >
-          <span>
-            {isShellLanguage ? (
-              <>
-                <span className="mr-1 text-gray-400">$</span>
-                {language || "shell"}
-              </>
-            ) : (
-              language || "text"
-            )}
-          </span>
+  return !inline ? (
+    <>
+      <pre className="my-3 rounded-md overflow-hidden">
+        <div className="bg-gray-800 text-gray-200 dark:bg-gray-900 px-4 py-2 text-xs">
+          {language || "text"}
         </div>
-        <SyntaxHighlighter
-          language={language || "text"}
-          style={resolvedTheme === "dark" ? dracula : vs}
-          customStyle={{
-            margin: 0,
-            padding: "1rem",
-            backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "#e7ecf2",
-            borderRadius: "0 0 0.375rem 0.375rem",
-            fontSize: "0.875rem",
-            lineHeight: "1.5",
-          }}
-          wrapLongLines={true}
-          codeTagProps={{
-            style: {
-              fontFamily:
-                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-            },
-          }}
-          PreTag="div"
+        <code
+          className={`${className} block p-4 overflow-x-auto bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200`}
+          {...props}
         >
-          {content}
-        </SyntaxHighlighter>
-      </div>
-    );
-  }
-
-  // If no language specified and no className, render as normal text
-  return <code {...props}>{children}</code>;
+          {children}
+        </code>
+      </pre>
+    </>
+  ) : (
+    <code
+      className="bg-gray-200 dark:bg-gray-800 rounded px-1 py-0.5 text-xs"
+      {...props}
+    >
+      {children}
+    </code>
+  );
 };
 
 // Loading component for Suspense fallback
@@ -407,9 +340,7 @@ export default function ClientChatPage({
             >
               <div className="flex items-center gap-2 max-w-full flex-row-reverse">
                 <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words">
-                  <div className="whitespace-pre-wrap text-sm">
-                    {message.content}
-                  </div>
+                  <div className="whitespace-pre-wrap">{message.content}</div>
                 </div>
               </div>
             </div>
@@ -422,14 +353,14 @@ export default function ClientChatPage({
                 key={`ai-${nextMessage.id || `${index}-response`}`}
                 className="mt-4 text-gray-800 dark:text-gray-200 group relative"
               >
-                <div className="prose prose-xs dark:prose-invert max-w-none break-words prose-spacing text-sm">
+                <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-spacing">
                   <ReactMarkdown
                     components={{
                       h1: ({ ...props }) => (
-                        <h1 className="text-xl font-bold my-5" {...props} />
+                        <h1 className="text-2xl font-bold my-6" {...props} />
                       ),
                       h2: ({ ...props }) => (
-                        <h2 className="text-lg font-semibold my-4" {...props} />
+                        <h2 className="text-xl font-semibold my-5" {...props} />
                       ),
                       h3: ({ ...props }) => (
                         <h3 className="text-lg font-medium my-4" {...props} />
@@ -438,24 +369,7 @@ export default function ClientChatPage({
                         <h4 className="text-lg font-medium my-3" {...props} />
                       ),
                       p: ({ ...props }) => <p className="my-3" {...props} />,
-                      code: (props) => {
-                        const { children, className, ...rest } = props;
-                        const match = /language-(\w+)/.exec(className || "");
-
-                        // If there is no className or language-*, it's an inline code
-                        if (!match && !className) {
-                          return (
-                            <code
-                              className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 font-mono px-1.5 py-0.5 border border-gray-200 dark:border-gray-700 rounded text-xs"
-                              {...rest}
-                            >
-                              {children}
-                            </code>
-                          );
-                        }
-                        // Otherwise, use the CodeBlock component for block code
-                        return <CodeBlock {...props} />;
-                      },
+                      code: CodeBlock,
                     }}
                     key={`md-${nextMessage.id || `${index}-response-md`}`}
                   >
@@ -513,40 +427,23 @@ export default function ClientChatPage({
               key={`assistant-${message.id || index}`}
               className="text-gray-800 dark:text-gray-200 group relative"
             >
-              <div className="prose prose-xs dark:prose-invert max-w-none break-words prose-spacing text-sm">
+              <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-spacing">
                 <ReactMarkdown
                   components={{
                     h1: ({ ...props }) => (
-                      <h1 className="text-xl font-bold my-5" {...props} />
+                      <h1 className="text-3xl font-bold my-6" {...props} />
                     ),
                     h2: ({ ...props }) => (
-                      <h2 className="text-lg font-semibold my-4" {...props} />
+                      <h2 className="text-2xl font-semibold my-5" {...props} />
                     ),
                     h3: ({ ...props }) => (
-                      <h3 className="text-lg font-medium my-4" {...props} />
+                      <h3 className="text-xl font-medium my-4" {...props} />
                     ),
                     h4: ({ ...props }) => (
                       <h4 className="text-lg font-medium my-3" {...props} />
                     ),
                     p: ({ ...props }) => <p className="my-3" {...props} />,
-                    code: (props) => {
-                      const { children, className, ...rest } = props;
-                      const match = /language-(\w+)/.exec(className || "");
-
-                      // If there is no className or language-*, it's an inline code
-                      if (!match && !className) {
-                        return (
-                          <code
-                            className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 font-mono px-1.5 py-0.5 border border-gray-200 dark:border-gray-700 rounded text-xs"
-                            {...rest}
-                          >
-                            {children}
-                          </code>
-                        );
-                      }
-                      // Otherwise, use the CodeBlock component for block code
-                      return <CodeBlock {...props} />;
-                    },
+                    code: CodeBlock,
                   }}
                   key={`md-assistant-${message.id || index}`}
                 >
