@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import ClientChatPage from "@/components/Main/ClientChatPage";
-import { ChatPageLoading } from "@/components/Main/ClientChatPage";
+import ClientChatPage from "@/components/Chat/ClientChatPage";
+import { ChatPageLoading } from "@/components/Chat/ChatPageLoading";
 import prisma from "@/lib/prisma";
 
 export default async function ChatPage(props: {

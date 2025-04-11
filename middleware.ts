@@ -100,7 +100,6 @@ export const config = {
     "/api/(.*)",
     "/trpc/(.*)",
     "/modules",
-    "/settings",
     "/chat", // Include /chat path for welcome chat redirection
     "/", // Include root path for welcome redirection
   ],

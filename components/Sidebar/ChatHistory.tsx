@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { MessageSquare, X } from "lucide-react";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getOrCreateSessionIdClient } from "@/lib/session";
+import { useNavigation } from "./SidebarParts";
 
 export interface Chat {
   id: string;
@@ -39,14 +40,16 @@ export interface Chat {
 export default function ChatHistory({
   chats,
   loading,
+  maxWidth,
 }: {
   chats: Chat[];
   loading: boolean;
+  maxWidth?: string;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
+  const { navigate } = useNavigation();
 
   // Debug: Log when chat data changes
   React.useEffect(() => {
@@ -83,6 +86,18 @@ export default function ChatHistory({
     }
 
     return false;
+  };
+
+  const navigateToChat = (chat: Chat) => {
+    // Modified navigation for welcome chat - always route to /chat/welcome
+    if (chat.title === "Welcome to Study Chat") {
+      navigate("/chat/welcome");
+    } else if (chat.moduleId && chat.module) {
+      const encodedName = encodeModuleSlug(chat.module.name);
+      navigate(`/${encodedName}/chat/${chat.id}`);
+    } else {
+      navigate(`/chat/${chat.id}`);
+    }
   };
 
   const handleDeleteChat = async (chat: Chat) => {
@@ -131,7 +146,7 @@ export default function ChatHistory({
 
       // If we're on the deleted chat's page, redirect to /chat
       if (isActiveChat(chat)) {
-        router.push("/chat");
+        navigate("/chat");
       }
     } catch (error) {
       console.error("Error deleting chat:", error);
@@ -175,10 +190,14 @@ export default function ChatHistory({
                       self.findIndex((c) => c.title === "Welcome to Study Chat")
                 )
                 .map((chat) => (
-                  <div key={chat.id} className="group/chat max-w-[240px]">
+                  <div
+                    key={chat.id}
+                    className="group/chat"
+                    style={{ maxWidth: maxWidth }}
+                  >
                     <div
                       className={cn(
-                        "w-full max-w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
+                        "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
                         isActiveChat(chat)
                           ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
                           : ""
@@ -188,17 +207,7 @@ export default function ChatHistory({
                         type="button"
                         className="flex-1 flex items-center justify-between truncate"
                         onClick={() => {
-                          // Modified navigation for welcome chat - always route to /chat/welcome
-                          if (chat.title === "Welcome to Study Chat") {
-                            router.push("/chat/welcome");
-                          } else if (chat.moduleId && chat.module) {
-                            const encodedName = encodeModuleSlug(
-                              chat.module.name
-                            );
-                            router.push(`/${encodedName}/chat/${chat.id}`);
-                          } else {
-                            router.push(`/chat/${chat.id}`);
-                          }
+                          navigateToChat(chat);
                         }}
                       >
                         <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-70px)]">
@@ -237,6 +246,7 @@ export default function ChatHistory({
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               onClick={() => {
                                 if (chatToDelete) {
                                   handleDeleteChat(chatToDelete);

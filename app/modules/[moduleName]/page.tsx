@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import ModuleDetailWrapper from "@/components/Modules/module-detail-page-wrapper";
+import ModuleDetailWrapper from "@/components/Modules/module-detail-page";
 
 type ModuleDetailPageProps = {
   params: Promise<{ moduleName: string }>;

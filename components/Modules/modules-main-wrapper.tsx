@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import ModulesPageContent from "./modules-content";
+import ModulesPageContent from "./modules-main-content";
 
 /**
  * Wrapper component that gets search params and passes them to ModulesPageContent.

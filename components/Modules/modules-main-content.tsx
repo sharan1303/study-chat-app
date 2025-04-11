@@ -3,12 +3,11 @@
 import React, { Suspense, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -29,6 +28,7 @@ import { useResources } from "@/lib/hooks/useResources";
 
 // Client component for module operations to be loaded in a Suspense boundary
 import ModuleOperations from "./module-operations";
+import Header from "../Main/Header";
 
 // Define interfaces for the module data
 interface Module {
@@ -183,7 +183,7 @@ export default function ModulesPageContent({
       <div className="flex min-h-screen w-full flex-col">
         <div className="flex-1 space-y-4">
           <div className="flex p-5 items-center">
-            <h1 className="font-bold text-xl">Categories</h1>
+            <h1 className="font-bold text-xl">Dashboard</h1>
           </div>
           <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
             <h3 className="text-xl font-medium">Please sign in</h3>
@@ -202,7 +202,7 @@ export default function ModulesPageContent({
   // Updated ResourcesWrapper using the resources from our custom hook
   function ResourcesWrapper() {
     return (
-      <div className="mt-6">
+      <div>
         <div className="flex items-center justify-between mb-4">
           {searchQuery && (
             <p className="text-muted-foreground">
@@ -213,15 +213,33 @@ export default function ModulesPageContent({
 
         {/* Use the ResourceTable component */}
         <div className="min-h-[300px]">
-          {resourcesLoading ? (
-            <ResourceTableSkeleton showModuleColumn={true} />
-          ) : filteredResources.length === 0 && isSignedIn ? (
+          {!isSignedIn ? (
             <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-              <h3 className="font-medium">
-                Access your knowledge base and upload your own resources.
+              <h3 className="text-lg font-medium">
+                Sign in to view and upload resources.
               </h3>
+              <SignInButton mode="modal">
+                <Button>Sign in</Button>
+              </SignInButton>
             </div>
-          ) : isSignedIn ? (
+          ) : resourcesLoading ? (
+            <ResourceTableSkeleton showModuleColumn={true} />
+          ) : filteredResources.length === 0 ? (
+            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
+              {searchQuery ? (
+                <>
+                  <h3 className="text-xl font-medium">No resources found</h3>
+                  <p className="text-muted-foreground">
+                    Try a different search term
+                  </p>
+                </>
+              ) : (
+                <h3 className="font-medium">
+                  Access your knowledge base and upload your own resources.
+                </h3>
+              )}
+            </div>
+          ) : (
             <ResourceTable
               resources={filteredResources.map((resource) => ({
                 ...resource,
@@ -231,12 +249,6 @@ export default function ModulesPageContent({
               onUpdate={handleResourceUpdate}
               showModuleColumn={true}
             />
-          ) : (
-            <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-              <h3 className="font-medium">
-                You need to be signed in to view and upload resources.
-              </h3>
-            </div>
           )}
         </div>
       </div>
@@ -245,26 +257,28 @@ export default function ModulesPageContent({
 
   // Return the main UI
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <div className="flex-1 space-y-4">
-        <div className="flex items-center justify-between px-3 py-3.5">
-          <h1 className="font-bold text-xl">Categories</h1>
-        </div>
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Header at the top */}
+      <div className="flex items-center justify-between px-6 py-4">
+        <h1 className="text-xl add-margin-for-headers">Dashboard</h1>
+        <Header />
+      </div>
 
-        {/* Tabs for Module and Resources - now at the top */}
-        <Tabs
-          defaultValue={activeTab}
-          className="px-3"
-          onValueChange={setActiveTab}
-        >
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+      <Tabs
+        defaultValue={activeTab}
+        onValueChange={setActiveTab}
+        className="flex flex-col flex-1 overflow-hidden"
+      >
+        {/* Fixed tabs header */}
+        <div className="px-6">
+          <TabsList className="grid max-w-xl grid-cols-2">
             <TabsTrigger value="modules">Modules</TabsTrigger>
-            <TabsTrigger value="resources">All Resources</TabsTrigger>
+            <TabsTrigger value="resources">Resources</TabsTrigger>
           </TabsList>
 
-          {/* Search bar with contextual button - now below tabs */}
-          <div className="relative flex items-center gap-2 mt-4 mb-6">
-            <div className="relative flex-1 max-w-md">
+          {/* Search bar with contextual button */}
+          <div className="flex items-center gap-2 pl-0.5 mt-4 mb-6 max-w-xl">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder={
@@ -278,36 +292,45 @@ export default function ModulesPageContent({
               />
             </div>
             {/* Contextual button that changes based on active tab */}
-            {activeTab === "modules" ? (
-              <Suspense fallback={<Button disabled>Loading...</Button>}>
-                <ModuleOperations sessionId={sessionId} />
-              </Suspense>
-            ) : isSignedIn ? (
-              <ResourceUploadButton
-                variant="outline"
-                moduleId={preselectedModuleId || undefined}
-                initialOpen={openResourceUpload}
-              />
-            ) : null}
+            <div className="flex-shrink-0">
+              {activeTab === "modules" ? (
+                <Suspense fallback={<Button disabled>Loading...</Button>}>
+                  <ModuleOperations sessionId={sessionId} />
+                </Suspense>
+              ) : isSignedIn ? (
+                <ResourceUploadButton
+                  variant="outline"
+                  moduleId={preselectedModuleId || undefined}
+                  initialOpen={openResourceUpload}
+                />
+              ) : null}
+            </div>
           </div>
+        </div>
 
-          <TabsContent value="modules" className="mt-2">
+        {/* Scrollable content area (only this part scrolls) */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth scrollbar-smooth pb-6 pl-6 pr-3">
+          <TabsContent value="modules" className="h-full">
             {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {/* No skeleton cards as requested */}
+              <div className="flex items-center justify-center pt-10">
+                <Loader2 className="animate-spin" />
               </div>
             ) : filteredModules.length === 0 ? (
               <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-                <h3 className="text-xl font-medium">No modules found</h3>
-                <p className="text-muted-foreground">
+                <h3 className="text-lg font-medium">
+                  {searchQuery
+                    ? "No modules found"
+                    : "Modules are a way to organise your conversations and uploaded resources."}
+                </h3>
+                <p className="text-lg text-muted-foreground">
                   {searchQuery
                     ? "Try a different search term"
-                    : "Create your first module to get started"}
+                    : "Create a module to get started."}
                 </p>
                 {!searchQuery}
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-min">
                 {filteredModules.map((module) => {
                   // Make sure module name exists and is not empty before encoding
                   if (!module.name) {
@@ -320,30 +343,20 @@ export default function ModulesPageContent({
                     `Creating link for "${module.name}" → "${moduleSlug}"`
                   );
 
-                  // Ensure moduleSlug is not empty
-                  if (!moduleSlug) {
-                    console.error(
-                      "Failed to encode module slug for",
-                      module.name
-                    );
-                    return null;
-                  }
 
                   return (
                     <Link
                       href={`/modules/${moduleSlug}`}
                       key={module.id || module.name}
                       prefetch={true}
+                      className="min-w-md max-w-xl w-full"
                     >
-                      <Card className="hover:bg-muted/50 transition-colors">
+                      <Card className="hover:bg-muted/50 transition-colors h-full">
                         <CardHeader>
-                          <CardTitle>
-                            <span className="mr-2">{module.icon}</span>
-                            {module.name}
+                          <CardTitle className="flex items-center gap-2">
+                            <span className="flex-shrink-0">{module.icon}</span>
+                            <span className="truncate">{module.name}</span>
                           </CardTitle>
-                          <CardDescription>
-                            {module.description || "No description"}
-                          </CardDescription>
                         </CardHeader>
                         <CardContent>
                           <div className="text-sm text-muted-foreground">
@@ -364,11 +377,11 @@ export default function ModulesPageContent({
             )}
           </TabsContent>
 
-          <TabsContent value="resources" className="mt-2">
+          <TabsContent value="resources" className="h-full">
             <ResourcesWrapper />
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
   );
 }

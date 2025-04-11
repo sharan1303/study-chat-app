@@ -56,7 +56,7 @@ export function useResources(isSignedIn: boolean, searchQuery: string) {
       const modulesData = await api.getModules();
       const modulesList = modulesData.modules || [];
       setResourceModules(
-        modulesList.map((m: any) => ({
+        modulesList.map((m: ResourceModule) => ({
           id: m.id,
           name: m.name,
           icon: m.icon,
@@ -151,7 +151,7 @@ export function useResources(isSignedIn: boolean, searchQuery: string) {
         const modulesData = await api.getModules();
         const modulesList = modulesData.modules || [];
         setResourceModules(
-          modulesList.map((m: any) => ({
+          modulesList.map((m: ResourceModule) => ({
             id: m.id,
             name: m.name,
             icon: m.icon,

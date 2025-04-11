@@ -39,14 +39,12 @@ export function useSidebar() {
 
 // Optimized mobile detection hook
 export function useIsMobile() {
-  // Initialize with a check for window only at runtime
-  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth < 768;
-  });
+  // Always initialize with false for SSR to avoid hydration mismatch
+  const [isMobile, setIsMobile] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    if (typeof window === "undefined") return;
+    // Only set mobile state after first render on client
+    setIsMobile(window.innerWidth < 768);
 
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -62,6 +60,7 @@ export function useIsMobile() {
 
 // Helper to get saved sidebar state from cookie
 function getSavedSidebarState(defaultOpen: boolean): boolean {
+  // Always return defaultOpen during SSR
   if (typeof document === "undefined") return defaultOpen;
 
   const cookies = document.cookie.split(";");

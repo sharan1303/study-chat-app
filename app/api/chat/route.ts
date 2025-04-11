@@ -156,9 +156,7 @@ export async function POST(request: Request) {
       const result = streamText({
         model: google("gemini-2.0-flash"),
         messages: formattedMessages,
-        temperature: 0.7,
-        topP: 0.95,
-        maxTokens: 2048,
+        temperature: 0.10,
         onFinish: async ({ text }) => {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
