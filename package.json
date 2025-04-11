@@ -62,7 +62,7 @@
     "react-syntax-highlighter": "^15.6.1",
     "simple-icons": "^14.11.1",
     "sonner": "^2.0.1",
-    "svix": "^1.62.0",
+    "svix": "^1.64.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
