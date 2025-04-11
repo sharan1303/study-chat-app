@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import CodeBlock from "./CodeBlock";
 import { Check, Copy } from "lucide-react";
 import type { Message } from "@ai-sdk/react";
-import { ShortcutIndicator } from "@/components/ui/shortcut-indicator";
+import { getOSModifierKey } from "@/lib/utils";
 
 export interface ChatMessagesProps {
   messages: Message[];
@@ -14,13 +14,60 @@ export interface ChatMessagesProps {
   modelName: string;
 }
 
-const UserMessage: React.FC<{ message: Message }> = ({ message }) => {
+const UserMessage: React.FC<{
+  message: Message;
+  copyToClipboard: (text: string, messageId: string) => void;
+  copiedMessageId: string | null;
+}> = ({ message, copyToClipboard, copiedMessageId }) => {
+  const messageRef = React.useRef<HTMLDivElement>(null);
+
+  // Add keyboard shortcut listener
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Cmd/Ctrl+C is pressed while the message is being hovered
+      if ((e.metaKey || e.ctrlKey) && e.key === "c") {
+        if (messageRef.current?.matches(":hover")) {
+          e.preventDefault();
+          copyToClipboard(message.content, message.id);
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [message.content, message.id, copyToClipboard]);
+
   return (
-    <div key={`user-${message.id}`} className="flex justify-end">
-      <div className="flex items-center gap-2 max-w-full flex-row-reverse">
-        <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words">
-          <div className="whitespace-pre-wrap text-sm">{message.content}</div>
-        </div>
+    <div
+      ref={messageRef}
+      key={`user-${message.id}`}
+      className="flex flex-col items-end group relative"
+    >
+      <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words max-w-full">
+        <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+      </div>
+      <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              copyToClipboard(message.content, message.id);
+            }
+          }}
+          type="button"
+          onClick={() => copyToClipboard(message.content, message.id)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+          aria-label="Copy message"
+          title={`Copy message (${getOSModifierKey()} + C)`}
+        >
+          {copiedMessageId === message.id ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <Copy className="h-4 w-4 hover:cursor-pointer" />
+          )}
+        </button>
       </div>
     </div>
   );
@@ -114,21 +161,14 @@ const AssistantMessage: React.FC<{
           }}
           type="button"
           onClick={() => copyToClipboard(message.content, message.id)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-          aria-label="Copy response"
-          title="Copy message (or use Cmd/Ctrl+C while hovering)"
+          className="flex items-center gap-2 px-3 py-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+          aria-label="Copy message"
+          title={`Copy message (${getOSModifierKey()} + C)`}
         >
           {copiedMessageId === message.id ? (
-            <span className="flex items-center gap-1">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Copied!</span>
-            </span>
+            <Check className="h-4 w-4 text-green-500" />
           ) : (
-            <>
-              <Copy className="h-4 w-4" />
-              <span className="ml-2 text-sm">Copy Message</span>
-              <ShortcutIndicator shortcutKey="C" className="ml-1" />
-            </>
+            <Copy className="h-4 w-4" />
           )}
         </button>
         <div className="text-xs text-muted-foreground">
@@ -151,7 +191,11 @@ const ChatMessages = React.memo(function ChatMessages({
         return (
           <React.Fragment key={message.id || index}>
             {message.role === "user" ? (
-              <UserMessage message={message} />
+              <UserMessage
+                message={message}
+                copyToClipboard={copyToClipboard}
+                copiedMessageId={copiedMessageId}
+              />
             ) : message.role === "assistant" ? (
               <AssistantMessage
                 message={message}
