@@ -48,9 +48,9 @@ export default function Loading() {
 
         {/* Empty area for modules to load into */}
         <div className="flex items-center justify-center pt-12">
-              <Loader2 />
+          <Loader2 />
         </div>
+      </div>
     </div>
-  </div>
   );
 }

@@ -607,6 +607,7 @@ export default function ClientChatPage({
                   onChange={handleInputChange}
                   className="flex-1 min-h-[120px] max-h-[400px] border-5 rounded-t-2xl rounded-b-none resize-none  w-full border-b-0 p-4"
                   rows={4}
+                  autoFocus
                   onKeyDown={handleKeyDown}
                 />
                 <Button
