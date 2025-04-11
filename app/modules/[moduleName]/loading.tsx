@@ -13,7 +13,7 @@ export default function ModuleDetailsLoading() {
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center px-3">
           {/* Title skeleton */}
-          <div className="h-8 w-48 addmarginforheaders bg-muted rounded mb-2" />
+          <div className="h-8 w-48 add-margin-for-headers bg-muted rounded mb-2" />
         </div>
 
         {/* Action buttons skeleton */}
@@ -22,9 +22,8 @@ export default function ModuleDetailsLoading() {
             <MessageSquare className="h-4 w-4" />
             <span className="hidden sm:inline">Go to Chat</span>
           </ButtonSkeleton>
-          
-          <div className="flex items-center gap-2">
 
+          <div className="flex items-center gap-2">
             <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
               <Trash className="h-4 w-4 text-destructive" />
             </ButtonSkeleton>
@@ -32,7 +31,6 @@ export default function ModuleDetailsLoading() {
             <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
               <Search className="h-4 w-4" />
             </ButtonSkeleton>
-
           </div>
 
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -46,12 +44,9 @@ export default function ModuleDetailsLoading() {
           <div className="flex items-center justify-center min-h-[158px] bg-background">
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
-          {/* <div className="flex items-center justify-center pt-12">
-            <Loader2 className="h-5 w-5 animate-spin items-center justify-center" />
-          </div> */}
         </div>
 
-        <div className="my-6 h-px bg-border"></div>
+        <div className="my-6 h-px bg-border" />
 
         {/* Resources section skeleton */}
         <div className="space-y-4">

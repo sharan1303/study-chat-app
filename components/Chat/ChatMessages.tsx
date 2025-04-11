@@ -77,6 +77,13 @@ const AssistantMessage: React.FC<{
       </div>
       <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
         <button
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              copyToClipboard(message.content, message.id);
+            }
+          }}
+          type="button"
           onClick={() => copyToClipboard(message.content, message.id)}
           className="text-xs px-2 py-2 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
           aria-label="Copy response"

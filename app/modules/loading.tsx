@@ -14,14 +14,14 @@ export default function Loading() {
   return (
     <div className="flex-1 space-y-2.5">
       <div className="flex items-center justify-between pt-4 px-6">
-          <h1 className="addmarginforheaders text-xl">Dashboard</h1>
-          <div className="flex items-center gap-3 -mt-0.5">
-            <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
-              <Search className="h-4 w-4" />
-            </ButtonSkeleton>
-            <Loader2 className="h-4 w-4 animate-spin" />
-          </div>
+        <h1 className="add-margin-for-headers text-xl">Dashboard</h1>
+        <div className="flex items-center gap-3 -mt-0.5">
+          <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
+            <Search className="h-4 w-4" />
+          </ButtonSkeleton>
+          <Loader2 className="h-4 w-4 animate-spin" />
         </div>
+      </div>
 
       {/* Tabs with static labels */}
       <div className="px-6">

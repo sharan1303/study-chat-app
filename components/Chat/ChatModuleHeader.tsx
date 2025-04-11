@@ -16,7 +16,7 @@ export default function ChatModuleHeader({
   if (!moduleDetails) return null;
 
   return (
-    <div className="py-3 pl-5 flex addmarginforheaders top-1 bg-background">
+    <div className="py-3 pl-5 flex add-margin-for-headers top-1 bg-background">
       <Button
         variant="ghost"
         className="flex items-center gap-3 pt-4 hover:bg-muted/50 rounded flex-shrink max-w-[85%]"
