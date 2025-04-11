@@ -343,14 +343,6 @@ export default function ModulesPageContent({
                     `Creating link for "${module.name}" → "${moduleSlug}"`
                   );
 
-                  // Ensure moduleSlug is not empty
-                  if (!moduleSlug) {
-                    console.error(
-                      "Failed to encode module slug for",
-                      module.name
-                    );
-                    return null;
-                  }
 
                   return (
                     <Link
