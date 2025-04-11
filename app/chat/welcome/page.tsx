@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import ClientChatPage from "@/components/Chat/ClientChatPage";
-import { ChatPageLoading } from "@/components/Chat/ClientChatPage";
+import { ChatPageLoading } from "@/components/Chat/ChatPageLoading";
 import { Message } from "@ai-sdk/react";
 import { WELCOME_PROMPT, WELCOME_RESPONSE } from "@/lib/prompts";
 import prisma from "@/lib/prisma";
