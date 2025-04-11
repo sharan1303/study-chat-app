@@ -1,4 +1,8 @@
+import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/ui/theme-toggle";
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Terms of Service - Study Chat",
@@ -7,6 +11,22 @@ export const metadata: Metadata = {
 
 export default function TermsOfService() {
   return (
+    <div className="h-full flex flex-col py-3">
+      {/* Top navigation bar */}
+      <div className="flex justify-between items-center mt-0.5 ml-5 pr-6">
+        <Button
+          variant="ghost"
+          size="sm" asChild
+          className="flex addmarginforheaders items-center">
+          <Link href="/">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Chat
+          </Link>
+        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+        </div>
+      </div>
     <div className="h-[calc(100vh-1px)] overflow-y-auto pb-8">
       <div className="max-w-4xl mx-auto p-6 mt-10">
         <div className="text-foreground/90">
@@ -1220,6 +1240,7 @@ export default function TermsOfService() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
