@@ -1,4 +1,8 @@
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import type { Metadata } from "next";
+import { ArrowLeft } from "lucide-react";
+import ThemeToggle from "@/components/ui/theme-toggle";
 
 export const metadata: Metadata = {
   title: "Cookie Policy - Study Chat",
@@ -7,6 +11,22 @@ export const metadata: Metadata = {
 
 export default function CookiePolicy() {
   return (
+    <div className="h-full flex flex-col py-3">
+      {/* Top navigation bar */}
+      <div className="flex justify-between items-center mt-0.5 ml-5 pr-6">
+        <Button
+          variant="ghost"
+          size="sm" asChild
+          className="flex addmarginforheaders items-center">
+          <Link href="/">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Chat
+          </Link>
+        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+        </div>
+      </div>
     <div className="h-[calc(100vh-1px)] overflow-y-auto pb-8">
       <div className="max-w-4xl mx-auto p-6 mt-10">
         <div className="text-foreground/90">
@@ -14,6 +34,7 @@ export default function CookiePolicy() {
             <h1 className="text-3xl font-bold tracking-tight mb-4">
               COOKIE POLICY
             </h1>
+
           </div>
 
           <div>
@@ -48,7 +69,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               What are cookies?
             </h2>
@@ -73,7 +94,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               Why do we use cookies?
             </h2>
@@ -90,7 +111,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               How can I control cookies?
             </h2>
@@ -120,7 +141,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <div>
               <h3 className="text-lg font-medium tracking-tight mb-2">
                 Analytics and customization cookies:
@@ -164,7 +185,7 @@ export default function CookiePolicy() {
                           Service:
                         </td>
                         <td className="py-2 text-muted-foreground">
-                          Adobe Analytics
+                          Vercel Analytics
                         </td>
                       </tr>
                       <tr className="border-b border-border/40">
@@ -190,7 +211,7 @@ export default function CookiePolicy() {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               How can I control cookies on my browser?
             </h2>
@@ -306,7 +327,7 @@ export default function CookiePolicy() {
             </ul>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               What about other tracking technologies, like web beacons?
             </h2>
@@ -329,7 +350,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               Do you use Flash cookies or Local Shared Objects?
             </h2>
@@ -364,7 +385,7 @@ export default function CookiePolicy() {
               </a>{" "}
               and following the instructions (which may include instructions
               that explain, for example, how to delete existing Flash Cookies
-              (referred to &quot;information&quot; on the Macromedia site), how
+              (referred to &quot;information&quot; on the Macromedia site)  , how
               to prevent Flash LSOs from being placed on your computer without
               your being asked, and (for Flash Player 8 and later) how to block
               Flash Cookies that are not being delivered by the operator of the
@@ -380,7 +401,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               Do you serve targeted advertising?
             </h2>
@@ -402,7 +423,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               How often will you update this Cookie Policy?
             </h2>
@@ -421,7 +442,7 @@ export default function CookiePolicy() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-10">
             <h2 className="text-xl font-semibold tracking-tight">
               Where can I get further information?
             </h2>
@@ -442,6 +463,7 @@ export default function CookiePolicy() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
