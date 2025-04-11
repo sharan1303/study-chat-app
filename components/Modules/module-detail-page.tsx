@@ -29,7 +29,7 @@ import Header from "../Main/Header";
 interface Module {
   id: string;
   name: string;
-  description: string | null;
+  content: string | null;
   icon: string;
   resourceCount: number;
   updatedAt: string;
@@ -70,8 +70,8 @@ const icons = [
  * Client component that handles the module detail functionality.
  *
  * This component fetches module data based on a module name provided via URL parameters and displays the module's icon,
- * title, description, and its associated resources. It supports editing the module's title, description, and icon, with updates
- * triggering either a full page refresh (for name changes) or a component refresh (for description and icon changes).
+ * title, content, and its associated resources. It supports editing the module's title, content, and icon, with updates
+ * triggering either a full page refresh (for name changes) or a component refresh (for content and icon changes).
  */
 export default function ModuleDetailWrapper({
   moduleName,
@@ -91,14 +91,14 @@ export default function ModuleDetailWrapper({
 
   // Editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
   const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
+  const [editContent, setEditContent] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Refs for detecting clicks outside
   const titleEditRef = useRef<HTMLDivElement>(null);
-  const descriptionEditRef = useRef<HTMLDivElement>(null);
+  const contentEditRef = useRef<HTMLDivElement>(null);
 
   // Validate props early
   useEffect(() => {
@@ -448,11 +448,11 @@ export default function ModuleDetailWrapper({
     };
   }, [isSignedIn, module]);
 
-  // Initialize title and description when module data is loaded
+  // Initialize title and content when module data is loaded
   useEffect(() => {
     if (module) {
       setEditTitle(module.name || "");
-      setEditDescription(module.description || "");
+      setEditContent(module.content || "");
 
       // Log successful module load
       console.log("Module data loaded successfully:", module.name);
@@ -470,7 +470,7 @@ export default function ModuleDetailWrapper({
   // Save module updates
   const saveModuleUpdate = async (updates: {
     name?: string;
-    description?: string;
+    content?: string;
     icon?: string;
   }) => {
     if (!module) return;
@@ -498,10 +498,8 @@ export default function ModuleDetailWrapper({
       // Prepare the update data
       const updateData = {
         name: updates.name !== undefined ? updates.name : module.name,
-        description:
-          updates.description !== undefined
-            ? updates.description
-            : module.description,
+        content:
+          updates.content !== undefined ? updates.content : module.content,
         icon: updates.icon !== undefined ? updates.icon : module.icon,
       };
 
@@ -518,7 +516,7 @@ export default function ModuleDetailWrapper({
           window.location.href = `/modules/${formattedName}`;
         }, 600);
       } else {
-        // For description and icon updates, just use router.refresh()
+        // For content and icon updates, just use router.refresh()
         // This is less disruptive but still updates server components
         router.refresh();
       }
@@ -534,7 +532,7 @@ export default function ModuleDetailWrapper({
     } finally {
       setIsSaving(false);
       setIsEditingTitle(false);
-      setIsEditingDescription(false);
+      setIsEditingContent(false);
     }
   };
 
@@ -547,9 +545,9 @@ export default function ModuleDetailWrapper({
     saveModuleUpdate({ name: editTitle });
   };
 
-  // Handle description update
-  const handleDescriptionSave = () => {
-    saveModuleUpdate({ description: editDescription });
+  // Handle content update
+  const handleContentSave = () => {
+    saveModuleUpdate({ content: editContent });
   };
 
   // Handle icon update
@@ -563,10 +561,10 @@ export default function ModuleDetailWrapper({
     setIsEditingTitle(false);
   }, [module, setEditTitle, setIsEditingTitle]);
 
-  const cancelDescriptionEdit = useCallback(() => {
-    setEditDescription(module?.description || "");
-    setIsEditingDescription(false);
-  }, [module, setEditDescription, setIsEditingDescription]);
+  const cancelContentEdit = useCallback(() => {
+    setEditContent(module?.content || "");
+    setIsEditingContent(false);
+  }, [module, setEditContent, setIsEditingContent]);
 
   // Add click outside handler
   useEffect(() => {
@@ -580,18 +578,18 @@ export default function ModuleDetailWrapper({
         cancelTitleEdit();
       }
 
-      // Handle description edit click outside
+      // Handle content edit click outside
       if (
-        isEditingDescription &&
-        descriptionEditRef.current &&
-        !descriptionEditRef.current.contains(event.target as Node)
+        isEditingContent &&
+        contentEditRef.current &&
+        !contentEditRef.current.contains(event.target as Node)
       ) {
-        cancelDescriptionEdit();
+        cancelContentEdit();
       }
     }
 
     // Add event listener when editing is active
-    if (isEditingTitle || isEditingDescription) {
+    if (isEditingTitle || isEditingContent) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
@@ -599,12 +597,7 @@ export default function ModuleDetailWrapper({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [
-    isEditingTitle,
-    isEditingDescription,
-    cancelDescriptionEdit,
-    cancelTitleEdit,
-  ]);
+  }, [isEditingTitle, isEditingContent, cancelContentEdit, cancelTitleEdit]);
 
   // Add retry function for cases where module might not load on first try
   const handleRetry = useCallback(() => {
@@ -660,7 +653,7 @@ export default function ModuleDetailWrapper({
             <Button
               variant="ghost"
               size="icon"
-              className="addmarginforheaders"
+              className="add-margin-for-headers"
               onClick={() => router.back()}
               aria-label="Go back"
             >
@@ -686,6 +679,12 @@ export default function ModuleDetailWrapper({
                       variant={module.icon === icon ? "default" : "outline"}
                       className="h-10 w-10 text-xl"
                       onClick={() => handleIconChange(icon)}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          handleIconChange(icon);
+                        }
+                      }}
                     >
                       {icon}
                     </Button>
@@ -730,6 +729,12 @@ export default function ModuleDetailWrapper({
                 className="text-xl cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
                 ref={titleEditRef}
                 onClick={() => setIsEditingTitle(true)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setIsEditingTitle(true);
+                  }
+                }}
               >
                 <span className="flex-shrink">{module.name}</span>
               </h1>
@@ -754,30 +759,31 @@ export default function ModuleDetailWrapper({
         <div className="space-y-13 px-3">
           <div className="px-4">
             <h2 className="text-lg mb-2">Content</h2>
-            {/* Editable description */}
-            {isEditingDescription ? (
-              <div className="flex flex-col gap-2" ref={descriptionEditRef}>
+            {/* Editable content */}
+            {isEditingContent ? (
+              <div className="flex flex-col gap-2" ref={contentEditRef}>
                 <Textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
                   className="min-h-[158px] mr-6 p-4"
                   placeholder="Provide context to your agent..."
+                  tabIndex={0}
                   autoFocus
                   onKeyDown={(e) => {
                     // Save on Enter
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      handleDescriptionSave();
+                      handleContentSave();
                     }
                     // Save on Ctrl+Enter or Command+Enter
                     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                       e.preventDefault();
-                      handleDescriptionSave();
+                      handleContentSave();
                     }
                     // Cancel on Escape
                     if (e.key === "Escape") {
                       e.preventDefault();
-                      cancelDescriptionEdit();
+                      cancelContentEdit();
                     }
                   }}
                 />
@@ -785,13 +791,13 @@ export default function ModuleDetailWrapper({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={cancelDescriptionEdit}
+                    onClick={cancelContentEdit}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleDescriptionSave}
+                    onClick={handleContentSave}
                     disabled={isSaving}
                   >
                     Save
@@ -800,10 +806,16 @@ export default function ModuleDetailWrapper({
               </div>
             ) : (
               <p
-                className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 mr-4 rounded min-h-[158px]"
-                onClick={() => setIsEditingDescription(true)}
+                className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 mr-4 mb-12 rounded min-h-[158px]"
+                onClick={() => setIsEditingContent(true)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setIsEditingContent(true);
+                  }
+                }}
               >
-                {module.description || "Provide context to your agent..."}
+                {module.content || "Provide context to your agent..."}
               </p>
             )}
           </div>

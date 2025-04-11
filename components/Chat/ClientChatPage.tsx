@@ -123,14 +123,6 @@ export default function ClientChatPage({
     ) {
       // Add the welcome chat to the sidebar for anonymous users
       sidebarChatUpdater.current(initialTitle, activeModule, true);
-
-      // If this is the welcome chat for first-time users, make sure they see the welcome message
-      if (
-        (chatId === "welcome-chat" || chatId.startsWith("welcome-chat-")) &&
-        window.location.pathname === "/chat/welcome"
-      ) {
-        console.log("Welcome chat loaded for first-time user");
-      }
     }
   }, [
     isAuthenticated,
@@ -200,7 +192,7 @@ export default function ClientChatPage({
         }
       },
       onError: (error: Error) => {
-        toast.error("Error: " + (error.message || "Failed to send message"));
+        toast.error(`Error: ${error.message || "Failed to send message"}`);
       },
     }),
     [
@@ -323,13 +315,13 @@ export default function ClientChatPage({
         {/* Chat content centered container */}
         <div className="flex-1">
           {/* Ensure chat thread has same width as input by using identical container classes */}
-          <div className="max-w-3xl mx-auto w-full transition-all duration-200">
+          <div className="max-w-3xl mx-auto transition-all duration-200">
             {/* Use the same padding as the input container */}
             <div className="px-0">
               {messages.length === 0 ? (
                 <WelcomeScreen showLogo={showLogo} />
               ) : (
-                <div className="flex flex-col space-y-8 pt-14 px-2 pb-8">
+                <div className="flex flex-col space-y-8 pt-14 px-4 pb-8">
                   <ChatMessages
                     messages={messages}
                     copiedMessageId={copiedMessageId}

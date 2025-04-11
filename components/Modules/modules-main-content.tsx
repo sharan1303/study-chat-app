@@ -260,7 +260,7 @@ export default function ModulesPageContent({
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Header at the top */}
       <div className="flex items-center justify-between px-6 py-4">
-        <h1 className="text-xl addmarginforheaders">Dashboard</h1>
+        <h1 className="text-xl add-margin-for-headers">Dashboard</h1>
         <Header />
       </div>
 

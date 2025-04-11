@@ -12,7 +12,7 @@ export default function SettingsLoading() {
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center addmarginforheaders p-2"
+          className="flex items-center add-margin-for-headers p-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Chat

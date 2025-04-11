@@ -8,7 +8,7 @@ export function ChatPageLoading() {
     <div className="min-h-[calc(100vh-var(--header-height))] flex flex-col">
       <div className="flex-1 flex flex-col pr-0">
         {/* Chat Header - Make it sticky at the top like the real header */}
-        <div className="py-4 px-1 pl-12 flex items-center justify-between addmarginforheaders top-0 bg-background z-10">
+        <div className="py-4 px-1 pl-12 flex items-center justify-between add-margin-for-headers top-0 bg-background z-10">
           <div className="flex items-center gap-2">
             <Skeleton className="w-8 h-8 rounded-md" />
             <Skeleton className="h-6 w-40" />
