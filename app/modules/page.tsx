@@ -1,4 +1,4 @@
-import ModulesPageWrapper from "@/components/Modules/modules-page-wrapper";
+import ModulesPageWrapper from "@/components/Modules/modules-main-wrapper";
 
 /**
  * Renders the modules page with search parameters handling.

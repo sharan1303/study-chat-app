@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
-import ClientChatPage from "@/components/Main/ClientChatPage";
-import { ChatPageLoading } from "@/components/Main/ClientChatPage";
+import ClientChatPage from "@/components/Chat/ClientChatPage";
+import { ChatPageLoading } from "@/components/Chat/ChatPageLoading";
 import { generateId } from "@/lib/utils";
 
 export default async function NewChat() {

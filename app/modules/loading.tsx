@@ -1,6 +1,6 @@
 import { ButtonSkeleton } from "@/components/ui/button-skeleton";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Search } from "lucide-react";
 
 /**
@@ -12,43 +12,49 @@ import { Search } from "lucide-react";
  */
 export default function Loading() {
   return (
-    <div className="flex-1 space-y-4">
-      <div className="flex items-center justify-between py-3.5">
-        <h1 className="addmarginforheaders font-bold text-xl">Dashboard</h1>
+    <div className="flex-1 space-y-2.5">
+      <div className="flex items-center justify-between pt-4 px-6">
+        <h1 className="add-margin-for-headers text-xl">Dashboard</h1>
+        <div className="flex items-center gap-3 -mt-0.5">
+          <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
+            <Search className="h-4 w-4" />
+          </ButtonSkeleton>
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
       </div>
 
       {/* Tabs with static labels */}
-      <div>
-        <div className="grid w-full max-w-md grid-cols-2 h-9 bg-muted rounded-lg">
-          <div className="flex items-center justify-center mt-1 h-7 bg-background rounded-lg">
+      <div className="px-6">
+        <div className="grid w-full max-w-xl grid-cols-2 h-9 bg-muted rounded-lg">
+          <div className="flex items-center justify-center mt-1 ml-1 h-7 bg-background rounded-md">
             <span className="font-medium text-sm">Modules</span>
           </div>
           <div className="flex items-center justify-center mt-1 h-7 w-auto rounded-sm">
-            <span className="font-medium text-sm text-muted-foreground">
+            <span className="pr-1 font-medium text-sm text-muted-foreground">
               Resources
             </span>
           </div>
         </div>
 
         {/* Search bar and button skeleton */}
-        <div className="relative flex items-center gap-2 mt-4 mb-6">
-          <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
+        <div className="flex items-center gap-2 pl-0.5 mt-4 mb-6 max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
               placeholder="Search modules..."
               className="pl-10"
               aria-label="Search modules"
-              />
+            />
           </div>
           <ButtonSkeleton variant="outline" className="opacity-100">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Module
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline ml-2">Create Module</span>
           </ButtonSkeleton>
         </div>
 
         {/* Empty area for modules to load into */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-2">
-          {/* No skeleton cards as requested */}
+        <div className="flex items-center justify-center pt-12">
+          <Loader2 />
         </div>
       </div>
     </div>
