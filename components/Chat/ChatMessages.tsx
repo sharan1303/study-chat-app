@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import CodeBlock from "./CodeBlock";
 import { Check, Copy } from "lucide-react";
 import type { Message } from "@ai-sdk/react";
+import { ShortcutIndicator } from "@/components/ui/shortcut-indicator";
 
 export interface ChatMessagesProps {
   messages: Message[];
@@ -31,8 +32,29 @@ const AssistantMessage: React.FC<{
   copiedMessageId: string | null;
   modelName: string;
 }> = ({ message, copyToClipboard, copiedMessageId, modelName }) => {
+  const messageRef = React.useRef<HTMLDivElement>(null);
+
+  // Add keyboard shortcut listener
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Cmd/Ctrl+C is pressed while the message is being hovered
+      if ((e.metaKey || e.ctrlKey) && e.key === "c") {
+        if (messageRef.current?.matches(":hover")) {
+          e.preventDefault();
+          copyToClipboard(message.content, message.id);
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [message.content, message.id, copyToClipboard]);
+
   return (
     <div
+      ref={messageRef}
       key={`assistant-${message.id}`}
       className="text-gray-800 dark:text-gray-200 group relative"
     >
@@ -92,8 +114,9 @@ const AssistantMessage: React.FC<{
           }}
           type="button"
           onClick={() => copyToClipboard(message.content, message.id)}
-          className="text-xs px-2 py-2 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+          className="flex items-center gap-2 px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
           aria-label="Copy response"
+          title="Copy message (or use Cmd/Ctrl+C while hovering)"
         >
           {copiedMessageId === message.id ? (
             <span className="flex items-center gap-1">
@@ -101,10 +124,11 @@ const AssistantMessage: React.FC<{
               <span>Copied!</span>
             </span>
           ) : (
-            <span className="flex items-center gap-1">
+            <>
               <Copy className="h-4 w-4" />
-              <span>Copy Response</span>
-            </span>
+              <span className="ml-2 text-sm">Copy Message</span>
+              <ShortcutIndicator shortcutKey="C" className="ml-1" />
+            </>
           )}
         </button>
         <div className="text-xs text-muted-foreground">
@@ -115,7 +139,7 @@ const AssistantMessage: React.FC<{
   );
 };
 
-export default function ChatMessages({
+const ChatMessages = React.memo(function ChatMessages({
   messages,
   copiedMessageId,
   copyToClipboard,
@@ -141,4 +165,6 @@ export default function ChatMessages({
       })}
     </>
   );
-}
+});
+
+export default ChatMessages;
