@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-import ModuleActions from "@/components/Modules/module-actions";
+import DeleteModule from "@/components/Modules/delete-module";
 import { ResourceUploadButton } from "@/components/Resource/resource-upload-button";
 import { ResourceTable } from "@/components/Resource/resource-table";
 import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
@@ -655,8 +655,7 @@ export default function ModuleDetailWrapper({
     <div className="flex flex-col min-h-screen w-full">
       <div className="flex-1 space-y-4">
         <div className="flex items-center justify-between py-3">
-          <div className="flex items-center">
-            <Header />
+          <div className="flex items-center pl-4">
             {/* Back button */}
             <Button
               variant="ghost"
@@ -701,7 +700,7 @@ export default function ModuleDetailWrapper({
                 <Input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="text-xl font-bold"
+                  className="min-w-0"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -728,7 +727,7 @@ export default function ModuleDetailWrapper({
               </div>
             ) : (
               <h1
-                className="text-xl font-bold cursor-pointer hover:bg-muted/50 px-2 py-1.5 rounded"
+                className="text-xl cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
                 ref={titleEditRef}
                 onClick={() => setIsEditingTitle(true)}
               >
@@ -736,7 +735,7 @@ export default function ModuleDetailWrapper({
               </h1>
             )}
           </div>
-          <div className="flex items-center gap-1 mr-16">
+          <div className="flex items-center gap-3 mr-24">
             <Button
               className="flex items-center gap-2"
               variant="outline"
@@ -747,21 +746,22 @@ export default function ModuleDetailWrapper({
               <MessageSquare className="h-5 w-5" />
               <span className="hidden sm:inline">Go to Chat</span>
             </Button>
-            <ModuleActions moduleId={module.id} moduleName={module.name} />
+            <DeleteModule moduleId={module.id} moduleName={module.name} />
           </div>
+          <Header />
         </div>
 
-        <div className="space-y-6 px-3">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Content</h2>
+        <div className="space-y-13 px-3">
+          <div className="px-4">
+            <h2 className="text-lg mb-2">Content</h2>
             {/* Editable description */}
             {isEditingDescription ? (
               <div className="flex flex-col gap-2" ref={descriptionEditRef}>
                 <Textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="min-h-[158px]"
-                  placeholder="Give context to your agent..."
+                  className="min-h-[158px] mr-6 p-4"
+                  placeholder="Provide context to your agent..."
                   autoFocus
                   onKeyDown={(e) => {
                     // Save on Enter
@@ -781,7 +781,7 @@ export default function ModuleDetailWrapper({
                     }
                   }}
                 />
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 -mb-4">
                   <Button
                     variant="outline"
                     size="sm"
@@ -800,19 +800,19 @@ export default function ModuleDetailWrapper({
               </div>
             ) : (
               <p
-                className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 rounded min-h-[158px]"
+                className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 mr-4 rounded min-h-[158px]"
                 onClick={() => setIsEditingDescription(true)}
               >
-                {module.description || "Give context to your agent..."}
+                {module.description || "Provide context to your agent..."}
               </p>
             )}
           </div>
 
-          <Separator className="my-6" />
+          <Separator className="my-6 mx-4" />
 
-          <div className="space-y-4">
+          <div className="space-y-4 px-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Resources</h2>
+              <h2 className="text-lg">Resources</h2>
               {isSignedIn && !!resources.length && (
                 <ResourceUploadButton variant="outline" moduleId={module.id} />
               )}
