@@ -6,7 +6,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   tomorrow,
   oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
+} from "react-syntax-highlighter/dist/cjs/styles/prism";
 
 type ExtendedCSSProperties = { [key: string]: string | number | undefined };
 
@@ -39,6 +39,16 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
     "bat",
   ].includes(language);
 
+  // Return a placeholder while theme is loading to prevent flashing
+  // Always use code elements for unmounted state to avoid nesting divs in p tags
+  if (!isMounted) {
+    return (
+      <code className="bg-transparent text-transparent" {...props}>
+        {content}
+      </code>
+    );
+  }
+
   if (inline) {
     return (
       <code
@@ -46,7 +56,7 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
         {...props}
       >
         {isShellLanguage && <span className="text-gray-400 mr-1">$</span>}
-        {children}
+        {content}
       </code>
     );
   }
@@ -81,13 +91,12 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
         <SyntaxHighlighter
           language={language || "text"}
           // @ts-expect-error - SyntaxHighlighter style prop type incompatibility
-          style={isMounted && resolvedTheme === "dark" ? tomorrow : oneLight}
+          style={resolvedTheme === "dark" ? tomorrow : oneLight}
           customStyle={
             {
               margin: 0,
               padding: "1rem",
-              backgroundColor:
-                isMounted && resolvedTheme === "dark" ? "#1e293b" : "#e7ecf2",
+              backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "#e7ecf2",
               borderRadius: "0 0 0.375rem 0.375rem",
               fontSize: "0.875rem",
               lineHeight: "1.5",
@@ -109,7 +118,15 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
     );
   }
 
-  return <code {...props}>{children}</code>;
+  // Default case for plain code
+  return (
+    <code
+      className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 font-mono px-1.5 py-0.5 border border-gray-200 dark:border-gray-700 rounded text-xs"
+      {...props}
+    >
+      {content}
+    </code>
+  );
 }
 
 export default CodeBlock;
