@@ -150,7 +150,7 @@ export const ModuleForm = ({
           // Dispatch a global event for module creation to refresh the modules list
           if (typeof window !== "undefined") {
             window.dispatchEvent(
-              new CustomEvent("module-created", {
+              new CustomEvent("module.created", {
                 detail: createdModule,
               })
             );
@@ -184,7 +184,6 @@ export const ModuleForm = ({
 
   return (
     <div className="p-4">
-
       {formError && (
         <div className="bg-destructive/15 text-destructive px-4 py-2 rounded-md mb-4">
           {formError}

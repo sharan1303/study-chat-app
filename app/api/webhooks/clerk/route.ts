@@ -20,7 +20,11 @@ interface ClerkUserData {
 }
 
 export async function POST(req: Request) {
-  console.log("Webhook endpoint called");
+  console.log("Webhook endpoint called with headers:", {
+    svix_id: req.headers.get("svix-id"),
+    svix_timestamp: req.headers.get("svix-timestamp"),
+    svix_signature_exists: !!req.headers.get("svix-signature"),
+  });
 
   try {
     // Get the raw body as text
@@ -96,7 +100,13 @@ export async function POST(req: Request) {
 
       console.log("Webhook verified successfully");
     } catch (err) {
-      console.error("Error verifying webhook:", err);
+      console.error("Detailed webhook verification error:", {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        secretLength: WEBHOOK_SECRET ? WEBHOOK_SECRET.length : 0,
+        secretPrefix: WEBHOOK_SECRET ? WEBHOOK_SECRET.substring(0, 5) : null,
+      });
       return new Response(
         `Error verifying webhook: ${
           err instanceof Error ? err.message : String(err)

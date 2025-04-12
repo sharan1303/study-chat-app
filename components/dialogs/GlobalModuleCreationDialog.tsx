@@ -59,7 +59,7 @@ export function GlobalModuleDialog() {
         </DialogTitle>
         <ModuleForm
           onSuccess={handleSuccess}
-          successEventName="module-create-success"
+          successEventName="module.created"
         />
       </DialogContent>
     </Dialog>

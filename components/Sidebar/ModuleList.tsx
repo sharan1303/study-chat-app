@@ -100,12 +100,10 @@ export default function ModuleList({
       handleCreateSuccess();
     };
 
-    window.addEventListener("module-create-success", handleModuleCreateSuccess);
+    window.addEventListener("module.created", handleModuleCreateSuccess);
+
     return () => {
-      window.removeEventListener(
-        "module-create-success",
-        handleModuleCreateSuccess
-      );
+      window.removeEventListener("module.created", handleModuleCreateSuccess);
     };
   }, [handleCreateSuccess]);
 
@@ -156,7 +154,7 @@ export default function ModuleList({
               <DialogTitle className="text-xl font-bold ml-4">
                 Create New Module
               </DialogTitle>
-              <ModuleForm successEventName="module-create-success" />
+              <ModuleForm successEventName="module.created" />
             </DialogContent>
           </Dialog>
         </div>
@@ -185,7 +183,7 @@ export default function ModuleList({
                     <DialogTitle className="text-xl font-bold ml-4">
                       Create New Module
                     </DialogTitle>
-                    <ModuleForm successEventName="module-create-success" />
+                    <ModuleForm successEventName="module.created" />
                   </DialogContent>
                 </Dialog>
               </div>
