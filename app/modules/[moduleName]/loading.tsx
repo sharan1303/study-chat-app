@@ -1,6 +1,5 @@
-import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 import { ButtonSkeleton } from "@/components/ui/button-skeleton";
-import { Edit, MessageSquare, Trash, Upload } from "lucide-react";
+import { Loader2, MessageSquare, Search, Trash } from "lucide-react";
 
 /**
  * Renders a loading skeleton for the module details page.
@@ -11,52 +10,54 @@ import { Edit, MessageSquare, Trash, Upload } from "lucide-react";
 export default function ModuleDetailsLoading() {
   return (
     <div className="flex-1 space-y-4">
-      <div className="flex items-center justify-between py-2">
-        <div className="flex items-center">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center px-3">
           {/* Title skeleton */}
-          <div className="h-8 w-48 bg-muted rounded ml-2 mb-2"></div>
+          <div className="h-8 w-48 add-margin-for-headers bg-muted rounded mb-2" />
         </div>
 
         {/* Action buttons skeleton */}
-        <div className="flex items-center gap-2 pr-16">
+        <div className="flex items-center gap-3 pr-2">
           <ButtonSkeleton variant="outline" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            <span>Go to Chat</span>
+            <span className="hidden sm:inline">Go to Chat</span>
           </ButtonSkeleton>
-          <div className="flex space-x-1">
-            <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
-              <Edit className="h-4 w-4" />
-            </ButtonSkeleton>
 
+          <div className="flex items-center gap-2">
             <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
               <Trash className="h-4 w-4 text-destructive" />
             </ButtonSkeleton>
+
+            <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
+              <Search className="h-4 w-4" />
+            </ButtonSkeleton>
           </div>
+
+          <Loader2 className="h-4 w-4 animate-spin" />
         </div>
       </div>
 
-      <div className="space-y-6 px-3">
+      <div className="space-y-6 px-7">
         {/* Description section skeleton */}
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold mb-2">Description</h2>
-          <div className="text-muted-foreground p-4 rounded min-h-[158px] bg-muted">
+          <h2 className="text-lg mb-2">Content</h2>
+          <div className="flex items-center justify-center min-h-[158px] bg-background">
+            <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         </div>
 
-        <div className="my-6 h-px bg-border"></div>
+        <div className="my-6 h-px bg-border" />
 
         {/* Resources section skeleton */}
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-lg font-semibold">Resources</h2>
-            <ButtonSkeleton variant="outline" className="flex items-center">
-              <Upload className="h-4 w-4 mr-2" />
-              <span>Upload</span>
-            </ButtonSkeleton>
+            <h2 className="text-lg">Resources</h2>
           </div>
 
           {/* Use ResourceTableSkeleton */}
-          <ResourceTableSkeleton showModuleColumn={false} />
+          <div className="flex items-center justify-center pt-12">
+            <Loader2 className="h-5 w-5 animate-spin items-center justify-center" />
+          </div>
         </div>
       </div>
     </div>

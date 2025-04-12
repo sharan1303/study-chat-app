@@ -233,13 +233,25 @@ div[contenteditable="true"] {
   animation: slide-in-right 0.3s ease-out;
 }
 
-/* Add margin to main content when sidebar is collapsed */
-.peer[data-state="collapsed"] ~ * {
-  margin-left: 4rem;
+.add-margin-for-headers {
+  align-self: normal;
+}
+
+/* Add margin to main heading when sidebar is collapsed - Desktop */
+.peer[data-state="collapsed"] ~ * .add-margin-for-headers {
+  margin-left: 5rem;
   transition: margin-left 0.2s ease-in-out;
 }
 
-.peer[data-state="expanded"] ~ * {
+.peer[data-state="expanded"] ~ * .add-margin-for-headers {
   margin-left: 0;
   transition: margin-left 0.2s ease-in-out;
+}
+
+/* Add margin to main content when sidebar is closed - Mobile */
+@media (max-width: 768px) {
+  [data-sidebar="mobile-trigger-fixed"] ~ * .add-margin-for-headers {
+    margin-left: 5rem;
+    transition: margin-left 0.2s ease-in-out;
+  }
 }
