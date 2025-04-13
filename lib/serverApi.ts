@@ -63,12 +63,19 @@ export const serverApi = {
       // Check if user is authenticated
       const { userId } = await auth();
 
+      // Don't proceed if user is not authenticated
+      if (!userId) {
+        console.log("Server: User not authenticated for resources");
+        return { resources: [] };
+      }
+
       const params = new URLSearchParams();
 
-      // If authenticated, use userId
-      if (userId) {
-        params.append("userId", userId);
-      }
+      // Always use userId for authenticated users
+      params.append("userId", userId);
+      console.log(
+        `Server: Using userId ${userId.substring(0, 8)}... for resources`
+      );
 
       const queryString = params.toString() ? `?${params.toString()}` : "";
 
@@ -88,7 +95,11 @@ export const serverApi = {
         return { resources: [] };
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log(
+        `Server: Successfully fetched resources for module ${moduleId}`
+      );
+      return data;
     } catch (error) {
       console.error("Error fetching resources server-side:", error);
       return { resources: [] };

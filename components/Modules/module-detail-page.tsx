@@ -164,6 +164,9 @@ export default function ModuleDetailWrapper({
           return notFound();
         }
 
+        // Check if we already have prefetched resources
+        const hasPrefetchedResources = prefetchedResources.length > 0;
+
         // First try an exact match query
         console.log("Attempting exact match API query for:", decodedModuleName);
         try {
@@ -188,45 +191,55 @@ export default function ModuleDetailWrapper({
               }))
             );
 
-            // Fetch resources regardless of authentication state
-            // This ensures we always try to load resources
-            console.log(
-              `Attempting to fetch resources for module: ${exactModules[0].id}`
-            );
-            try {
-              const resourcesResponse = await fetch(
-                `/api/modules/${exactModules[0].id}/resources`
-              );
+            // If authenticated and we don't have prefetched resources, fetch them
+            // This ensures we don't make redundant API calls
+            if (isSignedIn && !hasPrefetchedResources) {
               console.log(
-                "Resource API response status:",
-                resourcesResponse.status
+                `Fetching resources for module: ${exactModules[0].id}`
               );
-
-              if (resourcesResponse.status === 401) {
-                console.log("User is not authenticated for resources");
-                setResources([]);
-              } else if (resourcesResponse.ok) {
-                const responseData = await resourcesResponse.json();
-                console.log("Resources API raw response:", responseData);
-
-                // Parse the response data
-                const moduleResources = responseData.resources || [];
-                console.log("Resources count:", moduleResources.length);
-                console.log("Resources data:", moduleResources);
-
-                setResources(
-                  Array.isArray(moduleResources) ? moduleResources : []
+              try {
+                const resourcesResponse = await fetch(
+                  `/api/modules/${exactModules[0].id}/resources`
                 );
-              } else {
-                console.error(
-                  "Failed to fetch resources:",
-                  resourcesResponse.statusText
+                console.log(
+                  "Resource API response status:",
+                  resourcesResponse.status
                 );
+
+                if (resourcesResponse.status === 401) {
+                  console.log("User is not authenticated for resources");
+                  setResources([]);
+                } else if (resourcesResponse.ok) {
+                  const responseData = await resourcesResponse.json();
+                  console.log("Resources API raw response:", responseData);
+
+                  // Parse the response data
+                  const moduleResources = responseData.resources || [];
+                  console.log("Resources count:", moduleResources.length);
+                  console.log("Resources data:", moduleResources);
+
+                  setResources(
+                    Array.isArray(moduleResources) ? moduleResources : []
+                  );
+                  setShowResourceUI(true);
+                } else {
+                  console.error(
+                    "Failed to fetch resources:",
+                    resourcesResponse.statusText
+                  );
+                  setResources([]);
+                }
+              } catch (error) {
+                console.error("Error fetching resources:", error);
                 setResources([]);
               }
-            } catch (error) {
-              console.error("Error fetching resources:", error);
-              setResources([]);
+            } else if (hasPrefetchedResources) {
+              console.log(
+                "Using prefetched resources:",
+                prefetchedResources.length
+              );
+              // Make sure we mark the UI as ready to show resources
+              setShowResourceUI(true);
             }
 
             // Set loading state to false after data is loaded
@@ -332,8 +345,8 @@ export default function ModuleDetailWrapper({
 
           setModule(moduleData);
 
-          // Fetch resources only for authenticated users
-          if (isSignedIn) {
+          // Fetch resources only for authenticated users and if we don't have prefetched resources
+          if (isSignedIn && !hasPrefetchedResources) {
             const resourceApiUrl = `/api/modules/${moduleData.id}/resources`;
             console.log(
               `Fetching resources from: ${resourceApiUrl}, moduleId=${moduleData.id}`
@@ -374,6 +387,7 @@ export default function ModuleDetailWrapper({
               setResources(
                 Array.isArray(moduleResources) ? moduleResources : []
               );
+              setShowResourceUI(true);
             } else {
               console.error(
                 "Failed to fetch resources:",
@@ -381,6 +395,13 @@ export default function ModuleDetailWrapper({
               );
               setResources([]);
             }
+          } else if (hasPrefetchedResources) {
+            console.log(
+              "Using prefetched resources:",
+              prefetchedResources.length
+            );
+            // Make sure we mark the UI as ready to show resources
+            setShowResourceUI(true);
           } else {
             // No resources for anonymous users
             setResources([]);
@@ -400,7 +421,7 @@ export default function ModuleDetailWrapper({
     if (typeof window !== "undefined") {
       fetchModuleDetails();
     }
-  }, [moduleName, isSignedIn, prefetchedResources]);
+  }, [moduleName, isSignedIn, prefetchedResources.length]);
 
   // Listen for resource events to refresh the resource list
   useEffect(() => {
