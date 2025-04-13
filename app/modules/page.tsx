@@ -21,7 +21,9 @@ export default async function ModulesPage({
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   // Get search query from URL parameters - convert to undefined if null/empty
-  const searchQueryRaw = searchParams.query;
+  // Await the searchParams to fix the "searchParams should be awaited" error
+  const params = await Promise.resolve(searchParams);
+  const searchQueryRaw = params.query;
   const searchQuery =
     typeof searchQueryRaw === "string" && searchQueryRaw.trim() !== ""
       ? searchQueryRaw
@@ -36,7 +38,7 @@ export default async function ModulesPage({
     <div className="flex min-h-screen w-full flex-col">
       <ModulesPageWrapper
         prefetchedModules={modulesData.modules || []}
-        searchParams={searchParams}
+        searchParams={params}
       />
     </div>
   );

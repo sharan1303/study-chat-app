@@ -8,11 +8,16 @@ import { Module, Resource } from "../module-detail-page";
 
 /**
  * Custom hook to handle all module data fetching and state management
+ * @param moduleName - The URL-encoded module name from the route
+ * @param prefetchedResources - Optional prefetched resources
+ * @param isSignedIn - Authentication status
+ * @param decodedName - Optional pre-decoded module name (from server)
  */
 export function useModuleData(
   moduleName: string,
   prefetchedResources: Resource[] = [],
-  isSignedIn: boolean | undefined
+  isSignedIn: boolean | undefined,
+  decodedName?: string
 ) {
   const [module, setModule] = useState<Module | null>(null);
   const [resources, setResources] = useState<Resource[]>(prefetchedResources);
@@ -92,9 +97,9 @@ export function useModuleData(
 
   // Helper function to try exact module match
   const tryExactModuleMatch = useCallback(
-    async (decodedModuleName: string, hasPrefetchedResources: boolean) => {
+    async (searchName: string, hasPrefetchedResources: boolean) => {
       try {
-        const exactMatchData = await api.getModules(decodedModuleName, true);
+        const exactMatchData = await api.getModules(searchName, true);
         const exactModules = exactMatchData.modules || [];
 
         if (exactModules.length > 0) {
@@ -121,7 +126,7 @@ export function useModuleData(
 
   // Helper function to try fuzzy module match
   const tryFuzzyModuleMatch = useCallback(
-    async (decodedModuleName: string, hasPrefetchedResources: boolean) => {
+    async (searchName: string, hasPrefetchedResources: boolean) => {
       try {
         // Fetch all modules
         const modulesData = await fetchAllModules();
@@ -133,8 +138,7 @@ export function useModuleData(
 
         // Try different matching strategies
         let moduleData = modulesData.find(
-          (m: Module) =>
-            m.name.toLowerCase() === decodedModuleName.toLowerCase()
+          (m: Module) => m.name.toLowerCase() === searchName.toLowerCase()
         );
 
         if (!moduleData) {
@@ -143,7 +147,7 @@ export function useModuleData(
             const normalizedDbName = m.name
               .toLowerCase()
               .replace(/[^\w\s]/g, "");
-            const normalizedSearchName = decodedModuleName
+            const normalizedSearchName = searchName
               .toLowerCase()
               .replace(/[^\w\s]/g, "");
             return normalizedDbName === normalizedSearchName;
@@ -152,7 +156,7 @@ export function useModuleData(
           // If still not found, try API query
           if (!moduleData) {
             try {
-              const moduleQueryData = await api.getModules(decodedModuleName);
+              const moduleQueryData = await api.getModules(searchName);
               const responseData = moduleQueryData.modules || [];
 
               if (Array.isArray(responseData) && responseData.length > 0) {
@@ -212,9 +216,18 @@ export function useModuleData(
           return notFound();
         }
 
-        // Decode the module name from URL parameters
-        const decodedModuleName = decodeModuleSlug(moduleName);
-        console.log(`Looking for module with name: "${decodedModuleName}"`);
+        // Use pre-decoded name if provided, otherwise decode it here
+        const decodedModuleName = decodedName || decodeModuleSlug(moduleName);
+
+        // Only log when we need to decode on client
+        if (!decodedName) {
+          console.log(`Looking for module with name: "${decodedModuleName}"`);
+        } else {
+          // Use a more specific log when using server-provided name
+          console.log(
+            `Using server-provided decoded name: "${decodedModuleName}"`
+          );
+        }
 
         // Validate decoded module name
         if (!decodedModuleName || decodedModuleName === "unnamed-module") {
@@ -264,6 +277,7 @@ export function useModuleData(
     tryExactModuleMatch,
     tryFuzzyModuleMatch,
     prefetchedResources,
+    decodedName,
   ]);
 
   // Listen for resource events to refresh the resource list
