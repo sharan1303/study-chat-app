@@ -98,11 +98,7 @@ export const api = {
   /**
    * Create a new module
    */
-  async createModule(data: {
-    name: string;
-    context?: string;
-    icon?: string;
-  }) {
+  async createModule(data: { name: string; context?: string; icon?: string }) {
     const sessionId = getOrCreateSessionIdClient();
     console.log("API createModule using sessionId:", sessionId);
 

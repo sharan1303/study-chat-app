@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { notFound, useRouter } from "next/navigation";
 import axios from "axios";
-import { Check, MessageSquare, X, ChevronLeft } from "lucide-react";
+import { Check, MessageSquare, X, ChevronLeft, Loader2 } from "lucide-react";
 import { decodeModuleSlug, encodeModuleSlug } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { useAuth } from "@clerk/nextjs";
@@ -22,7 +22,7 @@ import {
 import DeleteModule from "@/components/Modules/delete-module";
 import { ResourceUploadButton } from "@/components/Resource/resource-upload-button";
 import { ResourceTable } from "@/components/Resource/resource-table";
-import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
+// import { ResourceTableSkeleton } from "@/components/Resource/resource-table-skeleton";
 import ModuleDetailsLoading from "@/app/modules/[moduleName]/loading";
 import Header from "../Main/Header";
 
@@ -75,17 +75,25 @@ const icons = [
  */
 export default function ModuleDetailWrapper({
   moduleName,
+  prefetchedResources = [],
 }: {
   moduleName: string;
+  prefetchedResources?: Resource[];
 }) {
   const router = useRouter();
   const { isSignedIn } = useAuth();
   const [module, setModule] = useState<Module | null>(null);
-  const [resources, setResources] = useState<Resource[]>([]);
+  const [resources, setResources] = useState<Resource[]>(prefetchedResources);
   const [allModules, setAllModules] = useState<
     { id: string; name: string; icon: string }[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isResourcesLoading, setIsResourcesLoading] = useState(
+    !prefetchedResources.length
+  );
+  const [showResourceUI, setShowResourceUI] = useState(
+    !!prefetchedResources.length
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -100,6 +108,11 @@ export default function ModuleDetailWrapper({
   const titleEditRef = useRef<HTMLDivElement>(null);
   const contextEditRef = useRef<HTMLDivElement>(null);
 
+  // Debug auth state
+  useEffect(() => {
+    console.log("AUTH STATE - isSignedIn:", isSignedIn);
+  }, [isSignedIn]);
+
   // Validate props early
   useEffect(() => {
     if (!moduleName || typeof moduleName !== "string") {
@@ -113,6 +126,10 @@ export default function ModuleDetailWrapper({
     const fetchModuleDetails = async () => {
       try {
         setIsLoading(true);
+        // Only set resources loading if we don't have prefetched resources
+        if (!prefetchedResources.length) {
+          setIsResourcesLoading(true);
+        }
         setErrorMessage(null);
 
         // Check if moduleName exists and is not undefined
@@ -127,6 +144,7 @@ export default function ModuleDetailWrapper({
           );
           setErrorMessage("Module name is missing or invalid");
           setIsLoading(false);
+          setIsResourcesLoading(false);
           return notFound();
         }
 
@@ -142,6 +160,7 @@ export default function ModuleDetailWrapper({
           console.error("Failed to decode module name properly");
           setErrorMessage("Invalid module name format");
           setIsLoading(false);
+          setIsResourcesLoading(false);
           return notFound();
         }
 
@@ -169,21 +188,32 @@ export default function ModuleDetailWrapper({
               }))
             );
 
-            // Fetch resources only for authenticated users
-            if (isSignedIn) {
+            // Fetch resources regardless of authentication state
+            // This ensures we always try to load resources
+            console.log(
+              `Attempting to fetch resources for module: ${exactModules[0].id}`
+            );
+            try {
               const resourcesResponse = await fetch(
                 `/api/modules/${exactModules[0].id}/resources`
               );
+              console.log(
+                "Resource API response status:",
+                resourcesResponse.status
+              );
+
               if (resourcesResponse.status === 401) {
-                // Handle unauthorized gracefully - user is not authenticated
                 console.log("User is not authenticated for resources");
                 setResources([]);
               } else if (resourcesResponse.ok) {
                 const responseData = await resourcesResponse.json();
-                // Handle both response formats - direct array or { resources: [] }
-                const moduleResources =
-                  responseData.resources || responseData || [];
-                console.log("Initial resources fetch:", moduleResources);
+                console.log("Resources API raw response:", responseData);
+
+                // Parse the response data
+                const moduleResources = responseData.resources || [];
+                console.log("Resources count:", moduleResources.length);
+                console.log("Resources data:", moduleResources);
+
                 setResources(
                   Array.isArray(moduleResources) ? moduleResources : []
                 );
@@ -194,13 +224,14 @@ export default function ModuleDetailWrapper({
                 );
                 setResources([]);
               }
-            } else {
-              // No resources for anonymous users
+            } catch (error) {
+              console.error("Error fetching resources:", error);
               setResources([]);
             }
 
             // Set loading state to false after data is loaded
             setIsLoading(false);
+            setIsResourcesLoading(false);
             return;
           }
         } catch (error) {
@@ -230,6 +261,7 @@ export default function ModuleDetailWrapper({
             console.error("No modules found in database");
             setErrorMessage("No modules found");
             setIsLoading(false);
+            setIsResourcesLoading(false);
             return notFound();
           }
 
@@ -281,6 +313,7 @@ export default function ModuleDetailWrapper({
                   console.error("No modules found via API query");
                   setErrorMessage("Module not found");
                   setIsLoading(false);
+                  setIsResourcesLoading(false);
                   return notFound();
                 }
               } catch (queryError) {
@@ -293,6 +326,7 @@ export default function ModuleDetailWrapper({
             console.error("Module not found after all search attempts");
             setErrorMessage("Module not found");
             setIsLoading(false);
+            setIsResourcesLoading(false);
             return notFound();
           }
 
@@ -306,13 +340,18 @@ export default function ModuleDetailWrapper({
             );
 
             const resourcesResponse = await fetch(resourceApiUrl);
+            console.log(
+              "Resource API URL:",
+              `/api/modules/${moduleData.id}/resources`
+            );
+            console.log("Response status:", resourcesResponse.status);
+            const responseData = await resourcesResponse.json();
+            console.log("Raw response data:", JSON.stringify(responseData));
             if (resourcesResponse.status === 401) {
               // Handle unauthorized gracefully - user is not authenticated
               console.log("User is not authenticated for resources");
               setResources([]);
             } else if (resourcesResponse.ok) {
-              const responseData = await resourcesResponse.json();
-              // Handle both response formats - direct array or { resources: [] }
               const moduleResources =
                 responseData.resources || responseData || [];
               console.log(
@@ -350,6 +389,7 @@ export default function ModuleDetailWrapper({
           console.error("Error fetching module details:", error);
         } finally {
           setIsLoading(false);
+          setIsResourcesLoading(false);
         }
       } catch (error) {
         console.error("Error fetching module details:", error);
@@ -360,7 +400,7 @@ export default function ModuleDetailWrapper({
     if (typeof window !== "undefined") {
       fetchModuleDetails();
     }
-  }, [moduleName, isSignedIn]);
+  }, [moduleName, isSignedIn, prefetchedResources]);
 
   // Listen for resource events to refresh the resource list
   useEffect(() => {
@@ -498,7 +538,8 @@ export default function ModuleDetailWrapper({
       // Prepare the update data
       const updateData = {
         name: updates.name !== undefined ? updates.name : module.name,
-        context: updates.context !== undefined ? updates.context : module.context,
+        context:
+          updates.context !== undefined ? updates.context : module.context,
         icon: updates.icon !== undefined ? updates.icon : module.icon,
       };
 
@@ -604,6 +645,7 @@ export default function ModuleDetailWrapper({
       // Limit retries to prevent infinite loops
       setRetryCount((prev) => prev + 1);
       setIsLoading(true);
+      setIsResourcesLoading(true);
       setErrorMessage(null);
       router.refresh(); // Refresh the page to try loading again
     } else {
@@ -613,6 +655,25 @@ export default function ModuleDetailWrapper({
       );
     }
   }, [retryCount, router]);
+
+  // Effect to control the showing of resource UI with a delay
+  useEffect(() => {
+    // If resources are already loaded (via prefetch), no need for delay
+    if (prefetchedResources.length > 0 && !isResourcesLoading) {
+      setShowResourceUI(true);
+      return;
+    }
+
+    if (!isResourcesLoading) {
+      // Wait for a short delay before showing any resource UI
+      const timer = setTimeout(() => {
+        setShowResourceUI(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setShowResourceUI(false);
+    }
+  }, [isResourcesLoading, prefetchedResources.length]);
 
   // Render error state with retry button
   if (errorMessage && !isLoading) {
@@ -819,64 +880,74 @@ export default function ModuleDetailWrapper({
             )}
           </div>
 
-          <Separator className="my-6 mx-4" />
+          <Separator className="my-5 mx-4" />
 
-          <div className="space-y-4 px-4">
+          <div className="space-y-5 px-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg">Resources</h2>
-              {isSignedIn && !!resources.length && (
+              <h2 className="text-lg">Uploads</h2>
+              {isSignedIn && !!resources.length && !isResourcesLoading && (
                 <ResourceUploadButton variant="outline" moduleId={module.id} />
               )}
             </div>
 
             <div className="min-h-[300px]">
-              {isLoading ? (
-                <ResourceTableSkeleton showModuleColumn={false} />
-              ) : resources.length === 0 && isSignedIn ? (
-                <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-dashed p-8 text-center">
-                  <h3 className="font-medium">
-                    Access your knowledge base and upload your own resources.
-                  </h3>
-                  <ResourceUploadButton
-                    variant="outline"
-                    className="text-secondary-foreground"
-                    moduleId={module.id}
-                  />
+              {/* Render loading skeleton when resources are loading */}
+              {isResourcesLoading && (
+                <div className="flex items-center justify-center pt-12">
+                  <Loader2 className="h-5 w-5 animate-spin items-center justify-center" />
                 </div>
-              ) : (
-                <ResourceTable
-                  resources={Array.isArray(resources) ? resources : []}
-                  modules={allModules}
-                  onUpdate={(updatedResource) => {
-                    if (updatedResource._deleted) {
-                      // If resource was deleted, keep it in state but mark as deleted
-                      setResources(
-                        resources.map((r) =>
-                          r.id === updatedResource.id
-                            ? { ...r, _deleted: true }
-                            : r
-                        )
-                      );
-                    } else if (updatedResource.moduleId !== module?.id) {
-                      // If module changed, remove from this list
-                      setResources(
-                        resources.map((r) =>
-                          r.id === updatedResource.id
-                            ? { ...r, _deleted: true }
-                            : r
-                        )
-                      );
-                    } else {
-                      // Regular update
-                      setResources(
-                        resources.map((r) =>
-                          r.id === updatedResource.id ? updatedResource : r
-                        )
-                      );
-                    }
-                  }}
-                  showModuleColumn={false}
-                />
+              )}
+
+              {/* Only render actual content after loading is complete AND showResourceUI is true */}
+              {!isResourcesLoading && showResourceUI && (
+                <>
+                  {resources.length === 0 && isSignedIn ? (
+                    <div className="flex flex-col items-center justify-center space-y-5 rounded-lg border border-dashed p-8 pt-1 text-center">
+                      <h3 className="font-medium">
+                        Access your knowledge base and upload your own files.
+                      </h3>
+                      <ResourceUploadButton
+                        variant="outline"
+                        className="text-secondary-foreground"
+                        moduleId={module.id}
+                      />
+                    </div>
+                  ) : (
+                    <ResourceTable
+                      resources={Array.isArray(resources) ? resources : []}
+                      modules={allModules}
+                      onUpdate={(updatedResource) => {
+                        if (updatedResource._deleted) {
+                          // If resource was deleted, keep it in state but mark as deleted
+                          setResources(
+                            resources.map((r) =>
+                              r.id === updatedResource.id
+                                ? { ...r, _deleted: true }
+                                : r
+                            )
+                          );
+                        } else if (updatedResource.moduleId !== module?.id) {
+                          // If module changed, remove from this list
+                          setResources(
+                            resources.map((r) =>
+                              r.id === updatedResource.id
+                                ? { ...r, _deleted: true }
+                                : r
+                            )
+                          );
+                        } else {
+                          // Regular update
+                          setResources(
+                            resources.map((r) =>
+                              r.id === updatedResource.id ? updatedResource : r
+                            )
+                          );
+                        }
+                      }}
+                      showModuleColumn={false}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
