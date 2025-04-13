@@ -54,7 +54,7 @@ export default function Loading() {
 
         {/* Empty area for modules to load into */}
         <div className="flex items-center justify-center pt-12">
-          <Loader2 />
+          <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       </div>
     </div>
