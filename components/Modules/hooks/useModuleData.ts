@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { notFound } from "next/navigation";
 import { toast } from "sonner";
@@ -37,6 +37,153 @@ export function useModuleData(
       notFound();
     }
   }, [moduleName]);
+
+  // Helper function to fetch resources for a module
+  const fetchModuleResources = useCallback(
+    async (moduleId: string, hasPrefetchedResources: boolean) => {
+      if (!isSignedIn || hasPrefetchedResources) {
+        if (hasPrefetchedResources) {
+          setShowResourceUI(true);
+        }
+        return;
+      }
+
+      try {
+        const resourcesResponse = await fetch(
+          `/api/modules/${moduleId}/resources`
+        );
+
+        if (resourcesResponse.status === 401) {
+          setResources([]);
+        } else if (resourcesResponse.ok) {
+          const responseData = await resourcesResponse.json();
+          const moduleResources = responseData.resources || [];
+          setResources(Array.isArray(moduleResources) ? moduleResources : []);
+          setShowResourceUI(true);
+        } else {
+          setResources([]);
+        }
+      } catch (error) {
+        console.error("Error fetching resources:", error);
+        setResources([]);
+      }
+    },
+    [isSignedIn, setResources, setShowResourceUI]
+  );
+
+  // Helper function to fetch all modules
+  const fetchAllModules = useCallback(async () => {
+    try {
+      const allModulesData = await api.getModules();
+      const modulesData = allModulesData.modules || [];
+      setAllModules(
+        modulesData.map((m: Module) => ({
+          id: m.id,
+          name: m.name,
+          icon: m.icon,
+        }))
+      );
+      return modulesData;
+    } catch (error) {
+      console.error("Error fetching all modules:", error);
+      return [];
+    }
+  }, [setAllModules]);
+
+  // Helper function to try exact module match
+  const tryExactModuleMatch = useCallback(
+    async (decodedModuleName: string, hasPrefetchedResources: boolean) => {
+      try {
+        const exactMatchData = await api.getModules(decodedModuleName, true);
+        const exactModules = exactMatchData.modules || [];
+
+        if (exactModules.length > 0) {
+          setModule(exactModules[0]);
+
+          // Get all modules for selector
+          await fetchAllModules();
+
+          // Fetch resources if needed
+          await fetchModuleResources(
+            exactModules[0].id,
+            hasPrefetchedResources
+          );
+
+          return true;
+        }
+      } catch (error) {
+        console.error("Error during exact match query:", error);
+      }
+      return false;
+    },
+    [fetchAllModules, fetchModuleResources, setModule]
+  );
+
+  // Helper function to try fuzzy module match
+  const tryFuzzyModuleMatch = useCallback(
+    async (decodedModuleName: string, hasPrefetchedResources: boolean) => {
+      try {
+        // Fetch all modules
+        const modulesData = await fetchAllModules();
+
+        if (modulesData.length === 0) {
+          setErrorMessage("No modules found");
+          return false;
+        }
+
+        // Try different matching strategies
+        let moduleData = modulesData.find(
+          (m: Module) =>
+            m.name.toLowerCase() === decodedModuleName.toLowerCase()
+        );
+
+        if (!moduleData) {
+          // Try normalized string matching
+          moduleData = modulesData.find((m: Module) => {
+            const normalizedDbName = m.name
+              .toLowerCase()
+              .replace(/[^\w\s]/g, "");
+            const normalizedSearchName = decodedModuleName
+              .toLowerCase()
+              .replace(/[^\w\s]/g, "");
+            return normalizedDbName === normalizedSearchName;
+          });
+
+          // If still not found, try API query
+          if (!moduleData) {
+            try {
+              const moduleQueryData = await api.getModules(decodedModuleName);
+              const responseData = moduleQueryData.modules || [];
+
+              if (Array.isArray(responseData) && responseData.length > 0) {
+                moduleData = responseData[0];
+              } else {
+                return false;
+              }
+            } catch (queryError) {
+              console.error("Error during fuzzy API query:", queryError);
+              return false;
+            }
+          }
+        }
+
+        if (!moduleData) {
+          return false;
+        }
+
+        setModule(moduleData);
+
+        // Fetch resources if needed
+        await fetchModuleResources(moduleData.id, hasPrefetchedResources);
+
+        return true;
+      } catch (error) {
+        console.error("Error in fuzzy matching:", error);
+        return false;
+      }
+    },
+    [fetchAllModules, fetchModuleResources, setModule, setErrorMessage]
+  );
 
   // Main data fetching effect
   useEffect(() => {
@@ -81,161 +228,29 @@ export function useModuleData(
         // Check if we already have prefetched resources
         const hasPrefetchedResources = prefetchedResources.length > 0;
 
-        // First try an exact match query
-        try {
-          const exactMatchData = await api.getModules(decodedModuleName, true);
-          const exactModules = exactMatchData.modules || [];
+        // First try an exact match, then fallback to fuzzy matching
+        const foundExactMatch = await tryExactModuleMatch(
+          decodedModuleName,
+          hasPrefetchedResources
+        );
 
-          if (exactModules.length > 0) {
-            setModule(exactModules[0]);
-
-            // Get all modules for selector
-            const allModulesData = await api.getModules();
-            const modulesData = allModulesData.modules || [];
-            setAllModules(
-              modulesData.map((m: Module) => ({
-                id: m.id,
-                name: m.name,
-                icon: m.icon,
-              }))
-            );
-
-            // If authenticated and we don't have prefetched resources, fetch them
-            if (isSignedIn && !hasPrefetchedResources) {
-              try {
-                const resourcesResponse = await fetch(
-                  `/api/modules/${exactModules[0].id}/resources`
-                );
-
-                if (resourcesResponse.status === 401) {
-                  setResources([]);
-                } else if (resourcesResponse.ok) {
-                  const responseData = await resourcesResponse.json();
-                  const moduleResources = responseData.resources || [];
-                  setResources(
-                    Array.isArray(moduleResources) ? moduleResources : []
-                  );
-                  setShowResourceUI(true);
-                } else {
-                  setResources([]);
-                }
-              } catch (error) {
-                console.error("Error fetching resources:", error);
-                setResources([]);
-              }
-            } else if (hasPrefetchedResources) {
-              // Make sure we mark the UI as ready to show resources
-              setShowResourceUI(true);
-            }
-
-            // Set loading state to false after data is loaded
-            setIsLoading(false);
-            setIsResourcesLoading(false);
-            return;
-          }
-        } catch (error) {
-          console.error("Error during exact match query:", error);
-        }
-
-        // If no exact match, proceed with fuzzy matching logic
-        try {
-          // Fetch all modules
-          const allModulesData = await api.getModules();
-          const modulesData = allModulesData.modules || [];
-
-          setAllModules(
-            modulesData.map((m: Module) => ({
-              id: m.id,
-              name: m.name,
-              icon: m.icon,
-            }))
+        if (!foundExactMatch) {
+          const foundFuzzyMatch = await tryFuzzyModuleMatch(
+            decodedModuleName,
+            hasPrefetchedResources
           );
 
-          if (modulesData.length === 0) {
-            setErrorMessage("No modules found");
-            setIsLoading(false);
-            setIsResourcesLoading(false);
-            return notFound();
-          }
-
-          // Try different matching strategies
-          let moduleData = modulesData.find(
-            (m: Module) =>
-              m.name.toLowerCase() === decodedModuleName.toLowerCase()
-          );
-
-          if (!moduleData) {
-            // Try normalized string matching
-            moduleData = modulesData.find((m: Module) => {
-              const normalizedDbName = m.name
-                .toLowerCase()
-                .replace(/[^\w\s]/g, "");
-              const normalizedSearchName = decodedModuleName
-                .toLowerCase()
-                .replace(/[^\w\s]/g, "");
-              return normalizedDbName === normalizedSearchName;
-            });
-
-            // If still not found, try API query
-            if (!moduleData) {
-              try {
-                const moduleQueryData = await api.getModules(decodedModuleName);
-                const responseData = moduleQueryData.modules || [];
-
-                if (Array.isArray(responseData) && responseData.length > 0) {
-                  moduleData = responseData[0];
-                } else {
-                  setErrorMessage("Module not found");
-                  setIsLoading(false);
-                  setIsResourcesLoading(false);
-                  return notFound();
-                }
-              } catch (queryError) {
-                console.error("Error during fuzzy API query:", queryError);
-              }
-            }
-          }
-
-          if (!moduleData) {
+          if (!foundFuzzyMatch) {
             setErrorMessage("Module not found");
-            setIsLoading(false);
-            setIsResourcesLoading(false);
-            return notFound();
+            notFound();
           }
-
-          setModule(moduleData);
-
-          // Fetch resources for authenticated users
-          if (isSignedIn && !hasPrefetchedResources) {
-            const resourceApiUrl = `/api/modules/${moduleData.id}/resources`;
-            const resourcesResponse = await fetch(resourceApiUrl);
-
-            if (resourcesResponse.status === 401) {
-              setResources([]);
-            } else if (resourcesResponse.ok) {
-              const responseData = await resourcesResponse.json();
-              const moduleResources =
-                responseData.resources || responseData || [];
-              setResources(
-                Array.isArray(moduleResources) ? moduleResources : []
-              );
-              setShowResourceUI(true);
-            } else {
-              setResources([]);
-            }
-          } else if (hasPrefetchedResources) {
-            setShowResourceUI(true);
-          } else {
-            setResources([]);
-          }
-        } catch (error) {
-          console.error("Error fetching module details:", error);
-        } finally {
-          setIsLoading(false);
-          setIsResourcesLoading(false);
         }
       } catch (error) {
         console.error("Error fetching module details:", error);
+        setErrorMessage("Error loading module");
+      } finally {
+        setIsLoading(false);
+        setIsResourcesLoading(false);
       }
     };
 
@@ -243,7 +258,13 @@ export function useModuleData(
     if (typeof window !== "undefined") {
       fetchModuleDetails();
     }
-  }, [moduleName, isSignedIn, prefetchedResources]);
+  }, [
+    moduleName,
+    isSignedIn,
+    tryExactModuleMatch,
+    tryFuzzyModuleMatch,
+    prefetchedResources,
+  ]);
 
   // Listen for resource events to refresh the resource list
   useEffect(() => {

@@ -120,13 +120,12 @@ export async function GET(
     }
 
     // Verify that the module exists
-    const moduleRecord = await prisma.module.findUnique({
+    const moduleRecord = await prisma.module.findFirst({
       where: {
         id: moduleId,
+        OR: [{ userId }, { sessionId }],
       },
-      include: {
-        user: true,
-      },
+      include: { user: true },
     });
 
     if (!moduleRecord) {
