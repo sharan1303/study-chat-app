@@ -30,6 +30,8 @@ export default function WelcomeScreen({ showLogo }: WelcomeScreenProps) {
               alt="Study Chat Logo"
               width={200}
               height={200}
+              priority
+              loading="eager"
             />
           )}
         </div>
