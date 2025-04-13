@@ -49,22 +49,26 @@ interface Module {
  * either a filtered list of modules or a resource table through a nested component.
  *
  * @param searchParams - URL query parameters that set the initial UI state (e.g., active tab, resource upload dialog visibility, and preselected module).
+ * @param prefetchedModules - Optional pre-fetched modules to be used instead of fetching from the API.
  */
 export default function ModulesPageContent({
   searchParams,
+  prefetchedModules = [],
 }: {
   searchParams: URLSearchParams;
+  prefetchedModules?: Module[];
 }) {
   const { isLoaded, isSignedIn } = useAuth();
   const { sessionId, isLoading: sessionLoading } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
-  const [modules, setModules] = useState<Module[]>([]);
-  const [filteredModules, setFilteredModules] = useState<Module[]>([]);
+  const [modules, setModules] = useState<Module[]>(prefetchedModules);
+  const [filteredModules, setFilteredModules] =
+    useState<Module[]>(prefetchedModules);
   const [activeTab, setActiveTab] = useState(() => {
     // Get tab from URL param or default to "modules"
     return searchParams?.get("tab") || "modules";
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!prefetchedModules.length);
   const shouldOpenResourceUpload =
     searchParams?.get("openResourceUpload") === "true";
   const preselectedModuleId = searchParams?.get("moduleId");
@@ -80,21 +84,25 @@ export default function ModulesPageContent({
     handleResourceUpdate,
   } = useResources(!!isSignedIn, searchQuery);
 
-  // This effect fetches the modules data from the API
+  // This effect fetches the modules data only if needed
   useEffect(() => {
     async function fetchModules() {
       try {
         setIsLoading(true);
 
-        // Artificial delay to ensure loading state is visible
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Only fetch if we don't have prefetched data or the search query has changed
+        if (!prefetchedModules.length || searchQuery) {
+          console.log("Client: Fetching modules:", searchQuery || "all");
+          const data = await api.getModules(searchQuery || undefined);
 
-        const data = await api.getModules(searchQuery || undefined);
-
-        // Extract modules from the response object
-        const modulesList = data.modules || [];
-        setModules(modulesList);
-        setFilteredModules(modulesList);
+          // Extract modules from the response object
+          const modulesList = data.modules || [];
+          setModules(modulesList);
+          setFilteredModules(modulesList);
+          console.log(`Client: Received ${modulesList.length} modules`);
+        } else {
+          console.log("Client: Using prefetched modules, skipping fetch");
+        }
       } catch (error) {
         console.error("Error fetching modules:", error);
         // Set modules to empty array on error
@@ -108,7 +116,14 @@ export default function ModulesPageContent({
     if (isLoaded && !sessionLoading) {
       fetchModules();
     }
-  }, [isSignedIn, isLoaded, sessionId, sessionLoading, searchQuery]);
+  }, [
+    isSignedIn,
+    isLoaded,
+    sessionId,
+    sessionLoading,
+    searchQuery,
+    prefetchedModules.length,
+  ]);
 
   // Listen for module creation events to refresh the module list
   useEffect(() => {
@@ -150,9 +165,7 @@ export default function ModulesPageContent({
           (module) =>
             module.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (module.context &&
-              module.context
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()))
+              module.context.toLowerCase().includes(searchQuery.toLowerCase()))
         );
         setFilteredModules(filtered);
       }
@@ -342,7 +355,6 @@ export default function ModulesPageContent({
                   console.log(
                     `Creating link for "${module.name}" → "${moduleSlug}"`
                   );
-
 
                   return (
                     <Link
