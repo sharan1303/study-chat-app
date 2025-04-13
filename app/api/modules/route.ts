@@ -8,7 +8,7 @@ import { broadcastModuleCreated } from "@/lib/events";
 type ModuleWithCount = {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
   createdAt: Date;
   updatedAt: Date;
@@ -88,7 +88,7 @@ async function processModulesRequest(
     const formattedModules = modules.map((module: ModuleWithCount) => ({
       id: module.id,
       name: module.name,
-      description: module.description,
+      context: module.context,
       icon: module.icon,
       resourceCount: module._count.resources,
       createdAt: module.createdAt.toISOString(),
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { name, description, icon } = await request.json();
+    const { name, context, icon } = await request.json();
 
     if (!name || name.trim().length < 2) {
       return NextResponse.json(
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
     // Create data object
     const data = {
       name,
-      description,
+      context,
       icon: icon || "📚",
     };
 
