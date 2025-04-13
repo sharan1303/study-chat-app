@@ -4,7 +4,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Module } from "../module-detail-page";
 
 // List of available icons
 const icons = [
