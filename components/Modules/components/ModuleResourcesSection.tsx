@@ -32,7 +32,7 @@ export default function ModuleResourcesSection({
       </div>
 
       <div className="min-h-[300px]">
-        {/* Render loading skeleton when resources are loading */}
+        {/* Render loading animation when resources are loading */}
         {isResourcesLoading && (
           <div className="flex items-center justify-center pt-12">
             <Loader2 className="h-5 w-5 animate-spin items-center justify-center" />
@@ -40,55 +40,54 @@ export default function ModuleResourcesSection({
         )}
 
         {/* Only render actual content after loading is complete AND showResourceUI is true */}
+        
         {!isResourcesLoading && showResourceUI && (
-          <>
-            {resources.length === 0 && isSignedIn ? (
-              <div className="flex flex-col items-center justify-center space-y-5 rounded-lg border border-dashed p-8 pt-1 text-center">
-                <h3 className="font-medium">
-                  Access your knowledge base and upload your own files.
-                </h3>
-                <ResourceUploadButton
-                  variant="outline"
-                  className="text-secondary-foreground"
-                  moduleId={module.id}
-                />
-              </div>
-            ) : (
-              <ResourceTable
-                resources={Array.isArray(resources) ? resources : []}
-                modules={allModules}
-                onUpdate={(updatedResource) => {
-                  if (updatedResource._deleted) {
-                    // If resource was deleted, keep it in state but mark as deleted
-                    setResources(
-                      resources.map((r) =>
-                        r.id === updatedResource.id
-                          ? { ...r, _deleted: true }
-                          : r
-                      )
-                    );
-                  } else if (updatedResource.moduleId !== module?.id) {
-                    // If module changed, remove from this list
-                    setResources(
-                      resources.map((r) =>
-                        r.id === updatedResource.id
-                          ? { ...r, _deleted: true }
-                          : r
-                      )
-                    );
-                  } else {
-                    // Regular update
-                    setResources(
-                      resources.map((r) =>
-                        r.id === updatedResource.id ? updatedResource : r
-                      )
-                    );
-                  }
-                }}
-                showModuleColumn={false}
+          resources.length === 0 && isSignedIn ? (
+            <div className="flex flex-col items-center justify-center space-y-5 rounded-lg border border-dashed p-8 pt-1 text-center">
+              <h3 className="font-medium">
+                Access your knowledge base and upload your own files.
+              </h3>
+              <ResourceUploadButton
+                variant="outline"
+                className="text-secondary-foreground"
+                moduleId={module.id}
               />
-            )}
-          </>
+            </div>
+          ) : (
+            <ResourceTable
+              resources={Array.isArray(resources) ? resources : []}
+              modules={allModules}
+              onUpdate={(updatedResource) => {
+                if (updatedResource._deleted) {
+                  // If resource was deleted, keep it in state but mark as deleted
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id
+                        ? { ...r, _deleted: true }
+                        : r
+                    )
+                  );
+                } else if (updatedResource.moduleId !== module?.id) {
+                  // If module changed, remove from this list
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id
+                        ? { ...r, _deleted: true }
+                        : r
+                    )
+                  );
+                } else {
+                  // Regular update
+                  setResources(
+                    resources.map((r) =>
+                      r.id === updatedResource.id ? updatedResource : r
+                    )
+                  );
+                }
+              }}
+              showModuleColumn={false}
+            />
+          )
         )}
       </div>
     </div>
