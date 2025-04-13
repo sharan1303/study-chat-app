@@ -46,6 +46,13 @@ export default async function ModuleDetailPage({
   const { userId } = await auth();
   const isAuthenticated = !!userId;
 
+  console.log(
+    "Server: Authentication status:",
+    isAuthenticated ? "Authenticated" : "Not authenticated"
+  );
+  console.log("Decoding slug:", resolvedParams.moduleName);
+  console.log("Decoded result:", decodedModuleName);
+
   // Prefetch module data to find the module ID
   let moduleId = null;
   let prefetchedResources = [];
@@ -60,11 +67,21 @@ export default async function ModuleDetailPage({
 
       // Prefetch resources if authenticated
       if (isAuthenticated && moduleId) {
+        console.log(`Server: Prefetching resources for module ${moduleId}`);
         const resourcesData = await serverApi.getModuleResourcesServer(
           moduleId
         );
         prefetchedResources = resourcesData.resources || [];
+        console.log(
+          `Server: Prefetched ${prefetchedResources.length} resources`
+        );
+      } else {
+        console.log(
+          "Server: Not prefetching resources - user not authenticated or no moduleId"
+        );
       }
+    } else {
+      console.log("Server: No exact module match found");
     }
   } catch (error) {
     console.error("Error prefetching module data:", error);
