@@ -17,5 +17,5 @@ export default async function HomePage() {
   redirect("/chat/welcome");
 }
 
-// Add this export to allow dynamic rendering
-export const dynamic = "force-dynamic";
+// Change from force-dynamic to static with revalidation
+export const revalidate = 3600; // Revalidate once per hour

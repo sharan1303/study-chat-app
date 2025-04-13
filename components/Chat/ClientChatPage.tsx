@@ -8,12 +8,28 @@ import { ModuleWithResources } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { encodeModuleSlug } from "@/lib/utils";
 import Header from "../Main/Header";
+import dynamic from "next/dynamic";
 
-// Import the extracted components
-import ChatMessages from "./ChatMessages";
+// Import the components that don't need to be loaded dynamically
 import ChatInput from "./ChatInput";
 import ChatModuleHeader from "./ChatModuleHeader";
-import WelcomeScreen from "./WelcomeScreen";
+
+// Dynamically import components that are not needed immediately
+const ChatMessages = dynamic(() => import("./ChatMessages"), {
+  loading: () => (
+    <div className="flex-1 overflow-y-auto p-4">
+      <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+    </div>
+  ),
+  ssr: false,
+});
+
+const WelcomeScreen = dynamic(() => import("./WelcomeScreen"), {
+  loading: () => (
+    <div className="text-center flex items-center justify-center h-96"></div>
+  ),
+  ssr: false,
+});
 
 /**
  * Renders a full-screen chat interface with message history, input, and an optional module header.
