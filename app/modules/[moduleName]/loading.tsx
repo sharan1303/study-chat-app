@@ -41,17 +41,18 @@ export default function ModuleDetailsLoading() {
         {/* Context section skeleton */}
         <div className="space-y-2">
           <h2 className="text-lg mb-2">Context</h2>
-          <div className="flex items-center justify-center min-h-[158px] bg-background">
+          <div className="flex items-center justify-center min-h-[182px] bg-background">
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         </div>
 
         <div className="my-6 h-px bg-border" />
 
-        {/* Resources section skeleton */}
+        {/* Uploads section skeleton */}
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-lg">Resources</h2>
+            {/* Renamed from Resources to Uploads for clarity */}
+            <h2 className="text-lg">Uploads</h2>
           </div>
 
           {/* Use ResourceTableSkeleton */}

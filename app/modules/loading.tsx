@@ -31,7 +31,7 @@ export default function Loading() {
           </div>
           <div className="flex items-center justify-center mt-1 h-7 w-auto rounded-sm">
             <span className="pr-1 font-medium text-sm text-muted-foreground">
-              Resources
+              Uploads
             </span>
           </div>
         </div>

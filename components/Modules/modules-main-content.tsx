@@ -273,7 +273,7 @@ export default function ModulesPageContent({
         <div className="px-6">
           <TabsList className="grid max-w-xl grid-cols-2">
             <TabsTrigger value="modules">Modules</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="uploads">Uploads</TabsTrigger>
           </TabsList>
 
           {/* Search bar with contextual button */}
@@ -284,7 +284,7 @@ export default function ModulesPageContent({
                 placeholder={
                   activeTab === "modules"
                     ? "Search modules..."
-                    : "Search resources..."
+                    : "Search uploads..."
                 }
                 className="pl-10"
                 value={searchQuery}
@@ -362,8 +362,8 @@ export default function ModulesPageContent({
                           <div className="text-sm text-muted-foreground">
                             {module.resourceCount}{" "}
                             {module.resourceCount === 1
-                              ? "resource"
-                              : "resources"}
+                              ? "uploaded file"
+                              : "uploaded files"}
                           </div>
                         </CardContent>
                         <CardFooter className="text-xs text-muted-foreground">
@@ -377,7 +377,7 @@ export default function ModulesPageContent({
             )}
           </TabsContent>
 
-          <TabsContent value="resources" className="h-full">
+          <TabsContent value="uploads" className="h-full">
             <ResourcesWrapper />
           </TabsContent>
         </div>
