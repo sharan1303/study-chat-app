@@ -164,8 +164,7 @@ export default function ModulesPageContent({
         const filtered = modules.filter(
           (module) =>
             module.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (module.context &&
-              module.context.toLowerCase().includes(searchQuery.toLowerCase()))
+            module.context?.toLowerCase().includes(searchQuery.toLowerCase())
         );
         setFilteredModules(filtered);
       }
@@ -352,9 +351,6 @@ export default function ModulesPageContent({
                   }
 
                   const moduleSlug = encodeModuleSlug(module.name);
-                  console.log(
-                    `Creating link for "${module.name}" → "${moduleSlug}"`
-                  );
 
                   return (
                     <Link
