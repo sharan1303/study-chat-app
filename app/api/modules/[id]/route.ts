@@ -68,7 +68,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     const searchParams = request.nextUrl.searchParams;
     const sessionId = searchParams.get("sessionId");
     const moduleId = params.id;
-    const { name, description, icon } = await request.json();
+    const { name, context, icon } = await request.json();
 
     if (!moduleId) {
       return NextResponse.json(
@@ -116,8 +116,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       where: { id: moduleId },
       data: {
         name: name !== undefined ? name : existingModule.name,
-        description:
-          description !== undefined ? description : existingModule.description,
+        context: context !== undefined ? context : existingModule.context,
         icon: icon !== undefined ? icon : existingModule.icon,
       },
     });

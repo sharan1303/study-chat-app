@@ -43,7 +43,7 @@ const formSchema = z.object({
 interface Module {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
 }
 

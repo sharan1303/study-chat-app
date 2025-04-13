@@ -38,9 +38,9 @@ export default function ModuleDetailsLoading() {
       </div>
 
       <div className="space-y-6 px-7">
-        {/* Description section skeleton */}
+        {/* Context section skeleton */}
         <div className="space-y-2">
-          <h2 className="text-lg mb-2">Content</h2>
+          <h2 className="text-lg mb-2">Context</h2>
           <div className="flex items-center justify-center min-h-[158px] bg-background">
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>

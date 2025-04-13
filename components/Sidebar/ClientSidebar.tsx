@@ -35,7 +35,7 @@ import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 export interface Module {
   id: string;
   name: string;
-  description?: string | null;
+  context?: string | null;
   icon: string;
   lastStudied?: string | null;
   resourceCount?: number;

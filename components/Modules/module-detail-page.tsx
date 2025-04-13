@@ -29,7 +29,7 @@ import Header from "../Main/Header";
 interface Module {
   id: string;
   name: string;
-  content: string | null;
+  context: string | null;
   icon: string;
   resourceCount: number;
   updatedAt: string;
@@ -91,14 +91,14 @@ export default function ModuleDetailWrapper({
 
   // Editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [isEditingContext, setIsEditingContext] = useState(false);
   const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState("");
+  const [editContext, setEditContext] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Refs for detecting clicks outside
   const titleEditRef = useRef<HTMLDivElement>(null);
-  const contentEditRef = useRef<HTMLDivElement>(null);
+  const contextEditRef = useRef<HTMLDivElement>(null);
 
   // Validate props early
   useEffect(() => {
@@ -452,13 +452,13 @@ export default function ModuleDetailWrapper({
   useEffect(() => {
     if (module) {
       setEditTitle(module.name || "");
-      setEditContent(module.content || "");
+      setEditContext(module.context || "");
 
       // Log successful module load
       console.log("Module data loaded successfully:", module.name);
 
       // Update document title
-      document.title = `${module.name} | Study Chat App`;
+      document.title = `${module.name} | Study Chat`;
     }
   }, [module]);
 
@@ -470,7 +470,7 @@ export default function ModuleDetailWrapper({
   // Save module updates
   const saveModuleUpdate = async (updates: {
     name?: string;
-    content?: string;
+    context?: string;
     icon?: string;
   }) => {
     if (!module) return;
@@ -498,8 +498,7 @@ export default function ModuleDetailWrapper({
       // Prepare the update data
       const updateData = {
         name: updates.name !== undefined ? updates.name : module.name,
-        content:
-          updates.content !== undefined ? updates.content : module.content,
+        context: updates.context !== undefined ? updates.context : module.context,
         icon: updates.icon !== undefined ? updates.icon : module.icon,
       };
 
@@ -532,7 +531,7 @@ export default function ModuleDetailWrapper({
     } finally {
       setIsSaving(false);
       setIsEditingTitle(false);
-      setIsEditingContent(false);
+      setIsEditingContext(false);
     }
   };
 
@@ -546,8 +545,8 @@ export default function ModuleDetailWrapper({
   };
 
   // Handle content update
-  const handleContentSave = () => {
-    saveModuleUpdate({ content: editContent });
+  const handleContextSave = () => {
+    saveModuleUpdate({ context: editContext });
   };
 
   // Handle icon update
@@ -561,10 +560,10 @@ export default function ModuleDetailWrapper({
     setIsEditingTitle(false);
   }, [module, setEditTitle, setIsEditingTitle]);
 
-  const cancelContentEdit = useCallback(() => {
-    setEditContent(module?.content || "");
-    setIsEditingContent(false);
-  }, [module, setEditContent, setIsEditingContent]);
+  const cancelContextEdit = useCallback(() => {
+    setEditContext(module?.context || "");
+    setIsEditingContext(false);
+  }, [module, setEditContext, setIsEditingContext]);
 
   // Add click outside handler
   useEffect(() => {
@@ -580,16 +579,16 @@ export default function ModuleDetailWrapper({
 
       // Handle content edit click outside
       if (
-        isEditingContent &&
-        contentEditRef.current &&
-        !contentEditRef.current.contains(event.target as Node)
+        isEditingContext &&
+        contextEditRef.current &&
+        !contextEditRef.current.contains(event.target as Node)
       ) {
-        cancelContentEdit();
+        cancelContextEdit();
       }
     }
 
     // Add event listener when editing is active
-    if (isEditingTitle || isEditingContent) {
+    if (isEditingTitle || isEditingContext) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
@@ -597,7 +596,7 @@ export default function ModuleDetailWrapper({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditingTitle, isEditingContent, cancelContentEdit, cancelTitleEdit]);
+  }, [isEditingTitle, isEditingContext, cancelContextEdit, cancelTitleEdit]);
 
   // Add retry function for cases where module might not load on first try
   const handleRetry = useCallback(() => {
@@ -758,32 +757,32 @@ export default function ModuleDetailWrapper({
 
         <div className="space-y-13 px-3">
           <div className="px-4">
-            <h2 className="text-lg mb-2">Content</h2>
+            <h2 className="text-lg mb-2">Context</h2>
             {/* Editable content */}
-            {isEditingContent ? (
-              <div className="flex flex-col gap-2" ref={contentEditRef}>
+            {isEditingContext ? (
+              <div className="flex flex-col gap-2" ref={contextEditRef}>
                 <Textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
+                  value={editContext}
+                  onChange={(e) => setEditContext(e.target.value)}
                   className="min-h-[158px] mr-6 p-4"
-                  placeholder="Provide context to your agent..."
+                  placeholder="Enter your context here..."
                   tabIndex={0}
                   autoFocus
                   onKeyDown={(e) => {
                     // Save on Enter
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      handleContentSave();
+                      handleContextSave();
                     }
                     // Save on Ctrl+Enter or Command+Enter
                     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                       e.preventDefault();
-                      handleContentSave();
+                      handleContextSave();
                     }
                     // Cancel on Escape
                     if (e.key === "Escape") {
                       e.preventDefault();
-                      cancelContentEdit();
+                      cancelContextEdit();
                     }
                   }}
                 />
@@ -791,13 +790,13 @@ export default function ModuleDetailWrapper({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={cancelContentEdit}
+                    onClick={cancelContextEdit}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleContentSave}
+                    onClick={handleContextSave}
                     disabled={isSaving}
                   >
                     Save
@@ -807,15 +806,15 @@ export default function ModuleDetailWrapper({
             ) : (
               <p
                 className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 mr-4 mb-12 rounded min-h-[158px]"
-                onClick={() => setIsEditingContent(true)}
+                onClick={() => setIsEditingContext(true)}
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
-                    setIsEditingContent(true);
+                    setIsEditingContext(true);
                   }
                 }}
               >
-                {module.content || "Provide context to your agent..."}
+                {module.context || "Enter your context here..."}
               </p>
             )}
           </div>

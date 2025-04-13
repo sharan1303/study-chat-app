@@ -27,7 +27,7 @@ import { encodeModuleSlug } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  description: z.string().optional(),
+  context: z.string().optional(),
   icon: z.string().min(1, "Please select an icon"),
 });
 
@@ -55,7 +55,7 @@ interface ModuleFormProps {
   initialData?: {
     id: string;
     name: string;
-    description?: string;
+    context?: string;
     icon: string;
   };
   successEventName?: string;
@@ -82,7 +82,7 @@ export const ModuleForm = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: initialData?.name || "",
-      description: initialData?.description || "",
+      context: initialData?.context || "",
       icon: initialData?.icon || "📚",
     },
   });
@@ -208,13 +208,13 @@ export const ModuleForm = ({
 
           <FormField
             control={form.control}
-            name="description"
+            name="context"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description (optional)</FormLabel>
+                <FormLabel>Context</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Enter a brief description of this module"
+                    placeholder="Give some context about this module"
                     {...field}
                     value={field.value || ""}
                   />

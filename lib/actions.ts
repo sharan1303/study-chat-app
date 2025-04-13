@@ -16,7 +16,7 @@ export interface ModuleResource {
 export interface ModuleWithResources {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
   createdAt: string;
   updatedAt: string;
