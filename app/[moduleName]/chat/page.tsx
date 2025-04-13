@@ -25,7 +25,7 @@ interface Resource {
 interface ModuleData {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
   createdAt: string;
   updatedAt: string;

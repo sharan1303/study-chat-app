@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { broadcastResourceCreated } from "@/lib/events";
+import { Prisma } from "@prisma/client";
 
 /**
  * Validates if the specified module exists and is accessible by the given user.
@@ -38,7 +39,7 @@ async function validateModuleAccess(
 
   try {
     // Build the query to find the module
-    const whereCondition: any = {
+    const whereCondition: Prisma.ModuleWhereInput = {
       id: moduleId,
     };
 

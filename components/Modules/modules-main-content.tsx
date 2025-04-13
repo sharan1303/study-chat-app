@@ -34,7 +34,7 @@ import Header from "../Main/Header";
 interface Module {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
   resourceCount: number;
   updatedAt: string;
@@ -149,8 +149,8 @@ export default function ModulesPageContent({
         const filtered = modules.filter(
           (module) =>
             module.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (module.description &&
-              module.description
+            (module.context &&
+              module.context
                 .toLowerCase()
                 .includes(searchQuery.toLowerCase()))
         );

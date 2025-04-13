@@ -23,7 +23,7 @@ model User {
 model Module {
   id          String     @id @default(uuid())
   name        String
-  description String?
+  context     String?
   icon        String     @default("📚")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

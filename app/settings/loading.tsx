@@ -24,7 +24,7 @@ export default function SettingsLoading() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto pt-1">
+      <div className="flex-1 overflow-auto pt-2 px-6">
         <div className="flex flex-col py-5 md:flex-row gap-8 max-w-6xl mx-auto">
           {/* Left sidebar with user info */}
           <div className="w-full md:w-1/3">

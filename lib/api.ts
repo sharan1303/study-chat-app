@@ -100,7 +100,7 @@ export const api = {
    */
   async createModule(data: {
     name: string;
-    description?: string;
+    context?: string;
     icon?: string;
   }) {
     const sessionId = getOrCreateSessionIdClient();

@@ -22,7 +22,7 @@ import { useSidebar } from "@/context/sidebar-context";
 export interface Module {
   id: string;
   name: string;
-  description?: string | null;
+  context?: string | null;
   icon: string;
   lastStudied?: string | null;
   createdAt?: string | null;
