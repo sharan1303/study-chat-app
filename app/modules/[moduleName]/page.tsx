@@ -90,6 +90,7 @@ export default async function ModuleDetailPage({
   return (
     <ModuleDetailWrapper
       moduleName={resolvedParams.moduleName}
+      decodedModuleName={decodedModuleName}
       prefetchedResources={prefetchedResources}
     />
   );

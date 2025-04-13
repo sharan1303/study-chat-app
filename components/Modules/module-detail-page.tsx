@@ -27,9 +27,11 @@ import DeleteModule from "@/components/dialogs/DeleteModuleDialog";
  */
 export default function ModuleDetailWrapper({
   moduleName,
+  decodedModuleName,
   prefetchedResources = [],
 }: {
   moduleName: string;
+  decodedModuleName?: string;
   prefetchedResources?: Resource[];
 }) {
   const router = useRouter();
@@ -46,7 +48,12 @@ export default function ModuleDetailWrapper({
     errorMessage,
     setResources,
     updateModule,
-  } = useModuleData(moduleName, prefetchedResources, isSignedIn);
+  } = useModuleData(
+    moduleName,
+    prefetchedResources,
+    isSignedIn,
+    decodedModuleName
+  );
 
   // Handle retry function for cases where module might not load on first try
   const handleRetry = () => {
