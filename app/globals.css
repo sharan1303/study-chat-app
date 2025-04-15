@@ -100,6 +100,11 @@ div[contenteditable="true"] {
   border-radius: var(--radius);
 }
 
+/* Context menu cursor styling */
+.cursor-context-menu {
+  cursor: context-menu;
+}
+
 /* Chat input specific styling */
 .chat-input-area {
   background-color: hsl(var(--input)) !important;

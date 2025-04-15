@@ -1,28 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquare, X } from "lucide-react";
-import { cn, encodeModuleSlug } from "@/lib/utils";
-import { formatDate } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { ChatThread } from "./ChatThreadList";
+import ChatThreadList from "./ChatThreadList";
+import axios from "axios";
 import { toast } from "sonner";
-import { getOrCreateSessionIdClient } from "@/lib/session";
-import { useNavigation } from "./SidebarParts";
 
+// Add the Chat interface export to resolve the import error
 export interface Chat {
   id: string;
   title: string;
@@ -34,212 +19,117 @@ export interface Chat {
     icon: string;
     id: string;
   } | null;
-  _isOptimistic?: boolean; // Optional flag for optimistic UI updates
+  _isOptimistic?: boolean;
+}
+
+interface ChatHistoryProps {
+  collapsed?: boolean;
+  chats?: any[]; // Accept existing chats data from the server
+  loading?: boolean; // Accept loading state from parent
+  maxWidth?: string; // Add maxWidth prop to match ClientSidebar usage
 }
 
 export default function ChatHistory({
-  chats,
-  loading,
+  collapsed = false,
+  chats: initialChats,
+  loading: initialLoading = true,
   maxWidth,
-}: {
-  chats: Chat[];
-  loading: boolean;
-  maxWidth?: string;
-}) {
+}: ChatHistoryProps) {
+  const [chatThreads, setChatThreads] = useState<ChatThread[]>([]);
+  const [loading, setLoading] = useState(initialLoading);
   const pathname = usePathname();
-  const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
-  const [sessionId, setSessionId] = React.useState<string | null>(null);
-  const { navigate } = useNavigation();
 
-  // Load sessionId from localStorage on component mount (client-side only)
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedSessionId = getOrCreateSessionIdClient();
-      if (storedSessionId) {
-        setSessionId(storedSessionId);
-      }
+  // Transform raw chats data into ChatThread format
+  useEffect(() => {
+    if (initialChats && Array.isArray(initialChats)) {
+      const threads = initialChats.map((chat) => ({
+        id: chat.id,
+        title: chat.title || "Untitled Chat",
+        lastMessage: chat.lastMessage,
+        updatedAt: chat.updatedAt || chat.createdAt,
+        path: `/chat/${chat.id}`,
+      }));
+      setChatThreads(threads);
+      setLoading(false);
+    } else if (!initialChats) {
+      // Only fetch if no initial data was provided
+      fetchChats();
     }
+  }, [initialChats]);
+
+  // Load chat threads
+  const fetchChats = async () => {
+    try {
+      setLoading(true);
+      // Replace with your actual API endpoint for fetching chat threads
+      const response = await axios.get("/api/chats");
+
+      // Transform the data to match the ChatThread interface
+      const threads = response.data.map((chat: any) => ({
+        id: chat.id,
+        title: chat.title || "Untitled Chat",
+        lastMessage: chat.lastMessage,
+        updatedAt: chat.updatedAt || chat.createdAt,
+        path: `/chat/${chat.id}`,
+      }));
+
+      setChatThreads(threads);
+    } catch (error) {
+      console.error("Failed to load chat threads:", error);
+      toast.error("Failed to load chat history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Listen for chat updates
+  useEffect(() => {
+    const handleChatUpdate = () => {
+      fetchChats();
+    };
+
+    window.addEventListener("chat.updated", handleChatUpdate);
+    window.addEventListener("chat.created", handleChatUpdate);
+    window.addEventListener("chat.deleted", handleChatUpdate);
+
+    return () => {
+      window.removeEventListener("chat.updated", handleChatUpdate);
+      window.removeEventListener("chat.created", handleChatUpdate);
+      window.removeEventListener("chat.deleted", handleChatUpdate);
+    };
   }, []);
 
-  const isActiveChat = (chat: Chat) => {
-    // Special case for welcome chat - only check the welcome path
-    if (chat.title === "Welcome to Study Chat") {
-      return pathname === "/chat/welcome";
-    }
-
-    if (pathname === `/chat/${chat.id}`) {
-      return true;
-    }
-
-    if (chat.moduleId && chat.module) {
-      const encodedName = encodeModuleSlug(chat.module.name);
-      return pathname === `/${encodedName}/chat/${chat.id}`;
-    }
-
-    return false;
-  };
-
-  const navigateToChat = (chat: Chat) => {
-    // Modified navigation for welcome chat - always route to /chat/welcome
-    if (chat.title === "Welcome to Study Chat") {
-      navigate("/chat/welcome");
-    } else if (chat.moduleId && chat.module) {
-      const encodedName = encodeModuleSlug(chat.module.name);
-      navigate(`/${encodedName}/chat/${chat.id}`);
-    } else {
-      navigate(`/chat/${chat.id}`);
-    }
-  };
-
-  const handleDeleteChat = async (chat: Chat) => {
+  // Handle chat deletion
+  const handleDeleteChat = async (chatId: string) => {
     try {
-      // Build URL with sessionId for anonymous users
-      let url = `/api/chat/${chat.id}`;
-      if (sessionId) {
-        url += `?sessionId=${sessionId}`;
-      }
+      // Replace with your actual API endpoint for deleting a chat
+      await axios.delete(`/api/chats/${chatId}`);
 
-      const response = await fetch(url, {
-        method: "DELETE",
-        credentials: "include", // This ensures cookies are sent with the request
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error deleting chat: ${errorText}`);
-        throw new Error(`Failed to delete chat: ${errorText}`);
-      }
-
-      toast.success("Chat deleted successfully");
-
-      // Remove deleted chat from UI immediately
-      window.dispatchEvent(
-        new CustomEvent("chat-deleted", {
-          detail: { chatId: chat.id },
-        })
+      // Update local state by filtering out the deleted chat
+      setChatThreads((prevThreads) =>
+        prevThreads.filter((thread) => thread.id !== chatId)
       );
 
-      // If we're on the deleted chat's page, redirect to /chat
-      if (isActiveChat(chat)) {
-        navigate("/chat");
-      }
+      // Dispatch an event to notify other components
+      window.dispatchEvent(
+        new CustomEvent("chat.deleted", {
+          detail: { chatId },
+        })
+      );
     } catch (error) {
-      console.error("Error deleting chat:", error);
+      console.error("Failed to delete chat:", error);
       toast.error("Failed to delete chat");
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center px-4 pt-4 pb-2 border-t">
-        <h3 className="text-sm font-medium">Chat History</h3>
-      </div>
-
-      <div className="flex-1 overflow-hidden">
-        {loading ? (
-          <ScrollArea className="h-full">
-            <div className="space-y-1 p-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="px-2 py-3 group/chat">
-                  <div className="flex items-center">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4 rounded flex-shrink-0" />
-                      <Skeleton className="h-4 w-[180px] rounded" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        ) : chats.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground"></div>
-        ) : (
-          <ScrollArea className="h-full max-w-full">
-            <div className="space-y-1 p-2">
-              {chats
-                .filter(
-                  (chat, index, self) =>
-                    // Filter out duplicate welcome chats
-                    chat.title !== "Welcome to Study Chat" ||
-                    index ===
-                      self.findIndex((c) => c.title === "Welcome to Study Chat")
-                )
-                .map((chat) => (
-                  <div
-                    key={chat.id}
-                    className="group/chat"
-                    style={{ maxWidth: maxWidth }}
-                  >
-                    <div
-                      className={cn(
-                        "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
-                        isActiveChat(chat)
-                          ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
-                          : ""
-                      )}
-                    >
-                      <button
-                        type="button"
-                        className="flex-1 flex items-center justify-between truncate"
-                        onClick={() => {
-                          navigateToChat(chat);
-                        }}
-                      >
-                        <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-70px)]">
-                          <MessageSquare
-                            size={14}
-                            className="mr-2 mt-0.5 flex-shrink-0"
-                          />
-                          <span className="truncate">{chat.title}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground hidden group-hover/chat:inline whitespace-nowrap pr-1">
-                          {formatDate(chat.updatedAt)}
-                        </span>
-                      </button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 ml-1 opacity-0 group-hover/chat:opacity-100 hover:bg-red-500 hover:text-white transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setChatToDelete(chat);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Thread</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete &quot;{chat.title}
-                              &quot;? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              onClick={() => {
-                                if (chatToDelete) {
-                                  handleDeleteChat(chatToDelete);
-                                }
-                              }}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </ScrollArea>
-        )}
-      </div>
-    </div>
+    <ChatThreadList
+      threads={chatThreads}
+      loading={loading}
+      pathname={pathname}
+      collapsed={collapsed}
+      onDelete={handleDeleteChat}
+      maxWidth={maxWidth}
+    />
   );
 }
