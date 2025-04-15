@@ -17,6 +17,7 @@ import { Plus } from "lucide-react";
 import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { useNavigation } from "./SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
+import { ModuleContextMenu } from "./ModuleContextMenu";
 
 // Define the Module type here instead of importing from Sidebar
 export interface Module {
@@ -191,23 +192,30 @@ export default function ModuleList({
           ) : (
             <nav className="grid gap-1">
               {modules.map((module) => (
-                <button
-                  key={module.id}
-                  onClick={() => onModuleClick(module.id, module.name)}
-                  style={{ maxWidth: maxWidth }}
-                  className={cn(
-                    "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2",
-                    checkIsActive(`/modules/${encodeModuleSlug(module.name)}`)
-                      ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
-                      : "",
-                    collapsed && "justify-center"
-                  )}
-                >
-                  <span>{module.icon}</span>
-                  {!collapsed && (
-                    <span className="truncate">{module.name}</span>
-                  )}
-                </button>
+                <ModuleContextMenu key={module.id} module={module}>
+                  <div className="w-full relative cursor-context-menu">
+                    <button
+                      onClick={(e) => {
+                        onModuleClick(module.id, module.name);
+                      }}
+                      style={{ maxWidth: maxWidth }}
+                      className={cn(
+                        "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2 group",
+                        checkIsActive(
+                          `/modules/${encodeModuleSlug(module.name)}`
+                        )
+                          ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
+                          : "",
+                        collapsed && "justify-center"
+                      )}
+                    >
+                      <span>{module.icon}</span>
+                      {!collapsed && (
+                        <span className="truncate flex-1">{module.name}</span>
+                      )}
+                    </button>
+                  </div>
+                </ModuleContextMenu>
               ))}
             </nav>
           )}
