@@ -5,7 +5,7 @@ import { v4 as uuid } from "uuid";
 // Session storage key
 export const SESSION_ID_KEY = "anonymous_session_id";
 // Session cookie name for client-side cookie management
-export const SESSION_COOKIE_NAME = "study_app_session";
+export const SESSION_COOKIE_NAME = "study_chat_session";
 
 /**
  * Gets or creates a session ID on the client side using localStorage
@@ -50,13 +50,6 @@ export function getOrCreateSessionIdClient(): string {
     document.cookie = `${SESSION_COOKIE_NAME}=${sessionId}; path=/; max-age=31536000; ${
       secure ? "Secure;" : ""
     } SameSite=${sameSite}`; // 1 year
-
-    console.log(
-      `Session ID set: ${sessionId.substring(
-        0,
-        8
-      )}... (secure: ${secure}, sameSite: ${sameSite})`
-    );
 
     return sessionId;
   } catch (error) {

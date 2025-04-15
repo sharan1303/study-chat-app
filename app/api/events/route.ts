@@ -42,9 +42,6 @@ export async function GET(request: NextRequest) {
   clientAttempts.count++;
   clientAttempts.lastAttempt = Date.now();
 
-  console.log(
-    `SSE connection attempt #${clientAttempts.count} for user: ${clientId} (${clientIP})`
-  );
 
   // Check if this client already has an active connection
   const hasExistingConnection = global.sseClients?.some(
@@ -90,7 +87,6 @@ export async function GET(request: NextRequest) {
         lastActivity: Date.now(),
         send: (data: { type: string; data: EventData; timestamp: string }) => {
           try {
-            console.log(`Sending SSE event to client ${client.id}:`, data.type);
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
             );
@@ -108,34 +104,15 @@ export async function GET(request: NextRequest) {
           (c) => c.id === clientId
         );
         if (existingClientIndex !== -1) {
-          console.log(
-            `[SSE DEBUG] Removing existing client with ID ${clientId}`
-          );
           global.sseClients.splice(existingClientIndex, 1);
         }
       }
 
       global.sseClients.push(client);
-      console.log(
-        `[SSE DEBUG] SSE client added. Total clients: ${global.sseClients.length}. Client ID: ${client.id}`
-      );
-
-      // Print details about all connected clients
-      console.log(`[SSE DEBUG] All connected clients:`);
-      global.sseClients.forEach((c, index) => {
-        console.log(
-          `[SSE DEBUG] Client #${index + 1}: ID=${c.id}, connected=${new Date(
-            c.connectedAt
-          ).toISOString()}`
-        );
-      });
 
       // Send an acknowledgment to confirm the connection is established
       setTimeout(() => {
         try {
-          console.log(
-            `[SSE DEBUG] Sending connection acknowledgment to client ${client.id}`
-          );
           client.send({
             type: "CONNECTION_ACK",
             data: { id: client.id, connectedAt: client.connectedAt },

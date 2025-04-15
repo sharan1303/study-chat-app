@@ -287,10 +287,6 @@ const ResourceRow = memo(
     // Logging on initial render or URL change
     useEffect(() => {
       if (!loggedRef.current || resource.fileUrl !== urlForRegeneration) {
-        console.log("🔄 Initializing useResourceUrl hook with:", {
-          resourceId: resource.id,
-          urlForRegeneration,
-        });
         loggedRef.current = true;
       }
     }, [resource.id, resource.fileUrl, urlForRegeneration]);
@@ -318,14 +314,6 @@ const ResourceRow = memo(
 
       setIsUrlLoading(true);
 
-      console.log("🔍 Resource details:", {
-        id: resource.id,
-        title: resource.title,
-        type: resource.type,
-        hasFileUrl: Boolean(resource.fileUrl),
-        fileUrl: resource.fileUrl,
-      });
-
       // Check if the URL is a Supabase storage URL that needs regeneration
       const urlToCheck = resource.fileUrl;
       const isSupabaseStorageUrl =
@@ -334,12 +322,9 @@ const ResourceRow = memo(
           urlToCheck.includes("/object/sign/") ||
           urlToCheck.includes("?token="));
 
-      console.log("🔍 URL analysis:", { urlToCheck, isSupabaseStorageUrl });
 
       // First priority: URLs that need regeneration (Supabase storage URLs)
       if (isSupabaseStorageUrl) {
-        console.log("📄 Starting resource view process for:", resource.title);
-        console.log("🔍 Original storage URL:", urlToCheck);
 
         try {
           // Check if the token is expired or about to expire
@@ -373,20 +358,9 @@ const ResourceRow = memo(
                 const timeUntilExpiration = expirationTime - currentTime;
                 const isExpiredOrExpiringSoon = timeUntilExpiration < 60 * 1000; // 1 minute instead of 10 minutes
 
-                console.log("🔍 Token analysis:", {
-                  expirationTime: new Date(expirationTime).toISOString(),
-                  currentTime: new Date(currentTime).toISOString(),
-                  timeUntilExpiration:
-                    Math.floor(timeUntilExpiration / 1000) + " seconds",
-                  isExpiredOrExpiringSoon,
-                });
-
                 needsRegeneration = isExpiredOrExpiringSoon;
               } else {
                 // If we can't extract the token, regenerate to be safe
-                console.log(
-                  "⚠️ Could not extract token from URL, regenerating to be safe"
-                );
                 needsRegeneration = true;
               }
             } catch (tokenError) {
@@ -404,10 +378,8 @@ const ResourceRow = memo(
             );
             // Regenerate URL since it's expired or will expire soon
             const newUrl = await regenerateUrl();
-            console.log("🔄 regenerateUrl() returned:", newUrl);
 
             if (!newUrl) {
-              console.error("❌ URL regeneration failed - No URL returned");
               toast.error("Failed to generate access URL. Please try again.");
               setIsUrlLoading(false);
               return;
@@ -422,28 +394,19 @@ const ResourceRow = memo(
               fileUrl: newUrl,
             };
             onUpdate(updatedResource);
-          } else {
-            console.log("✅ URL is still valid, using existing URL");
           }
 
-          console.log("🌐 Opening URL:", urlToOpen);
           // Open the URL
           const newWindow = window.open(urlToOpen, "_blank");
-          console.log(
-            "🌐 Window open result:",
-            newWindow ? "Success" : "Failed/Blocked"
-          );
 
           // If window was blocked or failed to open
           if (!newWindow) {
-            console.log("⚠️ Window open failed, attempting clipboard fallback");
             toast.info(
               "URL has been generated but popup was blocked. URL copied to clipboard instead."
             );
             // Copy URL to clipboard as fallback
             try {
               await navigator.clipboard.writeText(urlToOpen);
-              console.log("📋 URL copied to clipboard");
             } catch (clipboardErr) {
               console.error("❌ Clipboard copy failed:", clipboardErr);
               toast.error("Could not copy URL to clipboard. Please try again.");
@@ -473,7 +436,6 @@ const ResourceRow = memo(
       }
       // Second check: Is this a regular URL that can be opened directly?
       else if (resource.fileUrl) {
-        console.log("🌐 Opening regular URL:", resource.fileUrl);
         window.open(resource.fileUrl, "_blank");
         setIsUrlLoading(false);
       }

@@ -58,7 +58,7 @@ export default function ModuleDetailsLoading() {
         <div className="my-5 h-px mx-4 bg-border" />
 
         {/* Uploads section skeleton */}
-        <div className="space-y-5 px-4 pt-1">
+        <div className="space-y-5 px-4 pt-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg">Uploads</h2>
           </div>

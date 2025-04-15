@@ -44,11 +44,6 @@ export default async function ModuleDetailPage({
     return notFound();
   }
 
-  // Log the module name being passed to the client component
-  console.log(
-    `Server: Passing moduleName: "${resolvedParams.moduleName}" to client component`
-  );
-
   return <ModuleDetailWrapper moduleName={resolvedParams.moduleName} />;
 }
 ```
@@ -75,12 +70,8 @@ useEffect(() => {
         return notFound();
       }
 
-      // Log the raw module name from URL params
-      console.log(`Raw module name from URL: "${moduleName}"`);
-
       // Decode the module name from URL parameters
       const decodedModuleName = decodeModuleSlug(moduleName);
-      console.log(`Looking for module with name: "${decodedModuleName}"`);
 
       // Validate decoded module name
       if (!decodedModuleName || decodedModuleName === "unnamed-module") {
@@ -91,7 +82,6 @@ useEffect(() => {
       }
 
       // First try an exact match query
-      console.log("Attempting exact match API query for:", decodedModuleName);
       try {
         const exactMatchData = await api.getModules(decodedModuleName, true);
         // ... rest of the function with module retrieval logic ...

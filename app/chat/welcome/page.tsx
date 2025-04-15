@@ -99,7 +99,6 @@ const getOrCreateWelcomeChatId = cache(
           error instanceof Error &&
           error.message.includes("Unique constraint")
         ) {
-          console.log("Welcome chat ID collision, using session-specific ID");
           const fallbackId = `welcome-${sessionId.substring(0, 8)}`;
           try {
             await prisma.chat.create({

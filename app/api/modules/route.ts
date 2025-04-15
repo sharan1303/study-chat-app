@@ -28,13 +28,7 @@ async function processModulesRequest(
   exactMatch?: boolean
 ) {
   try {
-    // Debug the auth state
-    console.log("API processModulesRequest auth state:", {
-      userId,
-      sessionId,
-      hasUserId: !!userId,
-      hasSessionId: !!sessionId,
-    });
+
 
     // Either userId or sessionId must be provided
     if (!userId && !sessionId) {
@@ -172,17 +166,11 @@ export async function POST(request: NextRequest) {
     if (userId) {
       // @ts-expect-error - Known property but type system disagrees
       data.userId = userId;
-      console.log(`Creating module with userId: ${userId}`);
     } else if (sessionId) {
       // @ts-expect-error - Known property but type system disagrees
       data.sessionId = sessionId;
-      console.log(`Creating module with sessionId: ${sessionId}`);
     }
 
-    console.log(
-      "Module data being sent to database:",
-      JSON.stringify(data, null, 2)
-    );
 
     // Create the module with Prisma
     const moduleData = await prisma.module.create({ data });
@@ -191,7 +179,6 @@ export async function POST(request: NextRequest) {
     // Broadcast event for real-time updates
     const targetId = userId || sessionId;
     if (targetId) {
-      console.log(`Broadcasting module creation event to client ${targetId}`);
       const broadcastResult = broadcastModuleCreated(moduleData, [targetId]);
       console.log("Broadcast result:", broadcastResult);
     } else {

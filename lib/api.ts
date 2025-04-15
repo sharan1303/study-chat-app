@@ -12,9 +12,6 @@ export const api = {
     // Always ensure we have a session ID by using getOrCreate
     const sessionId = getOrCreateSessionIdClient();
 
-    // Debug: Log session ID
-    console.log("API getModules using sessionId:", sessionId);
-
     const params = new URLSearchParams();
 
     if (sessionId) {
@@ -48,7 +45,6 @@ export const api = {
    */
   async getModule(moduleId: string) {
     const sessionId = getOrCreateSessionIdClient();
-    console.log("API getModule using sessionId:", sessionId);
 
     const params = new URLSearchParams();
     if (sessionId) {
@@ -73,7 +69,6 @@ export const api = {
    */
   async getModuleResources(moduleId: string) {
     const sessionId = getOrCreateSessionIdClient();
-    console.log("API getModuleResources using sessionId:", sessionId);
 
     const params = new URLSearchParams();
     if (sessionId) {
@@ -100,7 +95,6 @@ export const api = {
    */
   async createModule(data: { name: string; context?: string; icon?: string }) {
     const sessionId = getOrCreateSessionIdClient();
-    console.log("API createModule using sessionId:", sessionId);
 
     const params = new URLSearchParams();
     if (sessionId) {
@@ -131,7 +125,6 @@ export const api = {
    */
   async getChatHistory() {
     const sessionId = getOrCreateSessionIdClient();
-    console.log("API getChatHistory using sessionId:", sessionId);
 
     const params = new URLSearchParams();
     if (sessionId) {
@@ -153,7 +146,6 @@ export const api = {
 
     // Get the response as JSON - this returns an array directly
     const data = await response.json();
-    console.log(`API client received chats:`, data.length || 0);
 
     // Return the data directly as it's already in the right format (array of chats)
     return data;

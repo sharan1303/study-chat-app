@@ -36,8 +36,6 @@ export const serverApi = {
         process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || "http://localhost:3000";
       const fullUrl = `${baseUrl}/api/modules${queryString}`;
 
-      console.log(`Server API making request to: ${fullUrl}`);
-
       const response = await fetch(fullUrl, { cache: "no-store" });
 
       if (!response.ok) {
@@ -73,9 +71,6 @@ export const serverApi = {
 
       // Always use userId for authenticated users
       params.append("userId", userId);
-      console.log(
-        `Server: Using userId ${userId.substring(0, 8)}... for resources`
-      );
 
       const queryString = params.toString() ? `?${params.toString()}` : "";
 
@@ -83,8 +78,6 @@ export const serverApi = {
       const baseUrl =
         process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || "http://localhost:3000";
       const fullUrl = `${baseUrl}/api/modules/${moduleId}/resources${queryString}`;
-
-      console.log(`Server API making request to: ${fullUrl}`);
 
       const response = await fetch(fullUrl, { cache: "no-store" });
 

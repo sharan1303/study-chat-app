@@ -92,16 +92,12 @@ export default function ModulesPageContent({
 
         // Only fetch if we don't have prefetched data or the search query has changed
         if (!prefetchedModules.length || searchQuery) {
-          console.log("Client: Fetching modules:", searchQuery || "all");
           const data = await api.getModules(searchQuery || undefined);
 
           // Extract modules from the response object
           const modulesList = data.modules || [];
           setModules(modulesList);
           setFilteredModules(modulesList);
-          console.log(`Client: Received ${modulesList.length} modules`);
-        } else {
-          console.log("Client: Using prefetched modules, skipping fetch");
         }
       } catch (error) {
         console.error("Error fetching modules:", error);
@@ -215,7 +211,7 @@ export default function ModulesPageContent({
   function ResourcesWrapper() {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           {searchQuery && (
             <p className="text-muted-foreground">
               Showing results for: &quot;{searchQuery}&quot;
@@ -321,7 +317,7 @@ export default function ModulesPageContent({
         </div>
 
         {/* Scrollable content area (only this part scrolls) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth scrollbar-smooth pb-6 pl-6 pr-3">
+        <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth scrollbar-smooth pb-6 pl-6 pr-6">
           <TabsContent value="modules" className="h-full">
             {isLoading ? (
               <div className="flex items-center justify-center pt-10">

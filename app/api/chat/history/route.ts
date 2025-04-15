@@ -13,12 +13,6 @@ export async function GET(request: NextRequest) {
   const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
   const sessionId = sessionIdFromParam || sessionIdFromKey;
 
-  // Log authentication information for debugging
-  console.log(
-    `API: Chat history request - userId: ${userId || "none"}, sessionId: ${
-      sessionId ? `${sessionId.substring(0, 8)}...` : "none"
-    }`
-  );
 
   // Require either userId or sessionId
   if (!userId && !sessionId) {
@@ -91,13 +85,7 @@ export async function GET(request: NextRequest) {
       return true;
     });
 
-    if (userId) {
-      console.log(`Found ${chats.length} chats for user ${userId}`);
-    } else {
-      console.log(
-        `Found ${chats.length} chats for anonymous session ${sessionId}`
-      );
-    }
+
 
     return Response.json(filteredChats);
   } catch (error) {

@@ -164,14 +164,14 @@ export default function ModuleDetailWrapper({
           </div>
         </div>
 
-        <div className="space-y-13 px-3">
-          <div className="px-4">
+        <div className="space-y-13 px-7">
+          <div>
             <h2 className="text-lg mb-2">Context</h2>
             {/* Module context editor */}
             <ModuleContextEditor module={module} updateModule={updateModule} />
           </div>
 
-          <Separator className="my-5 mx-4" />
+          <Separator className="my-6" />
 
           {/* Resources section */}
           <ModuleResourcesSection

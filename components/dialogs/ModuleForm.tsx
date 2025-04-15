@@ -106,15 +106,12 @@ export const ModuleForm = ({
   };
 
   const onSubmit = async (values: FormValues) => {
-    console.log("Form submitted with values:", values);
     setFormError(null);
 
     try {
       setIsSubmitting(true);
 
       if (initialData) {
-        // Update existing module
-        console.log("Updating module:", initialData.id);
 
         // Check if we need to add sessionId
         let updateUrl = `/api/modules/${initialData.id}`;
@@ -123,7 +120,6 @@ export const ModuleForm = ({
         }
 
         const updateResponse = await axios.post(updateUrl, values);
-        console.log("Module updated response:", updateResponse.data);
         toast.success("Module updated");
 
         // First close the dialog
@@ -137,12 +133,9 @@ export const ModuleForm = ({
         }
         // SSE will handle the update, no need for additional refreshes
       } else {
-        // Create new module
-        console.log("Creating new module");
 
         try {
           const createdModule = await api.createModule(values);
-          console.log("Module created response:", createdModule);
 
           // Close the dialog
           triggerSuccess();

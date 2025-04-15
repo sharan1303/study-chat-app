@@ -26,10 +26,8 @@ export async function GET(request: NextRequest) {
       };
 
       if (clientId) {
-        console.log(`Broadcasting test event to client: ${clientId}`);
         global.broadcastEvent("chat.created", testData, [clientId as string]);
       } else {
-        console.log("Broadcasting test event to all clients");
         global.broadcastEvent("chat.created", testData);
       }
 

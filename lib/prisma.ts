@@ -14,7 +14,6 @@ const prismaOptions: Prisma.PrismaClientOptions = {
 
 // Create PrismaClient singleton
 function createPrismaClient() {
-  console.log("Creating new PrismaClient instance");
   const client = new PrismaClient(prismaOptions);
 
   // Only add middleware for query timing if VERBOSE_LOGGING is enabled
@@ -23,11 +22,6 @@ function createPrismaClient() {
       const before = Date.now();
       const result = await next(params);
       const after = Date.now();
-      console.log(
-        `Prisma Query: ${params.model}.${params.action} took ${
-          after - before
-        }ms`
-      );
       return result;
     });
   }
@@ -43,16 +37,12 @@ let prisma: PrismaClient;
 // In development, we attach to the global object to prevent multiple instances
 if (process.env.NODE_ENV === "development") {
   if (!global.prisma) {
-    console.log("Initializing global Prisma client (development)");
     global.prisma = createPrismaClient();
-  } else {
-    console.log("Using existing global Prisma client");
   }
   prisma = global.prisma;
 } else {
   // In production, create a new client for each serverless function
   // Connection pooling will handle the efficiency
-  console.log("Initializing Prisma client (production)");
   prisma = createPrismaClient();
 }
 

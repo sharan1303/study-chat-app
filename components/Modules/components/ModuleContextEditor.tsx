@@ -105,7 +105,7 @@ export default function ModuleContextEditor({
         </div>
       ) : (
         <p
-          className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 mr-4 mb-12 rounded min-h-[158px]"
+          className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 mb-12 text-sm rounded min-h-[158px]"
           onClick={() => setIsEditingContext(true)}
           tabIndex={0}
           onKeyDown={(e) => {

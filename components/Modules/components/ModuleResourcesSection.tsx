@@ -23,7 +23,7 @@ export default function ModuleResourcesSection({
   setResources,
 }: ModuleResourcesSectionProps) {
   return (
-    <div className="space-y-5 px-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg">Uploads</h2>
         {isSignedIn && !!resources.length && !isResourcesLoading && (
@@ -43,7 +43,7 @@ export default function ModuleResourcesSection({
         
         {!isResourcesLoading && showResourceUI && (
           resources.length === 0 && isSignedIn ? (
-            <div className="flex flex-col items-center justify-center space-y-5 rounded-lg border border-dashed p-8 pt-1 text-center">
+            <div className="flex flex-col items-center justify-center space-y-5 rounded-lg border border-dashed py-5 text-center">
               <h3 className="font-medium">
                 Access your knowledge base and upload your own files.
               </h3>

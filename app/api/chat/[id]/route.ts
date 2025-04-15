@@ -68,7 +68,6 @@ export async function DELETE(
 ) {
   try {
     const params = await props.params;
-    console.log(`DELETE request for chat ID: ${params.id}`);
 
     const { userId } = await auth();
 
@@ -81,24 +80,9 @@ export async function DELETE(
       const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
       if (cookieValue) {
         sessionId = cookieValue;
-        console.log(
-          `Found sessionId in cookies: ${sessionId.substring(0, 8)}...`
-        );
       }
     }
 
-    // Get all cookies from the request for debugging
-    const allCookies = request.cookies.getAll();
-    console.log(
-      `All cookies:`,
-      allCookies.map((c) => `${c.name}=${c.value.substring(0, 5)}...`)
-    );
-
-    console.log(
-      `Auth info - userId: ${userId || "none"}, sessionId: ${
-        sessionId ? `${sessionId.substring(0, 8)}...` : "none"
-      }`
-    );
 
     // Check if either userId or sessionId is provided
     if (!userId && !sessionId) {
@@ -127,11 +111,9 @@ export async function DELETE(
       }
 
       chatWhereClause.userId = user.id;
-      console.log(`Looking for chat with userId: ${user.id}`);
     } else if (sessionId) {
       // For anonymous users with session
       chatWhereClause.sessionId = sessionId;
-      console.log(`Looking for chat with sessionId: ${sessionId}`);
     }
 
     // Get chat if it exists
@@ -139,15 +121,12 @@ export async function DELETE(
       where: chatWhereClause,
     });
 
-    console.log(`Chat found: ${chat ? "Yes" : "No"}`);
-
     if (!chat) {
       return new Response("Chat not found", { status: 404 });
     }
 
     try {
       // Delete the chat
-      console.log(`Attempting to delete chat with ID: ${params.id}`);
       const deleteResult = await prisma.chat.delete({
         where: {
           id: params.id,

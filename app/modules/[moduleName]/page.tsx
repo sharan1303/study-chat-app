@@ -19,6 +19,10 @@ export default async function ModuleDetailPage({
 }: ModuleDetailPageProps) {
   // Await the params Promise to get the actual values
   const resolvedParams = await params;
+  
+  // Check authentication status
+  const { userId } = await auth();
+  const isAuthenticated = !!userId;
 
   // Check if module name exists and is valid
   if (
@@ -34,24 +38,8 @@ export default async function ModuleDetailPage({
     return notFound();
   }
 
-  // Log the module name being passed to the client component
-  console.log(
-    `Server: Passing moduleName: "${resolvedParams.moduleName}" to client component`
-  );
-
   // Decode the module name from URL parameters
   const decodedModuleName = decodeModuleSlug(resolvedParams.moduleName);
-
-  // Check authentication status
-  const { userId } = await auth();
-  const isAuthenticated = !!userId;
-
-  console.log(
-    "Server: Authentication status:",
-    isAuthenticated ? "Authenticated" : "Not authenticated"
-  );
-  console.log("Decoding slug:", resolvedParams.moduleName);
-  console.log("Decoded result:", decodedModuleName);
 
   // Prefetch module data to find the module ID
   let moduleId = null;
@@ -67,21 +55,15 @@ export default async function ModuleDetailPage({
 
       // Prefetch resources if authenticated
       if (isAuthenticated && moduleId) {
-        console.log(`Server: Prefetching resources for module ${moduleId}`);
         const resourcesData = await serverApi.getModuleResourcesServer(
           moduleId
         );
         prefetchedResources = resourcesData.resources || [];
-        console.log(
-          `Server: Prefetched ${prefetchedResources.length} resources`
-        );
       } else {
         console.log(
           "Server: Not prefetching resources - user not authenticated or no moduleId"
         );
       }
-    } else {
-      console.log("Server: No exact module match found");
     }
   } catch (error) {
     console.error("Error prefetching module data:", error);

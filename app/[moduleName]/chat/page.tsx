@@ -128,7 +128,6 @@ export default function NewModuleChat() {
 
         if (userId) {
           // Fetch the module with more precise query
-          console.log(`Looking for module with name: "${decodedModuleName}"`);
 
           try {
             // First try an exact match query (case insensitive)
@@ -143,7 +142,6 @@ export default function NewModuleChat() {
               const modules = data.modules || [];
 
               if (modules.length > 0 && isMounted) {
-                console.log(`Found exact match for module: ${modules[0].name}`);
                 const formattedModule = {
                   ...modules[0],
                   resources: modules[0].resources || [],
@@ -178,7 +176,6 @@ export default function NewModuleChat() {
               const modules = data.modules || [];
 
               if (modules.length > 0 && isMounted) {
-                console.log(`Found fuzzy match for module: ${modules[0].name}`);
                 const formattedModule = {
                   ...modules[0],
                   resources: modules[0].resources || [],

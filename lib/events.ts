@@ -54,16 +54,8 @@ export function broadcastEvent(
   // Initialize metrics
   const metrics = { sent: 0, skipped: 0 };
 
-  console.log(`[BROADCAST DEBUG] Broadcasting event type: ${eventType}`);
-  console.log(`[BROADCAST DEBUG] Event data:`, JSON.stringify(data));
-  console.log(`[BROADCAST DEBUG] Target IDs:`, targetIds);
-  console.log(
-    `[BROADCAST DEBUG] Number of connected clients:`,
-    global.sseClients?.length || 0
-  );
 
   if (!global.sseClients || global.sseClients.length === 0) {
-    console.log(`[BROADCAST DEBUG] No SSE clients to broadcast to`);
     return metrics;
   }
 
@@ -75,18 +67,12 @@ export function broadcastEvent(
 
     if (shouldSend) {
       try {
-        console.log(
-          `[BROADCAST DEBUG] Sending event to client ID: ${client.id}`
-        );
         client.send({
           type: eventType,
           data,
           timestamp: new Date().toISOString(),
         });
         metrics.sent++;
-        console.log(
-          `[BROADCAST DEBUG] Successfully sent event to client ID: ${client.id}`
-        );
       } catch (error) {
         console.error(
           `[BROADCAST DEBUG] Error sending event to client ID: ${client.id}`,
@@ -95,16 +81,10 @@ export function broadcastEvent(
         metrics.skipped++;
       }
     } else {
-      console.log(
-        `[BROADCAST DEBUG] Skipping client ID: ${client.id} (not in target list)`
-      );
       metrics.skipped++;
     }
   }
 
-  console.log(
-    `[BROADCAST DEBUG] Broadcast results: sent=${metrics.sent}, skipped=${metrics.skipped}`
-  );
   return metrics;
 }
 

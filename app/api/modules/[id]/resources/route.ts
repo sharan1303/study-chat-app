@@ -74,7 +74,6 @@ async function validateModuleAccess(
       };
     }
 
-    console.log("Module access validated successfully");
     return { success: true };
   } catch (error) {
     console.error("Error validating module access:", error);

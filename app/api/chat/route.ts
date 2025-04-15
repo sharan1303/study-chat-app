@@ -247,11 +247,6 @@ export async function POST(request: Request) {
                 const targetId = userId || sessionId;
 
                 if (targetId) {
-                  console.log(
-                    `Broadcasting chat creation to ${
-                      userId ? "user " + userId : "session " + sessionId
-                    }`
-                  );
                   broadcastChatCreated(chatEventData, [targetId]);
                 }
               } else {
@@ -291,13 +286,6 @@ export async function POST(request: Request) {
                   const targetId = userId || sessionId;
 
                   if (targetId) {
-                    console.log(
-                      `Broadcasting message creation for chat ${
-                        savedChat.id
-                      } to ${
-                        userId ? "user " + userId : "session " + sessionId
-                      }`
-                    );
                     broadcastMessageCreated(messageData, [targetId]);
                   }
                 } catch (error) {

@@ -14,11 +14,9 @@ export default async function ModulesPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  console.log("Server: Fetching modules server-side");
-
   // This small delay ensures the loading.tsx is displayed properly
   // It prevents the flash of blank content
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
   // Get search query from URL parameters - convert to undefined if null/empty
   // Await the searchParams to fix the "searchParams should be awaited" error
@@ -31,8 +29,6 @@ export default async function ModulesPage({
 
   // Fetch modules data server-side
   const modulesData = await serverApi.getModules(searchQuery);
-
-  console.log(`Server: Fetched ${modulesData.modules?.length || 0} modules`);
 
   return (
     <div className="flex min-h-screen w-full flex-col">
