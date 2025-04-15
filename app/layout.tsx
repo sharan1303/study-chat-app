@@ -18,6 +18,7 @@ import PrivacyConsentBar from "@/components/dialogs/PrivacyConsentBar";
 import { ClerkProviderWithTheme } from "@/components/Clerk/ClerkProviderWithTheme";
 import { GlobalModuleDialog } from "@/components/dialogs/GlobalModuleCreationDialog";
 import { GlobalResourceUploadDialog } from "@/components/dialogs/GlobalResourceUploadDialog";
+import { ChangelogDialog } from "@/components/dialogs/ChangelogDialog";
 
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -84,6 +85,7 @@ export default function RootLayout({
                   <GlobalModuleDialog />
                   <GlobalResourceUploadDialog />
                   <CommandK />
+                  <ChangelogDialog />
                 </SidebarProvider>
               </KeyboardShortcutsProvider>
               <SessionInitializer />

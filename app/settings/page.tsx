@@ -280,6 +280,15 @@ function SettingsContent() {
                     <kbd className="px-2 py-1 rounded bg-muted text-xs">B</kbd>
                   </div>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Copy Chat Message (Hover)</span>
+                  <div className="flex gap-1">
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">
+                      {modKey}
+                    </kbd>
+                    <kbd className="px-2 py-1 rounded bg-muted text-xs">C</kbd>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -324,9 +333,8 @@ function SettingsContent() {
                           className="hidden"
                           aria-label="Import modules JSON file"
                         />
-                        <Button onClick={handleImportClick} className="w-full">
-                          <Upload className="h-4 w-4 mr-2" />
-                          Import Modules from JSON (Coming Soon)
+                        <Button onClick={handleImportClick} className="w-full bg-muted-foreground hover:bg-muted-foreground">
+                          Coming Soon
                         </Button>
                       </div>
                     </div>
@@ -432,7 +440,8 @@ function SettingsContent() {
 
                       <Separator />
 
-                      <div className="flex items-center justify-between">
+                      {/* TODO: Add sync across devices */}
+                      {/* <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
                           <h3 className="font-medium">Sync Across Devices</h3>
                           <p className="text-sm text-muted-foreground">
@@ -440,7 +449,7 @@ function SettingsContent() {
                           </p>
                         </div>
                         <Switch defaultChecked />
-                      </div>
+                      </div> */}
 
                       <Separator className="my-6" />
 
