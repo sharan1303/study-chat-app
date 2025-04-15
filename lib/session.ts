@@ -1,14 +1,22 @@
 "use client";
 
 import { v4 as uuid } from "uuid";
+import Cookies from "js-cookie";
 
-// Session storage key
-export const SESSION_ID_KEY = "anonymous_session_id";
-// Session cookie name for client-side cookie management
+// Session storage constants
+export const SESSION_ID_KEY = "anonymous_session_id"; // For localStorage fallback
 export const SESSION_COOKIE_NAME = "study_chat_session";
 
+// Cookie options
+const COOKIE_OPTIONS = {
+  path: "/",
+  expires: 365, // 1 year
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+};
+
 /**
- * Gets or creates a session ID on the client side using localStorage
+ * Gets or creates a session ID using secure cookies with localStorage fallback
  */
 export function getOrCreateSessionIdClient(): string {
   if (typeof window === "undefined") {
@@ -17,39 +25,36 @@ export function getOrCreateSessionIdClient(): string {
   }
 
   try {
-    // Check localStorage for existing session ID
-    let sessionId = localStorage.getItem(SESSION_ID_KEY);
+    // Check for existing session ID in cookies first
+    let sessionId = Cookies.get(SESSION_COOKIE_NAME);
 
-    // If no session ID exists, create one
+    // If no session ID in cookies, check localStorage as fallback
     if (!sessionId) {
-      sessionId = uuid();
       try {
-        localStorage.setItem(SESSION_ID_KEY, sessionId);
-        // Verify the session was stored
-        const verifySessionId = localStorage.getItem(SESSION_ID_KEY);
-        if (verifySessionId !== sessionId) {
-          console.error("Failed to store session ID in localStorage");
-          return "";
+        const storedId = localStorage.getItem(SESSION_ID_KEY);
+        if (storedId) {
+          sessionId = storedId;
+          // Migrate localStorage session to cookie for better security
+          Cookies.set(SESSION_COOKIE_NAME, sessionId, COOKIE_OPTIONS);
         }
       } catch (error) {
-        console.error("Error storing session ID in localStorage:", error);
-        return "";
+        // Ignore localStorage errors
       }
     }
 
-    // Set cookie attributes for cross-environment compatibility
-    const isLocalhost =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
+    // If no session ID exists anywhere, create one
+    if (!sessionId) {
+      sessionId = uuid();
+      // Set in cookie with proper security options
+      Cookies.set(SESSION_COOKIE_NAME, sessionId, COOKIE_OPTIONS);
 
-    // Determine appropriate cookie settings based on environment
-    const secure = !isLocalhost; // Only use Secure in production
-    const sameSite = "Lax"; // Good default for most applications
-
-    // Also store in a cookie as backup with proper security settings
-    document.cookie = `${SESSION_COOKIE_NAME}=${sessionId}; path=/; max-age=31536000; ${
-      secure ? "Secure;" : ""
-    } SameSite=${sameSite}`; // 1 year
+      // Also store in localStorage as fallback
+      try {
+        localStorage.setItem(SESSION_ID_KEY, sessionId);
+      } catch (error) {
+        // Ignore localStorage errors, we have cookies as primary storage
+      }
+    }
 
     return sessionId;
   } catch (error) {
@@ -59,7 +64,7 @@ export function getOrCreateSessionIdClient(): string {
 }
 
 /**
- * Gets the current session ID from localStorage
+ * Gets the current session ID prioritizing cookies over localStorage
  */
 export function getSessionIdClient(): string {
   if (typeof window === "undefined") {
@@ -67,26 +72,39 @@ export function getSessionIdClient(): string {
   }
 
   try {
-    // Try localStorage first
-    const localStorageSessionId = localStorage.getItem(SESSION_ID_KEY);
-    if (localStorageSessionId) {
-      return localStorageSessionId;
+    // Try cookies first (more secure)
+    const cookieSessionId = Cookies.get(SESSION_COOKIE_NAME);
+    if (cookieSessionId) {
+      return cookieSessionId;
     }
 
-    // If not in localStorage, try cookie
-    const cookies = document.cookie.split(";");
-    for (const cookie of cookies) {
-      const [name, value] = cookie.trim().split("=");
-      if (name === SESSION_COOKIE_NAME && value) {
-        // Found in cookie, restore to localStorage
-        localStorage.setItem(SESSION_ID_KEY, value);
-        return value;
+    // Fallback to localStorage if no cookie exists
+    try {
+      const localStorageSessionId = localStorage.getItem(SESSION_ID_KEY);
+      if (localStorageSessionId) {
+        // Found in localStorage but not in cookies, restore to cookies
+        Cookies.set(SESSION_COOKIE_NAME, localStorageSessionId, COOKIE_OPTIONS);
+        return localStorageSessionId;
       }
+    } catch (error) {
+      // Ignore localStorage errors
     }
 
     return "";
   } catch (error) {
     console.error("Error getting session ID:", error);
     return "";
+  }
+}
+
+/**
+ * Removes the session ID from both cookies and localStorage
+ */
+export function clearSessionId(): void {
+  try {
+    Cookies.remove(SESSION_COOKIE_NAME, { path: "/" });
+    localStorage.removeItem(SESSION_ID_KEY);
+  } catch (error) {
+    console.error("Error clearing session ID:", error);
   }
 }
