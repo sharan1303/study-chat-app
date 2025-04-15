@@ -108,15 +108,46 @@ export async function GET(request: NextRequest) {
           (c) => c.id === clientId
         );
         if (existingClientIndex !== -1) {
-          console.log(`Removing existing client with ID ${clientId}`);
+          console.log(
+            `[SSE DEBUG] Removing existing client with ID ${clientId}`
+          );
           global.sseClients.splice(existingClientIndex, 1);
         }
       }
 
       global.sseClients.push(client);
       console.log(
-        `SSE client added. Total clients: ${global.sseClients.length}. Client ID: ${client.id}`
+        `[SSE DEBUG] SSE client added. Total clients: ${global.sseClients.length}. Client ID: ${client.id}`
       );
+
+      // Print details about all connected clients
+      console.log(`[SSE DEBUG] All connected clients:`);
+      global.sseClients.forEach((c, index) => {
+        console.log(
+          `[SSE DEBUG] Client #${index + 1}: ID=${c.id}, connected=${new Date(
+            c.connectedAt
+          ).toISOString()}`
+        );
+      });
+
+      // Send an acknowledgment to confirm the connection is established
+      setTimeout(() => {
+        try {
+          console.log(
+            `[SSE DEBUG] Sending connection acknowledgment to client ${client.id}`
+          );
+          client.send({
+            type: "CONNECTION_ACK",
+            data: { id: client.id, connectedAt: client.connectedAt },
+            timestamp: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.error(
+            `[SSE DEBUG] Error sending acknowledgment to client ${client.id}:`,
+            error
+          );
+        }
+      }, 500);
 
       // Define cleanup when connection is closed
       request.signal.addEventListener("abort", () => {

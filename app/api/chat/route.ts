@@ -32,6 +32,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { messages, chatId, moduleId } = body;
     const sessionId = body.sessionId || null;
+    // We keep this parameter but don't use it anymore since we always want to broadcast AI responses
+    // const skipMessageBroadcast = body.skipMessageBroadcast || false;
+    const optimisticChatId = body.optimisticChatId || null;
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -156,30 +159,42 @@ export async function POST(request: Request) {
       const result = streamText({
         model: google("gemini-2.0-flash"),
         messages: formattedMessages,
-        temperature: 0.10,
+        temperature: 0.1,
         onFinish: async ({ text }) => {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
-            try {
-              const isNewChat = !chatId; // No chatId means it's a new chat
+            let isNewChat = true;
 
-              // Create data for upsert
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const chatData: any = {
+            try {
+              // Check if this chat already exists
+              const existingChat = await prisma.chat.findUnique({
+                where: { id: requestedChatId },
+              });
+
+              isNewChat = !existingChat;
+
+              // If it's a new chat, prepare data for creation
+              const chatData: {
+                id: string;
+                title: string;
+                moduleId: string | null;
+                messages: { role: string; content: string }[];
+                createdAt: Date;
+                updatedAt: Date;
+                userId?: string;
+                sessionId?: string;
+              } = {
                 id: requestedChatId,
                 title: chatTitle,
+                moduleId: moduleId,
                 messages: messages.concat([
                   { role: "assistant", content: text },
                 ]),
-                moduleId: isModuleMode ? moduleId : null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
               };
 
-              // Special handling for welcome chat
-              const isWelcomeChat =
-                requestedChatId === "welcome-chat" ||
-                chatTitle === "Welcome to Study Chat";
-
-              // Add either userId or sessionId based on authentication state
+              // Add user ID or session ID based on authentication status
               if (userId) {
                 chatData.userId = userId;
               } else if (sessionId) {
@@ -187,7 +202,7 @@ export async function POST(request: Request) {
               }
 
               // If this chat should be forced to appear as the oldest, set an old timestamp
-              if ((forceOldest && isNewChat) || isWelcomeChat) {
+              if (forceOldest && isNewChat) {
                 const oneYearAgo = new Date();
                 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
                 chatData.createdAt = oneYearAgo;
@@ -215,6 +230,17 @@ export async function POST(request: Request) {
                   createdAt: savedChat.createdAt,
                   updatedAt: savedChat.updatedAt,
                   sessionId: sessionId,
+                  // Include optimisticChatId if it was provided, to help client replace the optimistic chat
+                  optimisticChatId: optimisticChatId,
+                  // Include module info if available
+                  module: savedChat.moduleId
+                    ? {
+                        id: savedChat.moduleId,
+                        // These will be populated by the client based on its modules list
+                        name: null,
+                        icon: null,
+                      }
+                    : null,
                 };
 
                 // Determine target ID for broadcast
@@ -229,13 +255,37 @@ export async function POST(request: Request) {
                   broadcastChatCreated(chatEventData, [targetId]);
                 }
               } else {
-                // For existing chats, broadcast message created event
+                // For existing chats, always broadcast message created event
                 try {
+                  // Get any module details if this is a module chat
+                  let moduleDetails = null;
+                  if (savedChat.moduleId) {
+                    try {
+                      const moduleData = await prisma.module.findUnique({
+                        where: { id: savedChat.moduleId },
+                        select: { id: true, name: true, icon: true },
+                      });
+                      if (moduleData) {
+                        moduleDetails = moduleData;
+                      }
+                    } catch (err) {
+                      console.error(
+                        "Error fetching module details for event:",
+                        err
+                      );
+                    }
+                  }
+
                   const messageData = {
                     id: generateId(),
                     chatId: savedChat.id,
                     chatTitle: savedChat.title,
                     updatedAt: savedChat.updatedAt.toISOString(),
+                    moduleId: savedChat.moduleId,
+                    // Include optimistic chat ID if it was provided
+                    optimisticChatId: optimisticChatId,
+                    // Include module info if available for better client-side handling
+                    module: moduleDetails,
                   };
 
                   const targetId = userId || sessionId;

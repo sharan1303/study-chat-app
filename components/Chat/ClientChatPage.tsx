@@ -64,6 +64,11 @@ export default function ClientChatPage({
 }) {
   const [showLogo, setShowLogo] = React.useState(false);
 
+  // Store the optimistic chat ID
+  const [optimisticChatId, setOptimisticChatId] = React.useState<string | null>(
+    null
+  );
+
   // After mounting, we have access to the theme
   React.useEffect(() => {
     // Add a small delay before showing the logo to prevent flashing
@@ -168,6 +173,7 @@ export default function ClientChatPage({
         sessionId: !isAuthenticated ? sessionId : undefined,
         title: initialTitle,
         forceOldest: forceOldest,
+        optimisticChatId: optimisticChatId,
       },
       onResponse: (response: Response) => {
         // Try to extract model information from headers if available
@@ -221,6 +227,7 @@ export default function ClientChatPage({
       router,
       initialTitle,
       forceOldest,
+      optimisticChatId,
     ]
   );
 
@@ -253,27 +260,6 @@ export default function ClientChatPage({
     }
   }, [moduleDetails, router]);
 
-  // Add a callback for when the first message is sent
-  const handleFirstMessageSent = React.useCallback(
-    (message: string) => {
-      // Update the chat history optimistically when the first message is sent
-      if (sidebarChatUpdater.current && messages.length === 0) {
-        // Create a chat title from the first message
-        const chatTitle =
-          message.substring(0, 30) + (message.length > 30 ? "..." : "");
-        sidebarChatUpdater.current(chatTitle, activeModule, forceOldest);
-
-        // Log for anonymous users
-        if (!isAuthenticated && sessionId) {
-          console.log(
-            `Creating optimistic chat for anonymous user with sessionId: ${sessionId}`
-          );
-        }
-      }
-    },
-    [messages.length, isAuthenticated, activeModule, sessionId, forceOldest]
-  );
-
   // Handle form submission with optimized event handler
   const handleFormSubmit = React.useCallback(
     (e: React.FormEvent) => {
@@ -282,16 +268,41 @@ export default function ClientChatPage({
         // Track if this is the first message for the optimistic UI update
         const isFirstMessage = messages.length === 0;
 
+        // Get optimistic chat ID if we have one (to include in the broadcast)
+        let newOptimisticChatId = null;
+        if (isFirstMessage && sidebarChatUpdater.current) {
+          // Create a chat title from the first message
+          const chatTitle =
+            input.trim().substring(0, 30) +
+            (input.trim().length > 30 ? "..." : "");
+
+          // Create optimistic chat and get its ID
+          newOptimisticChatId = sidebarChatUpdater.current(
+            chatTitle,
+            activeModule,
+            forceOldest
+          );
+
+          // Update the state with the new optimistic chat ID
+          setOptimisticChatId(newOptimisticChatId);
+        }
+
         // Submit the form
         handleSubmit(e);
 
-        // If this is the first message, trigger the optimistic UI update
-        if (isFirstMessage) {
-          handleFirstMessageSent(input.trim());
-        }
+        // Note: We're removing the USER_MESSAGE_SENT broadcast code here
+        // This will prevent client-side sidebar updates when user sends a message
+        // The sidebar will only update when the server responds with AI's message
       }
     },
-    [input, chatLoading, handleSubmit, messages.length, handleFirstMessageSent]
+    [
+      input,
+      chatLoading,
+      handleSubmit,
+      messages.length,
+      activeModule,
+      forceOldest,
+    ]
   );
 
   // Handle keyboard event

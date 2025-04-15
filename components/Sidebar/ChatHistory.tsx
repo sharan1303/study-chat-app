@@ -51,19 +51,10 @@ export default function ChatHistory({
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const { navigate } = useNavigation();
 
-  // Debug: Log when chat data changes
-  React.useEffect(() => {
-    console.log("ChatHistory received updated chats:", chats.length);
-  }, [chats]);
-
   // Load sessionId from localStorage on component mount (client-side only)
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const storedSessionId = getOrCreateSessionIdClient();
-      console.log(
-        "[ChatHistory] Retrieved sessionId:",
-        storedSessionId?.substring(0, 8) + "..."
-      );
       if (storedSessionId) {
         setSessionId(storedSessionId);
       }
@@ -106,28 +97,12 @@ export default function ChatHistory({
       let url = `/api/chat/${chat.id}`;
       if (sessionId) {
         url += `?sessionId=${sessionId}`;
-        console.log(
-          `[ChatHistory] Deleting chat using sessionId: ${sessionId.substring(
-            0,
-            8
-          )}...`
-        );
-      } else {
-        console.log(
-          `[ChatHistory] Warning: Attempting to delete chat without sessionId`
-        );
       }
-
-      console.log(
-        `[ChatHistory] Deleting chat with ID: ${chat.id}, URL: ${url}`
-      );
 
       const response = await fetch(url, {
         method: "DELETE",
         credentials: "include", // This ensures cookies are sent with the request
       });
-
-      console.log(`Delete response status: ${response.status}`);
 
       if (!response.ok) {
         const errorText = await response.text();
