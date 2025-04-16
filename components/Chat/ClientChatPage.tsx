@@ -72,6 +72,11 @@ export default function ClientChatPage({
     null
   );
 
+  React.useEffect(() => {
+    console.log("Current optimisticChatId:", optimisticChatId);
+    console.log("Is new chat:", isNewChat);
+  }, [optimisticChatId, isNewChat]);
+
   // Track if this is a new chat to update title on first message
   const [isFirstMessage, setIsFirstMessage] = React.useState(isNewChat);
   const [displayTitle, setDisplayTitle] = React.useState(
@@ -131,6 +136,7 @@ export default function ClientChatPage({
           moduleId: string | null,
           forceOldest?: boolean
         ) => string;
+        __hasPendingOptimisticChat?: boolean;
       };
       if (win.__sidebarChatUpdater) {
         sidebarChatUpdater.current = win.__sidebarChatUpdater;
@@ -178,10 +184,10 @@ export default function ClientChatPage({
   // Update the sidebar for a new chat immediately
   React.useEffect(() => {
     if (isNewChat && sidebarChatUpdater.current && !optimisticChatId) {
-      const optimisticId = sidebarChatUpdater.current("New Chat", activeModule);
-      setOptimisticChatId(optimisticId);
+      // We're removing optimistic chat creation
+      // We'll let the chat be added to history only after the first message is sent
     }
-  }, [isNewChat, activeModule, optimisticChatId]);
+  }, [isNewChat, activeModule, optimisticChatId, forceOldest]);
 
   // Reference to the scroll container - needed for auto-scrolling
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -220,6 +226,7 @@ export default function ClientChatPage({
         optimisticChatId: optimisticChatId,
       },
       onResponse: (response: Response) => {
+        console.log("Chat API response received, status:", response.status);
         // Try to extract model information from headers if available
         const modelHeader = response.headers.get("x-model-used");
         if (modelHeader) {
@@ -300,12 +307,7 @@ export default function ClientChatPage({
         firstUserMessage + (firstUserMessage.length >= 50 ? "..." : "");
       setDisplayTitle(displayedTitle);
 
-      // Update the sidebar if available
-      if (sidebarChatUpdater.current) {
-        // Use the optimistic chat ID if available, otherwise use current chat ID
-        const chatIdToUpdate = optimisticChatId || chatId;
-        sidebarChatUpdater.current(displayedTitle, activeModule);
-      }
+      // We no longer need to update the sidebar here as the server event will handle it
 
       setIsFirstMessage(false);
       hasUpdatedTitle.current = true;
@@ -322,19 +324,8 @@ export default function ClientChatPage({
 
   // If using optimistic updates, update the sidebar when a first message is sent
   React.useEffect(() => {
-    if (
-      isNewChat &&
-      messages.length > 0 &&
-      messages[0].role === "user" &&
-      optimisticChatId &&
-      sidebarChatUpdater.current
-    ) {
-      // Update the chat title to the first message
-      const firstMessage = messages[0].content.substring(0, 50);
-      const displayTitle =
-        firstMessage + (firstMessage.length >= 50 ? "..." : "");
-      sidebarChatUpdater.current(displayTitle, activeModule);
-    }
+    // We no longer need this effect as we're relying on the server event
+    // to add the chat to the sidebar after the first message
   }, [messages, isNewChat, activeModule, optimisticChatId]);
 
   // Handle form submission with optimized event handler

@@ -167,11 +167,17 @@ export async function POST(request: Request) {
 
             try {
               // Check if this chat already exists
+              console.log("Checking if chat exists with ID:", requestedChatId);
               const existingChat = await prisma.chat.findUnique({
                 where: { id: requestedChatId },
               });
 
               isNewChat = !existingChat;
+              console.log(
+                "Is this a new chat?",
+                isNewChat,
+                existingChat ? "Chat exists" : "Chat does not exist"
+              );
 
               // If it's a new chat, prepare data for creation
               const chatData: {
@@ -247,9 +253,49 @@ export async function POST(request: Request) {
                 const targetId = userId || sessionId;
 
                 if (targetId) {
+                  console.log(
+                    "Broadcasting chat.created event for new chat:",
+                    savedChat.id
+                  );
+                  console.log("Target ID for broadcast:", targetId);
                   broadcastChatCreated(chatEventData, [targetId]);
+                } else {
+                  console.warn(
+                    "No target ID found for broadcasting chat.created event"
+                  );
                 }
               } else {
+                console.log(
+                  "Chat already exists, not sending chat.created event"
+                );
+
+                // TEMPORARY FIX: Also send chat.created for existing chats to help debug
+                const chatEventData = {
+                  id: savedChat.id,
+                  title: savedChat.title,
+                  moduleId: savedChat.moduleId,
+                  createdAt: savedChat.createdAt,
+                  updatedAt: savedChat.updatedAt,
+                  sessionId: sessionId,
+                  optimisticChatId: optimisticChatId,
+                  module: savedChat.moduleId
+                    ? {
+                        id: savedChat.moduleId,
+                        name: null,
+                        icon: null,
+                      }
+                    : null,
+                };
+
+                const targetId = userId || sessionId;
+                if (targetId) {
+                  console.log(
+                    "TEMPORARY DEBUG: Broadcasting chat.created for existing chat:",
+                    savedChat.id
+                  );
+                  broadcastChatCreated(chatEventData, [targetId]);
+                }
+
                 // For existing chats, always broadcast message created event
                 try {
                   // Get any module details if this is a module chat
