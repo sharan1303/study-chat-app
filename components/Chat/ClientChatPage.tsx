@@ -122,7 +122,8 @@ export default function ClientChatPage({
     | ((
         title: string,
         moduleId: string | null,
-        forceOldest?: boolean
+        forceOldest?: boolean,
+        currentPath?: string
       ) => string)
     | null
   >(null);
@@ -134,7 +135,8 @@ export default function ClientChatPage({
         __sidebarChatUpdater?: (
           title: string,
           moduleId: string | null,
-          forceOldest?: boolean
+          forceOldest?: boolean,
+          currentPath?: string
         ) => string;
         __hasPendingOptimisticChat?: boolean;
       };
@@ -333,10 +335,41 @@ export default function ClientChatPage({
     (e: React.FormEvent) => {
       e.preventDefault();
       if (input.trim() && !chatLoading) {
+        // For new chats, add an optimistic entry to the sidebar when sending first message
+        if (isNewChat && messages.length === 0 && sidebarChatUpdater.current) {
+          // Create a first message-based title
+          const title =
+            input.trim().substring(0, 50) + (input.length > 50 ? "..." : "");
+          console.log("Adding optimistic chat to sidebar:", title);
+
+          // Save the current path to help with maintaining the active state
+          const currentPath = window.location.pathname;
+
+          // Add the chat optimistically to the sidebar and store the ID
+          const newOptimisticId = sidebarChatUpdater.current(
+            title,
+            activeModule,
+            false,
+            currentPath
+          );
+          if (newOptimisticId) {
+            setOptimisticChatId(newOptimisticId);
+            console.log("Set optimistic chat ID:", newOptimisticId);
+          }
+        }
+
         handleSubmit(e);
       }
     },
-    [input, chatLoading, handleSubmit]
+    [
+      input,
+      chatLoading,
+      handleSubmit,
+      isNewChat,
+      messages.length,
+      sidebarChatUpdater,
+      activeModule,
+    ]
   );
 
   // Handle keyboard event
