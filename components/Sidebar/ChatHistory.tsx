@@ -250,6 +250,16 @@ export default function ChatHistory({
               >
                 <ExternalLink className="mr-2 h-4 w-4" /> Open in new tab
               </ContextMenuItem>
+              {chat.moduleId && chat.module && (
+                <ContextMenuItem
+                  onClick={() =>
+                    navigate(`/${encodeModuleSlug(chat.module?.name || "")}`)
+                  }
+                  className="cursor-pointer text-xs"
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" /> Go to module
+                </ContextMenuItem>
+              )}
               <ContextMenuSeparator />
               <ContextMenuItem
                 onClick={() => setChatToDelete(chat)}

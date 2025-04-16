@@ -144,10 +144,10 @@ export default function ModulesPageContent({
     };
 
     // Listen for the module-created event
-    window.addEventListener("module-created", handleModuleCreated);
+    window.addEventListener("module.created", handleModuleCreated);
 
     return () => {
-      window.removeEventListener("module-created", handleModuleCreated);
+      window.removeEventListener("module.created", handleModuleCreated);
     };
   }, [isLoaded, sessionLoading, searchQuery, activeTab]);
 

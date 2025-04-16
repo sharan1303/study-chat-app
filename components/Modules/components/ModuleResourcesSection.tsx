@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { ResourceUploadButton } from "@/components/Resource/resource-upload-button";
 import { ResourceTable } from "@/components/Resource/resource-table";
 import { Module, Resource } from "../module-detail-page";
+import { SignInButton } from "@clerk/nextjs";
 
 interface ModuleResourcesSectionProps {
   module: Module;
@@ -40,9 +41,20 @@ export default function ModuleResourcesSection({
         )}
 
         {/* Only render actual content after loading is complete AND showResourceUI is true */}
-        
-        {!isResourcesLoading && showResourceUI && (
-          resources.length === 0 && isSignedIn ? (
+
+        {!isSignedIn && (
+          <div className="flex flex-col items-center justify-center space-y-5 rounded-lg border border-dashed py-5 text-center">
+            <h3 className="font-medium">
+              Log in to upload your own files.
+            </h3>
+            <SignInButton mode="modal"/>
+          </div>
+        )}
+
+        {isSignedIn && (
+          <>
+            {!isResourcesLoading && showResourceUI && (
+              resources.length === 0 && isSignedIn ? (
             <div className="flex flex-col items-center justify-center space-y-5 rounded-lg border border-dashed py-5 text-center">
               <h3 className="font-medium">
                 Access your knowledge base and upload your own files.
@@ -88,6 +100,8 @@ export default function ModuleResourcesSection({
               showModuleColumn={false}
             />
           )
+            )}
+          </>
         )}
       </div>
     </div>

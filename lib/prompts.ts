@@ -39,14 +39,19 @@ export const WELCOME_RESPONSE = {
  * @param moduleName - The name of the module
  * @returns A message object with the welcome content
  */
-export const createModuleWelcomeMessage = (moduleName: string | null) => ({
-  id: "welcome",
-  role: "assistant" as const,
-  content: moduleName
-    ? `👋 Welcome to the "${moduleName}" module! I'm ready to help you learn about this topic\n\nWhat would you like to know?`
-    : "👋 Welcome to Study Chat! I'm here to help you learn.\n\n" +
-      "What would you like to study today?",
-});
+export const createModuleWelcomeMessage = (moduleName: string | null) => {
+  // Check if moduleName is null, undefined, or an empty string
+  const hasValidModuleName = moduleName && moduleName.trim().length > 0;
+
+  return {
+    id: "welcome",
+    role: "assistant" as const,
+    content: hasValidModuleName
+      ? `👋 Welcome to the "${moduleName}" module! I'm ready to help you learn \n\nWhat would you like to know?`
+      : "👋 Welcome to Study Chat! I'm here to help you learn.\n\n" +
+        "What would you like to study today?",
+  };
+};
 
 /**
  * System prompt for the general chat assistant.
