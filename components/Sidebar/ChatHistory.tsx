@@ -199,7 +199,7 @@ export default function ChatHistory({
         {chats.map((chat) => (
           <ContextMenu key={chat.id}>
             <ContextMenuTrigger className="w-full">
-              <div className="group/chat relative px-2">
+              <div className="group/chat relative px-1">
                 <div
                   className={cn(
                     "w-full text-left py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
@@ -211,7 +211,7 @@ export default function ChatHistory({
                 >
                   <button
                     type="button"
-                    className="flex-1 flex items-center gap-2 truncate pl-2"
+                    className="flex-1 flex items-center gap-2 truncate pl-3"
                     onClick={() => navigateToChat(chat)}
                   >
                     {chat.module ? (
@@ -225,7 +225,7 @@ export default function ChatHistory({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 opacity-0 group-hover/chat:opacity-100 hover:text-white hover:bg-red-600 transition-opacity"
+                    className="h-6 w-6 opacity-0 group-hover/chat:opacity-100 hover:text-white hover:bg-red-600 transition-opacity mr-1"
                     onClick={(e) => {
                       e.stopPropagation();
                       setChatToDelete(chat);
@@ -237,7 +237,7 @@ export default function ChatHistory({
 
                 {/* Module tooltip on hover */}
                 {chat.module && (
-                  <div className="absolute mr-1 left-0 right-12 top-0 bottom-0 flex items-center opacity-0 group-hover/chat:opacity-100 pointer-events-none">
+                  <div className="absolute mr-3 left-0 right-12 top-0 bottom-0 flex items-center opacity-0 group-hover/chat:opacity-100 pointer-events-none">
                     <div className="bg-popover text-popover-foreground text-xs px-2 py-1 rounded-md shadow-md ml-auto transform translate-x-4 hidden group-hover/chat:block">
                       <span className="flex items-center gap-1">
                         <span className="truncate">{chat.module.name}</span>
@@ -288,7 +288,7 @@ export default function ChatHistory({
   return (
     <div className="h-full overflow-hidden">
       <div className="flex items-center justify-between px-4 h-8">
-        <h2 className="text-xs font-semibold">Chat History</h2>
+        <h2 className="text-sm font-semibold">Chat History</h2>
       </div>
       <ScrollArea className="h-full pb-8">
         <div className="py-1">

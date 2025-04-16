@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
   clientAttempts.count++;
   clientAttempts.lastAttempt = Date.now();
 
-
   // Check if this client already has an active connection
   const hasExistingConnection = global.sseClients?.some(
     (c) => c.id === clientId
@@ -60,6 +59,10 @@ export async function GET(request: NextRequest) {
     "Cache-Control": "no-cache, no-transform",
     Connection: "keep-alive",
     "X-Accel-Buffering": "no", // Disable buffering in Nginx
+    // Add CORS headers to allow EventSource connections
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Allow-Headers": "Content-Type",
   });
 
   // Create a readable stream for sending events
@@ -71,6 +74,9 @@ export async function GET(request: NextRequest) {
       controller.enqueue(
         encoder.encode(`data: ${JSON.stringify({ type: "connected" })}\n\n`)
       );
+
+      // Add an initial comment to help keep the connection alive with some proxies
+      controller.enqueue(encoder.encode(": keep-alive comment\n\n"));
 
       // Store client info in global array for broadcasting
       if (!global.sseClients) {

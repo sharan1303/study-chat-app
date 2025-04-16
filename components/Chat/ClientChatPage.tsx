@@ -72,11 +72,6 @@ export default function ClientChatPage({
     null
   );
 
-  React.useEffect(() => {
-    console.log("Current optimisticChatId:", optimisticChatId);
-    console.log("Is new chat:", isNewChat);
-  }, [optimisticChatId, isNewChat]);
-
   // Track if this is a new chat to update title on first message
   const [isFirstMessage, setIsFirstMessage] = React.useState(isNewChat);
   const [displayTitle, setDisplayTitle] = React.useState(
@@ -105,11 +100,6 @@ export default function ClientChatPage({
       setModuleDetails(initialModuleDetails);
     }
   }, [initialModuleDetails]);
-
-  // Debug logs to track module data
-  React.useEffect(() => {
-    console.log("Module details state:", moduleDetails);
-  }, [moduleDetails]);
 
   const router = useRouter();
 
@@ -183,14 +173,6 @@ export default function ClientChatPage({
     chatId,
   ]);
 
-  // Update the sidebar for a new chat immediately
-  React.useEffect(() => {
-    if (isNewChat && sidebarChatUpdater.current && !optimisticChatId) {
-      // We're removing optimistic chat creation
-      // We'll let the chat be added to history only after the first message is sent
-    }
-  }, [isNewChat, activeModule, optimisticChatId, forceOldest]);
-
   // Reference to the scroll container - needed for auto-scrolling
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -228,7 +210,6 @@ export default function ClientChatPage({
         optimisticChatId: optimisticChatId,
       },
       onResponse: (response: Response) => {
-        console.log("Chat API response received, status:", response.status);
         // Try to extract model information from headers if available
         const modelHeader = response.headers.get("x-model-used");
         if (modelHeader) {
@@ -259,7 +240,6 @@ export default function ClientChatPage({
               // Check if we need to update the URL (if it doesn't already contain the chat ID)
               if (!currentPath.endsWith(`/${chatId}`)) {
                 const newPath = `/${encodedName}/chat/${chatId}`;
-                console.log(`Updating URL to: ${newPath}`);
                 router.replace(newPath, { scroll: false });
               }
             }
@@ -309,8 +289,6 @@ export default function ClientChatPage({
         firstUserMessage + (firstUserMessage.length >= 50 ? "..." : "");
       setDisplayTitle(displayedTitle);
 
-      // We no longer need to update the sidebar here as the server event will handle it
-
       setIsFirstMessage(false);
       hasUpdatedTitle.current = true;
     }
@@ -324,12 +302,6 @@ export default function ClientChatPage({
     }
   }, [moduleDetails, router]);
 
-  // If using optimistic updates, update the sidebar when a first message is sent
-  React.useEffect(() => {
-    // We no longer need this effect as we're relying on the server event
-    // to add the chat to the sidebar after the first message
-  }, [messages, isNewChat, activeModule, optimisticChatId]);
-
   // Handle form submission with optimized event handler
   const handleFormSubmit = React.useCallback(
     (e: React.FormEvent) => {
@@ -340,7 +312,6 @@ export default function ClientChatPage({
           // Create a first message-based title
           const title =
             input.trim().substring(0, 50) + (input.length > 50 ? "..." : "");
-          console.log("Adding optimistic chat to sidebar:", title);
 
           // Save the current path to help with maintaining the active state
           const currentPath = window.location.pathname;
@@ -354,7 +325,6 @@ export default function ClientChatPage({
           );
           if (newOptimisticId) {
             setOptimisticChatId(newOptimisticId);
-            console.log("Set optimistic chat ID:", newOptimisticId);
           }
         }
 
