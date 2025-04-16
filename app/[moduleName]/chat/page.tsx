@@ -9,6 +9,7 @@ import { ChatPageLoading } from "@/components/Chat/ChatPageLoading";
 import { useMemo } from "react";
 import { Message } from "@ai-sdk/react";
 import { createModuleWelcomeMessage } from "@/lib/prompts";
+import { ModuleWithResources } from "@/lib/actions";
 
 // Define a type for the module data
 interface Resource {
@@ -37,7 +38,9 @@ export default function NewModuleChat() {
   const { moduleName } = useParams() as { moduleName: string };
   const { isSignedIn, user } = useUser();
   const router = useRouter();
-  const [moduleData, setModuleData] = useState<ModuleData | null>(null);
+  const [moduleData, setModuleData] = useState<ModuleWithResources | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
   // Add a state to track if we've shown loading state at least once
   const [hasShownLoading, setHasShownLoading] = useState(false);
@@ -50,14 +53,18 @@ export default function NewModuleChat() {
 
   // Create an initial welcome message
   const welcomeMessage = useMemo<Message>(
-    () => createModuleWelcomeMessage(moduleData?.name || null),
-    [moduleData]
+    () => createModuleWelcomeMessage(moduleData?.name || decodedModuleName),
+    [moduleData, decodedModuleName]
   );
 
-  // Check if this is a new chat (not a chat/id route)
-  const isNewChat = useMemo(() => {
-    // If the URL ends with /chat, it's a new chat
-    return window.location.pathname.endsWith(`/${moduleName}/chat`);
+  // Use useState for isNewChat to ensure SSR compatibility
+  const [isNewChat, setIsNewChat] = useState(true);
+
+  // Update isNewChat on client side only
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsNewChat(window.location.pathname.endsWith(`/${moduleName}/chat`));
+    }
   }, [moduleName]);
 
   // Pre-emptively prepare the proper route to avoid 404s
@@ -71,6 +78,8 @@ export default function NewModuleChat() {
 
   useEffect(() => {
     let isMounted = true; // Track component mount state
+
+    console.log("Fetching module data for:", decodedModuleName); // Debug log
 
     // Set a timeout to show loading state for at least 300ms to prevent flashes
     const minLoadingTimer = setTimeout(() => {
@@ -88,7 +97,9 @@ export default function NewModuleChat() {
           if (sessionId) {
             // Try to find module by session ID
             const response = await fetch(
-              `/api/modules?name=${decodedModuleName}&sessionId=${sessionId}`
+              `/api/modules?name=${encodeURIComponent(
+                decodedModuleName
+              )}&sessionId=${sessionId}`
             );
 
             if (response.ok) {
@@ -100,6 +111,7 @@ export default function NewModuleChat() {
                   ...modules[0],
                   resources: modules[0].resources || [],
                 };
+                console.log("Found module data:", formattedModule); // Debug log
                 setModuleData(formattedModule);
                 setIsLoading(false);
 
@@ -123,7 +135,19 @@ export default function NewModuleChat() {
 
           // If no module found or no sessionId, we'll show a basic chat interface
           if (isMounted) {
-            setModuleData(null);
+            // Create a minimal module data object with just the name from the URL
+            const fallbackModule: ModuleWithResources = {
+              id: "temp-module-id",
+              name: decodedModuleName,
+              context: null,
+              icon: "📚",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              lastStudied: null,
+              resources: [],
+            };
+            console.log("No module found, using fallback:", fallbackModule); // Debug log
+            setModuleData(fallbackModule);
             setIsLoading(false);
           }
           return;
@@ -152,6 +176,10 @@ export default function NewModuleChat() {
                   ...modules[0],
                   resources: modules[0].resources || [],
                 };
+                console.log(
+                  "Found module data (exact match):",
+                  formattedModule
+                ); // Debug log
                 setModuleData(formattedModule);
                 setIsLoading(false);
 
@@ -186,6 +214,10 @@ export default function NewModuleChat() {
                   ...modules[0],
                   resources: modules[0].resources || [],
                 };
+                console.log(
+                  "Found module data (fuzzy match):",
+                  formattedModule
+                ); // Debug log
                 setModuleData(formattedModule);
                 setIsLoading(false);
 
@@ -202,24 +234,74 @@ export default function NewModuleChat() {
                   console.error("Error updating lastStudied:", e)
                 );
               } else if (isMounted) {
-                // No module found
-                notFound();
+                // Create a minimal module data object with just the name from the URL
+                const fallbackModule: ModuleWithResources = {
+                  id: "temp-module-id",
+                  name: decodedModuleName,
+                  context: null,
+                  icon: "📚",
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  lastStudied: null,
+                  resources: [],
+                };
+                console.log("No module found, using fallback:", fallbackModule); // Debug log
+                setModuleData(fallbackModule);
+                setIsLoading(false);
               }
             } else if (isMounted) {
-              // Error fetching module
-              notFound();
+              // Create a minimal module data object with just the name from the URL
+              const fallbackModule: ModuleWithResources = {
+                id: "temp-module-id",
+                name: decodedModuleName,
+                context: null,
+                icon: "📚",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                lastStudied: null,
+                resources: [],
+              };
+              console.log("API error, using fallback:", fallbackModule); // Debug log
+              setModuleData(fallbackModule);
+              setIsLoading(false);
             }
           } catch (error) {
             console.error("Error loading module:", error);
             if (isMounted) {
-              notFound();
+              // Create a minimal module data object with just the name from the URL
+              const fallbackModule: ModuleWithResources = {
+                id: "temp-module-id",
+                name: decodedModuleName,
+                context: null,
+                icon: "📚",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                lastStudied: null,
+                resources: [],
+              };
+              console.log("Error caught, using fallback:", fallbackModule); // Debug log
+              setModuleData(fallbackModule);
+              setIsLoading(false);
             }
           }
         }
       } catch (error) {
         console.error("Error loading module:", error);
         if (isMounted) {
-          notFound();
+          // Create a minimal module data object with just the name from the URL
+          const fallbackModule: ModuleWithResources = {
+            id: "temp-module-id",
+            name: decodedModuleName,
+            context: null,
+            icon: "📚",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            lastStudied: null,
+            resources: [],
+          };
+          console.log("Outer error catch, using fallback:", fallbackModule); // Debug log
+          setModuleData(fallbackModule);
+          setIsLoading(false);
         }
       }
     }
@@ -239,10 +321,41 @@ export default function NewModuleChat() {
     }
   }, [isLoading, moduleData]);
 
+  // Debug log moduleData changes
+  useEffect(() => {
+    console.log("moduleData changed:", moduleData);
+  }, [moduleData]);
+
+  // Create fallback module data immediately to ensure we have data for rendering
+  useEffect(() => {
+    // If no module data is loaded yet, create a minimal fallback with the name from URL
+    if (!moduleData && !isLoading) {
+      const fallbackModule: ModuleWithResources = {
+        id: "temp-module-id",
+        name: decodedModuleName,
+        context: null,
+        icon: "📚",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastStudied: null,
+        resources: [],
+      };
+      setModuleData(fallbackModule);
+    }
+  }, [moduleData, isLoading, decodedModuleName]);
+
   // Minimum loading time to prevent flicker
   if (isLoading && !hasShownLoading) {
     return <ChatPageLoading />;
   }
+
+  // Ensure we always have module data
+  if (!moduleData) {
+    return <ChatPageLoading />;
+  }
+
+  // Debug log right before rendering
+  console.log("Final moduleData being passed to ClientChatPage:", moduleData);
 
   return (
     <ClientChatPage

@@ -15,16 +15,20 @@ export default function ChatModuleHeader({
 }: ChatModuleHeaderProps) {
   if (!moduleDetails) return null;
 
+  // Safely extract values with fallbacks
+  const moduleName = moduleDetails.name || "Unnamed Module";
+  const moduleIcon = moduleDetails.icon || "📚";
+
   return (
-    <div className="py-3 pl-5 flex add-margin-for-headers top-1 bg-background">
+    <div className="py-3.5 pl-8 flex add-margin-for-headers top-1 bg-background">
       <Button
         variant="ghost"
-        className="flex items-center gap-3 pt-4 hover:bg-muted/50 rounded flex-shrink max-w-[85%]"
+        className="flex items-center gap-4 hover:bg-muted/50 rounded flex-shrink max-w-full"
         onClick={navigateToModuleDetails}
       >
-        <span className="text-2xl flex-shrink-0">{moduleDetails.icon}</span>
+        <span className="text-2xl flex-shrink-0">{moduleIcon}</span>
         <div className="min-w-0 overflow-hidden">
-          <h1 className="text-xl truncate">{moduleDetails.name}</h1>
+          <h1 className="text-xl font-medium truncate">{moduleName}</h1>
         </div>
       </Button>
     </div>

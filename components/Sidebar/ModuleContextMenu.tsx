@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Edit, Trash } from "lucide-react";
+import { ExternalLink, Edit, Trash, MessageSquare } from "lucide-react";
 import { encodeModuleSlug } from "@/lib/utils";
 import axios from "axios";
 import { toast } from "sonner";
@@ -54,6 +54,11 @@ export function ModuleContextMenu({
     window.open(`/modules/${encodedName}`, "_blank");
   };
 
+  const handleGoToChat = () => {
+    const encodedName = encodeModuleSlug(module.name);
+    router.push(`/${encodedName}/chat`);
+  };
+
   const handleEditSuccess = () => {
     setIsEditDialogOpen(false);
   };
@@ -99,6 +104,12 @@ export function ModuleContextMenu({
             className="cursor-pointer text-xs"
           >
             <ExternalLink className="mr-2 h-4 w-4" /> Open in new tab
+          </ContextMenuItem>
+          <ContextMenuItem
+            onClick={handleGoToChat}
+            className="cursor-pointer text-xs"
+          >
+            <MessageSquare className="mr-2 h-4 w-4" /> New module chat
           </ContextMenuItem>
           <ContextMenuItem
             onClick={() => setIsEditDialogOpen(true)}

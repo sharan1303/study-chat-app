@@ -118,7 +118,7 @@ export default function ModuleTitle({
         </div>
       ) : (
         <h1
-          className="text-xl cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
+          className="text-lg cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
           onClick={() => setIsEditingTitle(true)}
           tabIndex={0}
           onKeyDown={(e) => {

@@ -91,9 +91,21 @@ export default function ClientChatPage({
   const [activeModule] = React.useState<string | null>(
     initialModuleDetails?.id ?? null
   );
-  const [moduleDetails] = React.useState<ModuleWithResources | null>(
-    initialModuleDetails ?? null
-  );
+  const [moduleDetails, setModuleDetails] =
+    React.useState<ModuleWithResources | null>(initialModuleDetails ?? null);
+
+  // Update moduleDetails when initialModuleDetails changes
+  React.useEffect(() => {
+    if (initialModuleDetails) {
+      setModuleDetails(initialModuleDetails);
+    }
+  }, [initialModuleDetails]);
+
+  // Debug logs to track module data
+  React.useEffect(() => {
+    console.log("Module details state:", moduleDetails);
+  }, [moduleDetails]);
+
   const router = useRouter();
 
   // Get the session ID from local storage for anonymous users
@@ -355,6 +367,14 @@ export default function ClientChatPage({
       {/* Header component */}
       <Header />
 
+      {/* Module Header - Fixed position */}
+      {moduleDetails && (
+        <ChatModuleHeader
+          moduleDetails={moduleDetails}
+          navigateToModuleDetails={navigateToModuleDetails}
+        />
+      )}
+
       {/* Main Content Area with Scrollbar - Make it span the full page */}
       <div
         ref={scrollContainerRef}
@@ -362,14 +382,6 @@ export default function ClientChatPage({
           messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
         } pr-0 scroll-smooth scrollbar-smooth custom-scrollbar`}
       >
-        {/* Chat Header - Now inside the scrollable area */}
-        {moduleDetails && (
-          <ChatModuleHeader
-            moduleDetails={moduleDetails}
-            navigateToModuleDetails={navigateToModuleDetails}
-          />
-        )}
-
         {/* Chat content centered container */}
         <div className="flex-1">
           {/* Ensure chat thread has same width as input by using identical container classes */}
