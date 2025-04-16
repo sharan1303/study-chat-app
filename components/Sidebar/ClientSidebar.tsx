@@ -30,6 +30,7 @@ import { api } from "@/lib/api";
 import { EVENT_TYPES } from "@/lib/events";
 import { getOrCreateSessionIdClient } from "@/lib/session";
 import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
+import { Separator } from "@radix-ui/react-separator";
 
 // Define module type
 export interface Module {
@@ -97,7 +98,6 @@ function ClientSidebarContent({
       const data = await api.getModules();
       return data;
     } catch (error) {
-      console.error("Error fetching modules:", error);
       return { modules: [] };
     }
   }, [isLoaded]);
@@ -114,7 +114,6 @@ function ClientSidebarContent({
       }
       return [];
     } catch (error) {
-      console.error("Error fetching chats:", error);
       return [];
     }
   }, []);
@@ -140,7 +139,6 @@ function ClientSidebarContent({
       const chat = await response.json();
       return chat;
     } catch (error) {
-      console.error(`Error fetching single chat ${chatId}:`, error);
       return null;
     }
   }, []);
@@ -152,7 +150,6 @@ function ClientSidebarContent({
       const chats = await fetchChats();
       setChats(chats);
     } catch (error) {
-      console.error("Error refreshing chat history:", error);
     } finally {
       setLoadingChats(false);
     }
@@ -161,6 +158,13 @@ function ClientSidebarContent({
   // Set up Server-Sent Events (SSE) for real-time updates
   useEffect(() => {
     if (!isLoaded) return;
+
+    // Check if EventSource is supported in this browser
+    if (typeof EventSource === "undefined") {
+      // EventSource is not supported in this browser
+      // Consider implementing a fallback mechanism like polling
+      return;
+    }
 
     let url = `/api/events`;
 
@@ -173,31 +177,45 @@ function ClientSidebarContent({
       if (sessionId) {
         url += `?sessionId=${sessionId}`;
       } else {
-        console.warn("SSE: No sessionId found for anonymous user");
+        // No sessionId found for anonymous user
       }
     }
 
-    console.log("Setting up EventSource connection to:", url);
     let es: EventSource | null = null;
 
     // Create a new EventSource if it doesn't exist, or reuse existing one
     if (eventSourceRef.current) {
       es = eventSourceRef.current;
-      console.log("Reusing existing EventSource connection");
-    } else {
-      if (typeof window !== "undefined") {
-        console.log("Creating new EventSource connection");
-        es = new EventSource(url);
-        eventSourceRef.current = es;
+    } else if (typeof window !== "undefined") {
+      try {
+        // Use a try-catch block for EventSource creation
+        const newEs = new EventSource(url, { withCredentials: true });
+        es = newEs;
+        eventSourceRef.current = newEs;
+
+        // Add a delay before setting up event handlers to ensure connection is properly established
+        setTimeout(() => {
+          // Event handlers will be set up below
+        }, 100);
+      } catch (error) {
+        // Try to reconnect after delay
+        setTimeout(() => {
+          try {
+            const retryEs = new EventSource(url, { withCredentials: true });
+            eventSourceRef.current = retryEs;
+          } catch (retryError) {
+            // Retry failed
+          }
+        }, 3000);
       }
     }
 
     if (es) {
       // Set up error handler
       es.onerror = (err) => {
-        console.error("EventSource error:", err);
+        // EventSource error
 
-        // Check the connection state
+        // Check the readyState and connection state
         const connectionState = es
           ? es.readyState === 0
             ? "CONNECTING"
@@ -208,25 +226,34 @@ function ClientSidebarContent({
             : "UNKNOWN"
           : "NULL";
 
-        console.error(`EventSource connection state: ${connectionState}`);
+        // Add a more robust error handling and reconnection strategy
+        if (!es || es.readyState === EventSource.CLOSED) {
+          // EventSource connection closed or in error state, attempting to reconnect
 
-        // Close the connection if it's in an error state
-        if (es && es.readyState === EventSource.CLOSED) {
-          console.log("EventSource connection closed, attempting to reconnect");
-          es.close();
-          eventSourceRef.current = null;
+          // Close the existing connection if it exists
+          if (es) {
+            es.close();
+            eventSourceRef.current = null;
+          }
 
-          // Try to reconnect after a delay
+          // Try to reconnect after a delay with exponential backoff
           setTimeout(() => {
             if (typeof window !== "undefined") {
-              console.log("Reconnecting EventSource to:", url);
-              const newEs = new EventSource(url);
-              eventSourceRef.current = newEs;
+              try {
+                const newEs = new EventSource(url);
+                eventSourceRef.current = newEs;
 
-              // Set up same handlers on the new connection
-              newEs.onopen = () =>
-                console.log("Reconnected EventSource opened successfully");
-              newEs.onerror = es.onerror; // Reuse same error handler
+                // Set up same handlers on the new connection
+                newEs.onopen = () => {
+                  // Reconnected EventSource opened successfully
+                };
+                newEs.onerror = es.onerror; // Reuse same error handler
+
+                // Re-attach the message handler
+                newEs.onmessage = es.onmessage;
+              } catch (reconnectError) {
+                // Failed to reconnect EventSource
+              }
             }
           }, 3000);
         }
@@ -234,7 +261,7 @@ function ClientSidebarContent({
 
       // Add open handler to confirm connection
       es.onopen = () => {
-        console.log("EventSource connection opened successfully");
+        // EventSource connection opened successfully
       };
 
       // Set up message handler for general messages
@@ -287,28 +314,21 @@ function ClientSidebarContent({
                 prevChats.filter((chat) => chat.id !== chatData.id)
               );
             } else {
-              console.error("Invalid chat deletion data in event:", data);
+              // Invalid chat deletion data in event
             }
           } else if (data.type === "HEARTBEAT") {
             // Server heartbeat received
           } else if (isEventType(EVENT_TYPES.CHAT_CREATED, "chat.created")) {
             // We got a real chat - might be replacing an optimistic one
-            console.log("Received chat.created event", data);
-
-            // The data is directly in data, not in data.chat
             const newChat = data.data;
 
             // First check if this is replacing an optimistic chat
             setChats((prevChats) => {
               // Make sure newChat exists before attempting to access properties
               if (!newChat) {
-                console.warn(
-                  "Received chat.created event with undefined chat data"
-                );
+                // Received chat.created event with undefined chat data
                 return prevChats;
               }
-
-              console.log("Adding new chat to sidebar:", newChat);
 
               // First check if this chat already exists in our list
               const existingChatIndex = prevChats.findIndex(
@@ -316,26 +336,17 @@ function ClientSidebarContent({
               );
 
               if (existingChatIndex >= 0) {
-                console.log("Chat already exists in sidebar, not adding again");
                 return prevChats;
               }
 
               // Check if we have an optimistic chat ID to match against
               if (newChat.optimisticChatId) {
-                console.log(
-                  "Looking for optimistic chat with ID:",
-                  newChat.optimisticChatId
-                );
                 // Try to find the optimistic chat with matching ID
                 const optimisticIdIndex = prevChats.findIndex(
                   (chat) => chat.id === newChat.optimisticChatId
                 );
 
                 if (optimisticIdIndex >= 0) {
-                  console.log(
-                    "Found optimistic chat by ID at index:",
-                    optimisticIdIndex
-                  );
                   // Replace the optimistic chat with the real one but preserve UI state
                   const updatedChats = [...prevChats];
                   const existingChat = prevChats[optimisticIdIndex];
@@ -357,10 +368,6 @@ function ClientSidebarContent({
               );
 
               if (optimisticIndex >= 0) {
-                console.log(
-                  "Replacing optimistic chat at index:",
-                  optimisticIndex
-                );
                 // Replace the optimistic chat with the real one but preserve UI state
                 const updatedChats = [...prevChats];
                 const existingChat = prevChats[optimisticIndex];
@@ -371,7 +378,6 @@ function ClientSidebarContent({
                 };
                 return updatedChats;
               } else {
-                console.log("Adding new chat to the beginning of chat list");
                 // Just add as a new chat
                 return [newChat, ...prevChats];
               }
@@ -561,10 +567,7 @@ function ClientSidebarContent({
                 });
               }
             } else {
-              console.error(
-                "Invalid or incomplete message data in event:",
-                data
-              );
+              // Invalid or incomplete message data in event
               // Fall back to refresh if data is incomplete
               refreshChatHistory();
             }
@@ -772,10 +775,7 @@ function ClientSidebarContent({
                 }
               });
             } else {
-              console.error(
-                "Invalid or incomplete user message data in event:",
-                data
-              );
+              // Invalid or incomplete user message data in event
               refreshChatHistory();
             }
           } else if (isEventType(EVENT_TYPES.DATA_MIGRATED, "data.migrated")) {
@@ -793,7 +793,6 @@ function ClientSidebarContent({
           }
         } catch (error) {
           // Log parsing errors
-          console.error("Error parsing SSE event:", error);
         }
       };
     }
@@ -809,16 +808,33 @@ function ClientSidebarContent({
             if (sessionId) {
               pingUrl += `?sessionId=${sessionId}`;
             }
+          } else {
+            pingUrl += `?userId=${userId}`;
           }
-          fetch(pingUrl).catch(() => {
+
+          fetch(pingUrl, {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          }).catch((pingError) => {
             // If ping fails, close and reconnect
             if (es) {
               es.close();
               eventSourceRef.current = null;
             }
           });
-        } catch {
-          // Silently handle ping errors
+        } catch (error) {
+          // Error during keepalive ping
+        }
+      } else if (es && es.readyState === EventSource.CLOSED) {
+        // Attempt reconnection
+        try {
+          es.close();
+          eventSourceRef.current = null;
+          const newEs = new EventSource(url, { withCredentials: true });
+          eventSourceRef.current = newEs;
+        } catch (reconnectError) {
+          // Failed to reconnect during keepalive check
         }
       }
     }, 30000);
@@ -827,11 +843,13 @@ function ClientSidebarContent({
     return () => {
       clearInterval(keepaliveTimer);
 
-      // Only close the EventSource if the page is unloading
-      if (typeof window !== "undefined" && window.onbeforeunload) {
-        if (es) {
-          es.close();
+      // Always close the EventSource connection on cleanup
+      if (eventSourceRef.current) {
+        try {
+          eventSourceRef.current.close();
           eventSourceRef.current = null;
+        } catch (error) {
+          // Error closing EventSource during cleanup
         }
       }
     };
@@ -881,9 +899,7 @@ function ClientSidebarContent({
         // Refresh chat history to show the welcome chat
         refreshChatHistory();
       }
-    } catch (error) {
-      console.error("Error creating welcome chat:", error);
-    }
+    } catch (error) {}
   }, [refreshChatHistory]);
 
   // Initial data fetching
@@ -900,7 +916,6 @@ function ClientSidebarContent({
           }
         })
         .catch((error) => {
-          console.error("Error fetching modules:", error);
           setError("Failed to load modules. Please try again later.");
         })
         .finally(() => {
@@ -1159,7 +1174,7 @@ function ClientSidebarContent({
       <SidebarContent className="p-0">
         {/* Show error message if there is one */}
         {error && state === "expanded" && (
-          <div className="px-4 py-2 mt-2 text-sm text-red-600 bg-red-50 rounded mx-2 mb-2">
+          <div className="px-4 py-2 mt-2 text-sm text-red-600 bg-red-50 rounded mx-2">
             <p className="font-semibold">Error loading modules:</p>
             <p className="text-xs break-words">{error}</p>
           </div>
@@ -1168,7 +1183,7 @@ function ClientSidebarContent({
         {/* Module List */}
         <div
           className={
-            state === "expanded" || isMobile ? "h-1/3 min-h-[150px]" : ""
+            state === "expanded" || isMobile ? "h-1/4 min-h-[240px]" : ""
           }
         >
           <ModuleList
@@ -1183,9 +1198,11 @@ function ClientSidebarContent({
           />
         </div>
 
+        <Separator className="border-t" />
+
         {/* Chat History Section - always visible on mobile */}
         {(state === "expanded" || isMobile) && (
-          <div className="h-2/3 min-h-[200px]">
+          <div className="h-3/4">
             <ChatHistory
               chats={chats}
               loading={loadingChats}

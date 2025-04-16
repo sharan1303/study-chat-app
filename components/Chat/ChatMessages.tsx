@@ -46,7 +46,7 @@ const UserMessage: React.FC<{
       key={`user-${message.id}`}
       className="flex flex-col items-end group relative"
     >
-      <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words max-w-full">
+      <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words">
         <div className="whitespace-pre-wrap text-sm">{message.content}</div>
       </div>
       <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -106,7 +106,7 @@ const AssistantMessage: React.FC<{
       key={`assistant-${message.id}`}
       className="text-gray-800 dark:text-gray-200 group relative"
     >
-      <div className="prose prose-xs dark:prose-invert max-w-none break-words prose-spacing text-sm">
+      <div className="prose prose-xs dark:prose-invert max-w-none w-full break-words prose-spacing text-sm">
         <ReactMarkdown
           components={{
             h1: (props) => (
@@ -164,7 +164,7 @@ const AssistantMessage: React.FC<{
           onClick={() => copyToClipboard(message.content)}
           className="flex items-center gap-2 px-3 py-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
           aria-label="Copy message"
-          title={`Copy message (${getOSModifierKey()} + C)`}
+          title={`Copy message (${getOSModifierKey()}+C)`}
         >
           {isCopied ? (
             <Check className="h-4 w-4 text-green-500" />
@@ -199,7 +199,7 @@ export default function ChatMessages({
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto space-y-8">
+      <div className="space-y-8 w-full max-w-full">
         {messages.map((message, index) => {
           return (
             <React.Fragment key={message.id || index}>
