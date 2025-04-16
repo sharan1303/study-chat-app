@@ -320,7 +320,35 @@ function ClientSidebarContent({
                 return prevChats;
               }
 
-              // Look for an optimistic chat with proper null checking
+              // Check if we have an optimistic chat ID to match against
+              if (newChat.optimisticChatId) {
+                console.log(
+                  "Looking for optimistic chat with ID:",
+                  newChat.optimisticChatId
+                );
+                // Try to find the optimistic chat with matching ID
+                const optimisticIdIndex = prevChats.findIndex(
+                  (chat) => chat.id === newChat.optimisticChatId
+                );
+
+                if (optimisticIdIndex >= 0) {
+                  console.log(
+                    "Found optimistic chat by ID at index:",
+                    optimisticIdIndex
+                  );
+                  // Replace the optimistic chat with the real one but preserve UI state
+                  const updatedChats = [...prevChats];
+                  const existingChat = prevChats[optimisticIdIndex];
+                  updatedChats[optimisticIdIndex] = {
+                    ...existingChat, // Keep any UI-related properties
+                    ...newChat, // Add server data
+                    _isOptimistic: false, // Mark as no longer optimistic
+                  };
+                  return updatedChats;
+                }
+              }
+
+              // If no optimistic chat ID match, look for a generic optimistic chat
               const optimisticIndex = prevChats.findIndex(
                 (chat) =>
                   chat._isOptimistic &&
@@ -333,11 +361,13 @@ function ClientSidebarContent({
                   "Replacing optimistic chat at index:",
                   optimisticIndex
                 );
-                // Replace the optimistic chat with the real one
+                // Replace the optimistic chat with the real one but preserve UI state
                 const updatedChats = [...prevChats];
+                const existingChat = prevChats[optimisticIndex];
                 updatedChats[optimisticIndex] = {
-                  ...newChat,
-                  _isOptimistic: false,
+                  ...existingChat, // Keep any UI-related properties
+                  ...newChat, // Add server data
+                  _isOptimistic: false, // Mark as no longer optimistic
                 };
                 return updatedChats;
               } else {
@@ -958,7 +988,8 @@ function ClientSidebarContent({
     (
       chatTitle: string,
       moduleId: string | null = null,
-      forceOldest = false
+      forceOldest = false,
+      currentPath = ""
     ) => {
       // Get today's date - we want all new chats to appear in today's section
       const now = new Date();
@@ -980,6 +1011,7 @@ function ClientSidebarContent({
             }
           : null,
         _isOptimistic: true, // Mark as optimistic to replace when real data arrives
+        _currentPath: currentPath, // Store the current path for active state
       };
 
       setChats((prevChats) => {
@@ -1009,7 +1041,8 @@ function ClientSidebarContent({
         __sidebarChatUpdater?: (
           title: string,
           moduleId: string | null,
-          forceOldest?: boolean
+          forceOldest?: boolean,
+          currentPath?: string
         ) => string;
         __hasPendingOptimisticChat?: boolean;
       };
@@ -1020,13 +1053,13 @@ function ClientSidebarContent({
       );
 
       // Only update the function if it doesn't exist already
-      win.__sidebarChatUpdater = (title, moduleId, forceOldest = false) => {
-        // Skip adding optimistic chats for "New Chat" titles
-        if (title === "New Chat") {
-          return "";
-        }
-
-        // For other titles, continue with existing behavior
+      win.__sidebarChatUpdater = (
+        title,
+        moduleId,
+        forceOldest = false,
+        currentPath = ""
+      ) => {
+        // We now want to add optimistic chats for all titles, including first messages
         const effectiveModuleId = moduleId;
 
         // Check if we already have an optimistic chat that matches this context
@@ -1050,7 +1083,12 @@ function ClientSidebarContent({
         }
 
         // Otherwise create a new one with the effective moduleId
-        return addOptimisticChat(title, effectiveModuleId, forceOldest);
+        return addOptimisticChat(
+          title,
+          effectiveModuleId,
+          forceOldest,
+          currentPath
+        );
       };
     }
 
@@ -1061,7 +1099,8 @@ function ClientSidebarContent({
           __sidebarChatUpdater?: (
             title: string,
             moduleId: string | null,
-            forceOldest?: boolean
+            forceOldest?: boolean,
+            currentPath?: string
           ) => string;
           __hasPendingOptimisticChat?: boolean;
         };

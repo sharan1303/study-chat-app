@@ -42,6 +42,7 @@ export interface Chat {
     id: string;
   } | null;
   _isOptimistic?: boolean;
+  _currentPath?: string; // Store the current path for active state
 }
 
 interface ChatHistoryProps {
@@ -110,28 +111,38 @@ export default function ChatHistory({
       return pathname === "/chat/welcome";
     }
 
-    // Special case for optimistic chats / new chats
+    // If a _currentPath is stored (for optimistic chats), use it for matching
+    if (chat._currentPath && pathname === chat._currentPath) {
+      return true;
+    }
+
+    // Check exact path match first - highest priority
+    if (pathname === `/chat/${chat.id}`) {
+      return true;
+    }
+
+    // Check module-specific paths
+    if (chat.moduleId && chat.module) {
+      const encodedName = encodeModuleSlug(chat.module.name);
+      if (pathname === `/${encodedName}/chat/${chat.id}`) {
+        return true;
+      }
+    }
+
+    // Special case for optimistic chats and new chats
+    // This will activate when we're on a root path (/chat) or a module chat path
     if (chat._isOptimistic) {
       // If we're on a path that ends with just /chat or /moduleName/chat
       const isModulePath = pathname.indexOf("/chat") > 1; // Like /moduleName/chat
       const isRootPath = pathname === "/chat";
 
       if (chat.moduleId) {
-        // Module-specific new chat
+        // Module-specific new chat - active when we're on the module chat path
         return isModulePath && !pathname.includes("/chat/");
       } else {
-        // Regular new chat
+        // Regular new chat - active when we're on the root chat path
         return isRootPath;
       }
-    }
-
-    if (pathname === `/chat/${chat.id}`) {
-      return true;
-    }
-
-    if (chat.moduleId && chat.module) {
-      const encodedName = encodeModuleSlug(chat.module.name);
-      return pathname === `/${encodedName}/chat/${chat.id}`;
     }
 
     return false;
