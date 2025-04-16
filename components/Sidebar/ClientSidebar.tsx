@@ -912,9 +912,18 @@ function ClientSidebarContent({
     setActiveModuleId(moduleId);
 
     if (moduleName) {
-      // Navigate to module chat with just module name in URL
-      router.push(`/${encodeModuleSlug(moduleName)}/chat`);
+      // Navigate to module details page with module name in URL
+      router.push(`/modules/${encodeModuleSlug(moduleName)}`);
     }
+  };
+
+  // Modified to handle creating a new chat properly with sidebar highlighting
+  const handleNewChat = () => {
+    // Regular chat context
+    router.push("/chat");
+
+    // Add the optimistic chat to the sidebar
+    addOptimisticChat("New Chat", null);
   };
 
   // Now let's add the optimistic UI update functionality
@@ -925,13 +934,17 @@ function ClientSidebarContent({
       moduleId: string | null = null,
       forceOldest = false
     ) => {
+      // Get today's date - we want all new chats to appear in today's section
+      const now = new Date();
+      const todayDate = now.toISOString();
+
       const optimisticChat: Chat = {
         id: `optimistic-${Date.now()}`, // Temporary ID until real one arrives
         title: chatTitle,
         createdAt: forceOldest
           ? new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString() // One year ago for oldest chats
-          : new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+          : todayDate,
+        updatedAt: todayDate, // Always use today's date for sorting
         moduleId: moduleId,
         module: moduleId
           ? {
@@ -1022,7 +1035,7 @@ function ClientSidebarContent({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push("/chat")}
+              onClick={handleNewChat}
               title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
               className={cn(
                 "h-9 w-9",

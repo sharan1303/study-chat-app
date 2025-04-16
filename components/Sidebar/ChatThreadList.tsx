@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Plus } from "lucide-react";
 import { useNavigation } from "./SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
 import { ChatContextMenu } from "./ChatContextMenu";
@@ -17,6 +17,7 @@ export interface ChatThread {
   lastMessage?: string | null;
   updatedAt?: string | null;
   path: string;
+  isNewChat?: boolean;
 }
 
 interface ChatThreadListProps {
@@ -29,6 +30,8 @@ interface ChatThreadListProps {
   collapsed?: boolean;
   maxWidth?: string;
   onDelete?: (chatId: string) => void;
+  showNewChatButton?: boolean;
+  onNewChatClick?: () => void;
 }
 
 /**
@@ -44,6 +47,8 @@ export default function ChatThreadList({
   collapsed = false,
   maxWidth,
   onDelete,
+  showNewChatButton = false,
+  onNewChatClick,
 }: ChatThreadListProps) {
   const nextRouter = useRouter();
   const nextPathname = usePathname();
@@ -88,24 +93,6 @@ export default function ChatThreadList({
 
   return (
     <div className="flex flex-col h-full">
-      {!collapsed && (
-        <div className="px-2 py-1 flex items-center justify-between">
-          <Button
-            variant={pathname?.startsWith("/chat") ? "secondary" : "ghost"}
-            className="justify-start hover:bg-accent w-40 pl-2 pb-2 text-left"
-            asChild
-            title="View Chats"
-            onClick={() => {
-              if (isMobile) {
-                setOpenMobile(false);
-              }
-            }}
-          >
-            <Link href="/chat">Chat History</Link>
-          </Button>
-        </div>
-      )}
-
       <ScrollArea className="flex-1 overflow-y-auto">
         <div className={collapsed ? "p-1" : "p-2 pt-0"}>
           {loading ? (
@@ -116,16 +103,9 @@ export default function ChatThreadList({
                 </>
               )}
             </div>
-          ) : threads.length === 0 ? (
-            !collapsed && (
-              <div className="text-center py-2 px-1">
-                <Button className="w-full" size="default" asChild>
-                  <Link href="/chat/new">Start a new chat</Link>
-                </Button>
-              </div>
-            )
           ) : (
-            <nav className="grid gap-1">
+            <nav className="grid gap-1 ml-2">
+
               {threads.map((thread) => (
                 <ChatContextMenu
                   key={thread.id}
@@ -133,6 +113,7 @@ export default function ChatThreadList({
                   chatName={thread.title}
                   chatPath={thread.path}
                   onDelete={() => handleDeleteThread(thread.id)}
+                  disabled={thread.isNewChat}
                 >
                   <div className="w-full relative cursor-context-menu">
                     <button
@@ -142,7 +123,7 @@ export default function ChatThreadList({
                       style={{ maxWidth: maxWidth }}
                       className={cn(
                         "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center gap-2 group",
-                        checkIsActive(thread.path)
+                        checkIsActive(thread.path) || thread.isNewChat
                           ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
                           : "",
                         collapsed && "justify-center"

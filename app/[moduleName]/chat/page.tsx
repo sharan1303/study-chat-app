@@ -54,6 +54,12 @@ export default function NewModuleChat() {
     [moduleData]
   );
 
+  // Check if this is a new chat (not a chat/id route)
+  const isNewChat = useMemo(() => {
+    // If the URL ends with /chat, it's a new chat
+    return window.location.pathname.endsWith(`/${moduleName}/chat`);
+  }, [moduleName]);
+
   // Pre-emptively prepare the proper route to avoid 404s
   useEffect(() => {
     // Ensure the router knows about this chat ID
@@ -226,9 +232,15 @@ export default function NewModuleChat() {
     };
   }, [decodedModuleName, isSignedIn, user]);
 
-  // Only render the ClientChatPage after loading is complete and we've shown the loading state
-  // This prevents flashes from quick loading
-  if (isLoading || !hasShownLoading) {
+  // Cleanup the loading state once we have module data
+  useEffect(() => {
+    if (!isLoading && moduleData) {
+      setHasShownLoading(true);
+    }
+  }, [isLoading, moduleData]);
+
+  // Minimum loading time to prevent flicker
+  if (isLoading && !hasShownLoading) {
     return <ChatPageLoading />;
   }
 
@@ -237,7 +249,8 @@ export default function NewModuleChat() {
       initialModuleDetails={moduleData}
       chatId={chatId}
       initialMessages={[welcomeMessage]}
-      isAuthenticated={!!isSignedIn}
+      isAuthenticated={isSignedIn}
+      isNewChat={isNewChat}
     />
   );
 }

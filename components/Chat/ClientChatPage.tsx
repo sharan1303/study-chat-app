@@ -44,6 +44,7 @@ const WelcomeScreen = dynamic(() => import("./WelcomeScreen"), {
  * @param isAuthenticated - Indicates whether the user is authenticated (defaults to true).
  * @param initialTitle - Optional initial title for the chat.
  * @param forceOldest - When true, ensures this chat appears as the oldest in history (for unauthenticated users).
+ * @param isNewChat - When true, shows as "New Chat" in the UI until first message
  *
  * @returns The rendered chat interface as a React element.
  */
@@ -54,6 +55,7 @@ export default function ClientChatPage({
   isAuthenticated = true,
   initialTitle,
   forceOldest = false,
+  isNewChat = false,
 }: {
   initialModuleDetails?: ModuleWithResources | null;
   chatId: string;
@@ -61,12 +63,19 @@ export default function ClientChatPage({
   isAuthenticated?: boolean;
   initialTitle?: string;
   forceOldest?: boolean;
+  isNewChat?: boolean;
 }) {
   const [showLogo, setShowLogo] = React.useState(false);
 
   // Store the optimistic chat ID
   const [optimisticChatId, setOptimisticChatId] = React.useState<string | null>(
     null
+  );
+
+  // Track if this is a new chat to update title on first message
+  const [isFirstMessage, setIsFirstMessage] = React.useState(isNewChat);
+  const [displayTitle, setDisplayTitle] = React.useState(
+    isNewChat ? "New Chat" : initialTitle
   );
 
   // After mounting, we have access to the theme
@@ -154,11 +163,34 @@ export default function ClientChatPage({
     chatId,
   ]);
 
-  // Reference to the scroll container, but don't auto-scroll
+  // Update the sidebar for a new chat immediately
+  React.useEffect(() => {
+    if (isNewChat && sidebarChatUpdater.current && !optimisticChatId) {
+      const optimisticId = sidebarChatUpdater.current("New Chat", activeModule);
+      setOptimisticChatId(optimisticId);
+    }
+  }, [isNewChat, activeModule, optimisticChatId]);
+
+  // Reference to the scroll container - needed for auto-scrolling
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Default model name - we'll try to retrieve it dynamically if possible
   const [modelName, setModelName] = React.useState<string>("Gemini 2.0 Flash");
+
+  // Track if the user has copied a message
+  const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(
+    null
+  );
+
+  const copyToClipboard = React.useCallback(
+    (text: string, messageId: string) => {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedMessageId(messageId);
+        setTimeout(() => setCopiedMessageId(null), 2000);
+      });
+    },
+    []
+  );
 
   // Memoize the chat options to prevent unnecessary re-initialization
   const chatOptions = React.useMemo(
@@ -239,20 +271,36 @@ export default function ClientChatPage({
     isLoading: chatLoading,
   } = useChat(chatOptions);
 
-  const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(
-    null
-  );
+  // Keep track if we've already updated the title for first message
+  const hasUpdatedTitle = React.useRef(false);
 
-  const copyToClipboard = React.useCallback(
-    (text: string, messageId: string) => {
-      navigator.clipboard.writeText(text).then(() => {
-        setCopiedMessageId(messageId);
-        setTimeout(() => setCopiedMessageId(null), 2000);
-      });
-    },
-    []
-  );
+  // When messages change, check if we should update the title
+  React.useEffect(() => {
+    if (
+      isFirstMessage &&
+      messages.length > 0 &&
+      messages[0].role === "user" &&
+      !hasUpdatedTitle.current
+    ) {
+      // Update the display title with the first user message
+      const firstUserMessage = messages[0].content.substring(0, 50);
+      const displayedTitle =
+        firstUserMessage + (firstUserMessage.length >= 50 ? "..." : "");
+      setDisplayTitle(displayedTitle);
 
+      // Update the sidebar if available
+      if (sidebarChatUpdater.current) {
+        // Use the optimistic chat ID if available, otherwise use current chat ID
+        const chatIdToUpdate = optimisticChatId || chatId;
+        sidebarChatUpdater.current(displayedTitle, activeModule);
+      }
+
+      setIsFirstMessage(false);
+      hasUpdatedTitle.current = true;
+    }
+  }, [messages, isFirstMessage, activeModule, optimisticChatId, chatId]);
+
+  // Function to handle navigation to module details page
   const navigateToModuleDetails = React.useCallback(() => {
     if (moduleDetails) {
       const encodedName = encodeModuleSlug(moduleDetails.name);
@@ -260,49 +308,32 @@ export default function ClientChatPage({
     }
   }, [moduleDetails, router]);
 
+  // If using optimistic updates, update the sidebar when a first message is sent
+  React.useEffect(() => {
+    if (
+      isNewChat &&
+      messages.length > 0 &&
+      messages[0].role === "user" &&
+      optimisticChatId &&
+      sidebarChatUpdater.current
+    ) {
+      // Update the chat title to the first message
+      const firstMessage = messages[0].content.substring(0, 50);
+      const displayTitle =
+        firstMessage + (firstMessage.length >= 50 ? "..." : "");
+      sidebarChatUpdater.current(displayTitle, activeModule);
+    }
+  }, [messages, isNewChat, activeModule, optimisticChatId]);
+
   // Handle form submission with optimized event handler
   const handleFormSubmit = React.useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
       if (input.trim() && !chatLoading) {
-        // Track if this is the first message for the optimistic UI update
-        const isFirstMessage = messages.length === 0;
-
-        // Get optimistic chat ID if we have one (to include in the broadcast)
-        let newOptimisticChatId = null;
-        if (isFirstMessage && sidebarChatUpdater.current) {
-          // Create a chat title from the first message
-          const chatTitle =
-            input.trim().substring(0, 30) +
-            (input.trim().length > 30 ? "..." : "");
-
-          // Create optimistic chat and get its ID
-          newOptimisticChatId = sidebarChatUpdater.current(
-            chatTitle,
-            activeModule,
-            forceOldest
-          );
-
-          // Update the state with the new optimistic chat ID
-          setOptimisticChatId(newOptimisticChatId);
-        }
-
-        // Submit the form
         handleSubmit(e);
-
-        // Note: We're removing the USER_MESSAGE_SENT broadcast code here
-        // This will prevent client-side sidebar updates when user sends a message
-        // The sidebar will only update when the server responds with AI's message
       }
     },
-    [
-      input,
-      chatLoading,
-      handleSubmit,
-      messages.length,
-      activeModule,
-      forceOldest,
-    ]
+    [input, chatLoading, handleSubmit]
   );
 
   // Handle keyboard event

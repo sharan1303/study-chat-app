@@ -29,6 +29,7 @@ interface ChatContextMenuProps {
   children: React.ReactNode;
   triggerClassName?: string;
   onDelete?: () => void;
+  disabled?: boolean;
 }
 
 export function ChatContextMenu({
@@ -38,6 +39,7 @@ export function ChatContextMenu({
   children,
   triggerClassName,
   onDelete,
+  disabled = false,
 }: ChatContextMenuProps) {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,26 +71,30 @@ export function ChatContextMenu({
 
   return (
     <>
-      <ContextMenu>
-        <ContextMenuTrigger asChild className={triggerClassName}>
-          {children}
-        </ContextMenuTrigger>
-        <ContextMenuContent className="w-48">
-          <ContextMenuItem
-            onClick={handleOpenInNewTab}
-            className="cursor-pointer text-xs"
-          >
-            <ExternalLink className="mr-2 h-4 w-4" /> Open in new tab
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onClick={() => setShowDeleteAlert(true)}
-            className="cursor-pointer text-destructive focus:text-destructive text-xs"
-          >
-            <Trash className="mr-2 h-4 w-4" /> Delete thread
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+      {disabled ? (
+        <>{children}</>
+      ) : (
+        <ContextMenu>
+          <ContextMenuTrigger asChild className={triggerClassName}>
+            {children}
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-48">
+            <ContextMenuItem
+              onClick={handleOpenInNewTab}
+              className="cursor-pointer text-xs"
+            >
+              <ExternalLink className="mr-2 h-4 w-4" /> Open in new tab
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={() => setShowDeleteAlert(true)}
+              className="cursor-pointer text-destructive focus:text-destructive text-xs"
+            >
+              <Trash className="mr-2 h-4 w-4" /> Delete thread
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      )}
 
       {/* Delete Chat Alert Dialog */}
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
