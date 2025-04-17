@@ -35,7 +35,7 @@ export function ChatPageLoading() {
             <div className="relative">
               <Skeleton
                 variant="input"
-                className="flex-1 min-h-[120px] max-h-[400px] resize-none w-full"
+                className="flex-1 rounded-t-2xl rounded-b-none min-h-[120px] max-h-[400px] resize-none w-full"
               />
               <Skeleton className="absolute right-3 top-3 h-10 w-10 rounded-lg bg-primary" />
             </div>

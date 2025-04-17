@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import Link from "next/link";
 import { getOSModifierKey } from "@/lib/utils";
 import React from "react";
 
@@ -79,8 +78,8 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
         description: "Resolved issue with user authentication and signup",
       },
       {
-        type: "Feature",
-        description: "Improved UI for mobile devices",
+        type: "Improvemenet",
+        description: "UI for mobile devices",
       },
       {
         type: "Feature",
@@ -91,12 +90,10 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
         ◦ Toggle sidebar (${getOSModifierKey()}+B) 
         ◦ Upload resources (${getOSModifierKey()}+U)
         `,
-
-        link: { text: "View in Settings", href: "/settings" },
       },
       {
         type: "Feature",
-        description: `Added Search / Command palette (${getOSModifierKey()}+K) for global navigation and search for modules and chat threads.`,
+        description: `Added Search (${getOSModifierKey()}+K) for global navigation and search for modules and chat threads.`,
       },
       {
         type: "Fix",
@@ -105,6 +102,10 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
       {
         type: "Improvement",
         description: "Speed up app loading time and module dashboard",
+      },
+      {
+        type: "Improvement",
+        description: "Chat History displays module info on hover",
       },
     ],
   },
@@ -173,14 +174,6 @@ export function ChangelogDialog() {
                             {line}
                           </React.Fragment>
                         ))}
-                        {change.link && (
-                          <Link
-                            href={change.link.href}
-                            className="ml-1 text-muted-foreground hover:underline"
-                          >
-                            {change.link.text}
-                          </Link>
-                        )}
                       </span>
                     </li>
                   ))}

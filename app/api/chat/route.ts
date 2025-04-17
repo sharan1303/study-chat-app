@@ -7,7 +7,11 @@ import { getModuleContext } from "@/lib/modules";
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
-import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
+import {
+  broadcastChatCreated,
+  broadcastMessageCreated,
+  broadcastUserMessageSent,
+} from "@/lib/events";
 import {
   createGeneralSystemPrompt,
   createModuleSystemPrompt,
@@ -52,6 +56,63 @@ export async function POST(request: Request) {
         { error: "Session ID or authentication required to save chat history" },
         { status: 401 }
       );
+    }
+
+    // Immediately send a user.message.sent event to update the sidebar
+    if (shouldSaveHistory && (userId || sessionId)) {
+      try {
+        // Get any module details if this is a module chat
+        let moduleDetails = null;
+        if (moduleId) {
+          try {
+            const moduleData = await prisma.module.findUnique({
+              where: { id: moduleId },
+              select: { id: true, name: true, icon: true },
+            });
+            if (moduleData) {
+              moduleDetails = moduleData;
+              console.log(
+                "Found module details for immediate event:",
+                moduleData
+              );
+            }
+          } catch (err) {
+            console.error(
+              "Error fetching module details for immediate event:",
+              err
+            );
+          }
+        }
+
+        // Get the last user message for the chat title
+        const lastMessage = messages[messages.length - 1];
+        const messageTitle = formatChatTitle(lastMessage.content);
+
+        // Send an immediate event with the user's message
+        const immediateMessageData = {
+          id: generateId(),
+          chatId: requestedChatId,
+          chatTitle: messageTitle,
+          updatedAt: new Date().toISOString(),
+          moduleId: moduleId,
+          optimisticChatId: optimisticChatId,
+          module: moduleDetails,
+        };
+
+        const targetId = userId || sessionId;
+        if (targetId) {
+          console.log(
+            "Immediately broadcasting user.message.sent event before AI response:",
+            requestedChatId,
+            "with module info:",
+            moduleDetails
+          );
+          broadcastUserMessageSent(immediateMessageData, [targetId]);
+        }
+      } catch (error) {
+        console.error("Error broadcasting immediate user message:", error);
+        // Continue processing even if this fails
+      }
     }
 
     let user = null;
@@ -229,7 +290,16 @@ export async function POST(request: Request) {
               // Only broadcast for new chats
               if (isNewChat) {
                 // Create single chat creation event
-                const chatEventData = {
+                const chatEventData: {
+                  id: string;
+                  title: string;
+                  moduleId: string | null;
+                  createdAt: Date;
+                  updatedAt: Date;
+                  sessionId: string | null;
+                  optimisticChatId?: string;
+                  module: { id: string; name: string; icon: string } | null;
+                } = {
                   id: savedChat.id,
                   title: savedChat.title,
                   moduleId: savedChat.moduleId,
@@ -239,15 +309,31 @@ export async function POST(request: Request) {
                   // Include optimisticChatId if it was provided, to help client replace the optimistic chat
                   optimisticChatId: optimisticChatId,
                   // Include module info if available
-                  module: savedChat.moduleId
-                    ? {
-                        id: savedChat.moduleId,
-                        // These will be populated by the client based on its modules list
-                        name: null,
-                        icon: null,
-                      }
-                    : null,
+                  module: null, // Will be populated below
                 };
+
+                // Get module info if this is a module chat
+                if (savedChat.moduleId) {
+                  try {
+                    const moduleData = await prisma.module.findUnique({
+                      where: { id: savedChat.moduleId },
+                      select: { id: true, name: true, icon: true },
+                    });
+
+                    if (moduleData) {
+                      chatEventData.module = moduleData;
+                      console.log(
+                        "Retrieved module info for chat.created event:",
+                        moduleData
+                      );
+                    }
+                  } catch (err) {
+                    console.error(
+                      "Error fetching module details for chat.created event:",
+                      err
+                    );
+                  }
+                }
 
                 // Determine target ID for broadcast
                 const targetId = userId || sessionId;
@@ -255,7 +341,9 @@ export async function POST(request: Request) {
                 if (targetId) {
                   console.log(
                     "Broadcasting chat.created event for new chat:",
-                    savedChat.id
+                    savedChat.id,
+                    "with module info:",
+                    chatEventData.module
                   );
                   console.log("Target ID for broadcast:", targetId);
                   broadcastChatCreated(chatEventData, [targetId]);
@@ -270,7 +358,16 @@ export async function POST(request: Request) {
                 );
 
                 // TEMPORARY FIX: Also send chat.created for existing chats to help debug
-                const chatEventData = {
+                const chatEventData: {
+                  id: string;
+                  title: string;
+                  moduleId: string | null;
+                  createdAt: Date;
+                  updatedAt: Date;
+                  sessionId: string | null;
+                  optimisticChatId?: string;
+                  module: { id: string; name: string; icon: string } | null;
+                } = {
                   id: savedChat.id,
                   title: savedChat.title,
                   moduleId: savedChat.moduleId,
@@ -278,20 +375,39 @@ export async function POST(request: Request) {
                   updatedAt: savedChat.updatedAt,
                   sessionId: sessionId,
                   optimisticChatId: optimisticChatId,
-                  module: savedChat.moduleId
-                    ? {
-                        id: savedChat.moduleId,
-                        name: null,
-                        icon: null,
-                      }
-                    : null,
+                  module: null, // Will be populated below
                 };
+
+                // Get module info if this is a module chat
+                if (savedChat.moduleId) {
+                  try {
+                    const moduleData = await prisma.module.findUnique({
+                      where: { id: savedChat.moduleId },
+                      select: { id: true, name: true, icon: true },
+                    });
+
+                    if (moduleData) {
+                      chatEventData.module = moduleData;
+                      console.log(
+                        "Retrieved module info for existing chat:",
+                        moduleData
+                      );
+                    }
+                  } catch (err) {
+                    console.error(
+                      "Error fetching module details for existing chat:",
+                      err
+                    );
+                  }
+                }
 
                 const targetId = userId || sessionId;
                 if (targetId) {
                   console.log(
                     "TEMPORARY DEBUG: Broadcasting chat.created for existing chat:",
-                    savedChat.id
+                    savedChat.id,
+                    "with module info:",
+                    chatEventData.module
                   );
                   broadcastChatCreated(chatEventData, [targetId]);
                 }
