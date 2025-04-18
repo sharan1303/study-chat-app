@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { broadcastResourceCreated } from "@/lib/events";
 import { Prisma } from "@prisma/client";
+import { processResource } from "@/lib/document-processor";
 
 // Configure Next.js to handle larger uploads
 export const config = {
@@ -171,6 +172,24 @@ export async function POST(request: NextRequest) {
       id: resource.id,
       moduleId: resource.moduleId,
     });
+
+    // Trigger background processing for RAG
+    // We don't await this to avoid delaying the response
+    if (process.env.ENABLE_RAG === "true") {
+      try {
+        // Fire and forget - don't await
+        processResource(resource.id).catch((err) => {
+          console.error(
+            `Background RAG processing error for ${resource.id}:`,
+            err
+          );
+        });
+        console.log(`RAG processing initiated for resource: ${resource.id}`);
+      } catch (error) {
+        // Log but don't fail the request
+        console.error(`Failed to initiate RAG processing: ${error}`);
+      }
+    }
 
     return NextResponse.json({
       id: resource.id,

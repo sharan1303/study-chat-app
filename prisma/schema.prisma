@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
+  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp", schema: "extensions"), vector(schema: "extensions")]
 }
 
 model User {
@@ -52,6 +52,7 @@ model Resource {
   fileSize  Int?
   module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   user      User?    @relation(fields: [userId], references: [id])
+  chunks    ResourceChunk[]
 
   @@index([moduleId])
   @@index([userId])
@@ -71,4 +72,17 @@ model Chat {
 
   @@index([userId])
   @@index([sessionId])
+}
+
+model ResourceChunk {
+  id          String   @id @default(uuid())
+  resourceId  String
+  content     String   @db.Text
+  metadata    Json
+  embedding   Unsupported("vector(1536)")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
 }

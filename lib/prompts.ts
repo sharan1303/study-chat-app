@@ -83,6 +83,15 @@ export const createGeneralSystemPrompt = (searchContext = "") => `
   - Use headings (## and ###) for sections
   - Use code blocks for code examples
   - Use > for quotes
+
+  ${
+    searchContext
+      ? `
+  IMPORTANT: When using information from the search results, include a SOURCES section at the end of your response.
+  Format source references as: [Resource Title](resource:resource-id)
+  `
+      : ""
+  }
 `;
 
 /**
@@ -122,6 +131,15 @@ export const createModuleSystemPrompt = (
   - Use headings (## and ###) for sections
   - Use code blocks for code examples
   - Use > for quotes
+
+  ${
+    searchContext
+      ? `
+  IMPORTANT: When using information from the search results, include a SOURCES section at the end of your response.
+  Format source references as: [Resource Title](resource:resource-id)
+  `
+      : ""
+  }
 `;
 
 /**
