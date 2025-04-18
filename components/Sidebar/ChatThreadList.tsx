@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useRouter, usePathname } from "next/navigation";
-import { MessageSquare, Plus } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { useNavigation } from "./SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
 import { ChatContextMenu } from "./ChatContextMenu";
@@ -117,6 +115,7 @@ export default function ChatThreadList({
                 >
                   <div className="w-full relative cursor-context-menu">
                     <button
+                      type="button"
                       onClick={(e) => {
                         onThreadClick(thread.id, thread.path);
                       }}

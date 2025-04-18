@@ -98,6 +98,8 @@ export default function ClientChatPage({
   React.useEffect(() => {
     if (initialModuleDetails) {
       setModuleDetails(initialModuleDetails);
+    } else {
+      setModuleDetails(null);
     }
   }, [initialModuleDetails]);
 
@@ -277,11 +279,14 @@ export default function ClientChatPage({
 
   // When messages change, check if we should update the title
   React.useEffect(() => {
+    // Only update title for truly new chats with their first message
     if (
       isFirstMessage &&
       messages.length > 0 &&
       messages[0].role === "user" &&
-      !hasUpdatedTitle.current
+      !hasUpdatedTitle.current &&
+      isNewChat && // Make sure this is actually a new chat
+      (chatId === "new" || !chatId.includes("-")) // Additional check for truly new chat IDs
     ) {
       // Update the display title with the first user message
       const firstUserMessage = messages[0].content.substring(0, 50);
@@ -292,7 +297,14 @@ export default function ClientChatPage({
       setIsFirstMessage(false);
       hasUpdatedTitle.current = true;
     }
-  }, [messages, isFirstMessage, activeModule, optimisticChatId, chatId]);
+  }, [
+    messages,
+    isFirstMessage,
+    activeModule,
+    optimisticChatId,
+    chatId,
+    isNewChat,
+  ]);
 
   // Function to handle navigation to module details page
   const navigateToModuleDetails = React.useCallback(() => {
@@ -307,8 +319,14 @@ export default function ClientChatPage({
     (e: React.FormEvent) => {
       e.preventDefault();
       if (input.trim() && !chatLoading) {
-        // For new chats, add an optimistic entry to the sidebar when sending first message
-        if (isNewChat && messages.length === 0 && sidebarChatUpdater.current) {
+        // ONLY add optimistic entry for truly new chats with no messages
+        // and only on the root chat path
+        if (
+          isNewChat &&
+          messages.length === 0 &&
+          sidebarChatUpdater.current &&
+          (chatId === "new" || !chatId.includes("-"))
+        ) {
           // Create a first message-based title
           const title =
             input.trim().substring(0, 50) + (input.length > 50 ? "..." : "");
@@ -316,15 +334,21 @@ export default function ClientChatPage({
           // Save the current path to help with maintaining the active state
           const currentPath = window.location.pathname;
 
-          // Add the chat optimistically to the sidebar and store the ID
-          const newOptimisticId = sidebarChatUpdater.current(
-            title,
-            activeModule,
-            false,
-            currentPath
-          );
-          if (newOptimisticId) {
-            setOptimisticChatId(newOptimisticId);
+          // Only add optimistic chat if we're on a root chat path AND this is a new chat
+          if (
+            (currentPath === "/chat" || currentPath.endsWith("/chat")) &&
+            !optimisticChatId
+          ) {
+            // Add the chat optimistically to the sidebar and store the ID
+            const newOptimisticId = sidebarChatUpdater.current(
+              title,
+              activeModule,
+              false,
+              currentPath
+            );
+            if (newOptimisticId) {
+              setOptimisticChatId(newOptimisticId);
+            }
           }
         }
 
@@ -339,6 +363,8 @@ export default function ClientChatPage({
       messages.length,
       sidebarChatUpdater,
       activeModule,
+      chatId,
+      optimisticChatId,
     ]
   );
 
@@ -388,8 +414,6 @@ export default function ClientChatPage({
                 <div className="flex flex-col space-y-8 pt-14 px-4 pb-8">
                   <ChatMessages
                     messages={messages}
-                    copiedMessageId={copiedMessageId}
-                    copyToClipboard={copyToClipboard}
                     modelName={modelName}
                   />
                 </div>

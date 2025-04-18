@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { MessageSquare, X, ExternalLink, Plus, Trash } from "lucide-react";
@@ -77,25 +77,30 @@ export default function ChatHistory({
     const last30Days: Chat[] = [];
     const older: Chat[] = [];
 
-    chats.forEach((chat) => {
-      // Always put optimistic chats in Today section
-      if (chat._isOptimistic) {
-        todayChats.push(chat);
-        return;
-      }
+    [...chats]
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+      .forEach((chat) => {
+        // Always put optimistic chats in Today section
+        if (chat._isOptimistic) {
+          todayChats.push(chat);
+          return;
+        }
 
-      const chatDate = new Date(chat.updatedAt);
+        const chatDate = new Date(chat.updatedAt);
 
-      if (chatDate >= today) {
-        todayChats.push(chat);
-      } else if (chatDate >= oneWeekAgo) {
-        last7Days.push(chat);
-      } else if (chatDate >= oneMonthAgo) {
-        last30Days.push(chat);
-      } else {
-        older.push(chat);
-      }
-    });
+        if (chatDate >= today) {
+          todayChats.push(chat);
+        } else if (chatDate >= oneWeekAgo) {
+          last7Days.push(chat);
+        } else if (chatDate >= oneMonthAgo) {
+          last30Days.push(chat);
+        } else {
+          older.push(chat);
+        }
+      });
 
     return {
       today: todayChats,
@@ -186,7 +191,7 @@ export default function ChatHistory({
     }
   };
 
-  const groupedChats = groupChatsByDate(chats);
+  const groupedChats = useMemo(() => groupChatsByDate(chats), [chats]);
 
   const renderChatGroup = (chats: Chat[], title: string) => {
     if (chats.length === 0) return null;
