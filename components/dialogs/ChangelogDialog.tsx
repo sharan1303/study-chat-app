@@ -113,18 +113,19 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
     date: "Coming Soon",
     title: "",
     changes: [
-        {
-            type: "Feature",
-            description: "Support for more models",
-        },
-        {
-            type: "Feature",
-            description: "Module integration directly from chat using @ to call for module context and documents",
-        },
-        {
-            type: "Improvement",
-            description: "Uploaded documents added to context",
-        },
+      {
+        type: "Feature",
+        description: "Support for more models",
+      },
+      {
+        type: "Feature",
+        description:
+          "Module integration directly from chat using @ to call for module context and documents",
+      },
+      {
+        type: "Improvement",
+        description: "Uploaded documents added to context",
+      },
     ],
   },
 ];
@@ -154,7 +155,7 @@ export function ChangelogDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-md rounded-lg sm:max-w-md md:max-w-lg lg:max-w-xl">
+      <DialogContent className="max-w-[95vw] h-auto rounded-lg sm:max-w-md md:max-w-lg lg:max-w-xl">
         <DialogHeader>
           <DialogTitle>What's New</DialogTitle>
           <DialogDescription>
@@ -162,7 +163,7 @@ export function ChangelogDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="mt-4">
+        <ScrollArea className="mt-4 max-h-[50vh] md:max-h-[60vh]">
           <div className="space-y-6">
             {CHANGELOG_ENTRIES.map((entry) => (
               <div key={entry.version} className="space-y-2">
