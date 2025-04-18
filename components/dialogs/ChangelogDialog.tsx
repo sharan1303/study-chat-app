@@ -115,15 +115,15 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
     changes: [
         {
             type: "Feature",
-            description: "Support for more modules",
+            description: "Support for more models",
         },
         {
             type: "Feature",
-            description: "Module integration directly from chat using @ to call for module containing context and documents",
+            description: "Module integration directly from chat using @ to call for module context and documents",
         },
         {
             type: "Improvement",
-            description: "Uploaded documents will be displayed in chat page",
+            description: "Uploaded documents added to context",
         },
     ],
   },
