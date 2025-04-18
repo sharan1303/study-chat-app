@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
-import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -70,7 +69,7 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
   // Add more versions here as your app evolves
   {
     version: "1.0.1",
-    date: "April 15, 2025",
+    date: "April 18, 2025",
     title: "",
     changes: [
       {
@@ -78,7 +77,7 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
         description: "Resolved issue with user authentication and signup",
       },
       {
-        type: "Improvemenet",
+        type: "Improvement",
         description: "UI for mobile devices",
       },
       {
@@ -105,8 +104,27 @@ const CHANGELOG_ENTRIES: VersionEntry[] = [
       },
       {
         type: "Improvement",
-        description: "Chat History displays module info on hover",
+        description: "Chat History displays module name on hover",
       },
+    ],
+  },
+  {
+    version: "1.0.2",
+    date: "Coming Soon",
+    title: "",
+    changes: [
+        {
+            type: "Feature",
+            description: "Support for more modules",
+        },
+        {
+            type: "Feature",
+            description: "Module integration directly from chat using @ to call for module containing context and documents",
+        },
+        {
+            type: "Improvement",
+            description: "Uploaded documents will be displayed in chat page",
+        },
     ],
   },
 ];

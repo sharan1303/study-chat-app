@@ -62,27 +62,7 @@ export async function POST(request: Request) {
     if (shouldSaveHistory && (userId || sessionId)) {
       try {
         // Get any module details if this is a module chat
-        let moduleDetails = null;
-        if (moduleId) {
-          try {
-            const moduleData = await prisma.module.findUnique({
-              where: { id: moduleId },
-              select: { id: true, name: true, icon: true },
-            });
-            if (moduleData) {
-              moduleDetails = moduleData;
-              console.log(
-                "Found module details for immediate event:",
-                moduleData
-              );
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching module details for immediate event:",
-              err
-            );
-          }
-        }
+        const moduleDetails = moduleId ? await getModuleMeta(moduleId) : null;
 
         // Get the last user message for the chat title
         const lastMessage = messages[messages.length - 1];
@@ -101,12 +81,7 @@ export async function POST(request: Request) {
 
         const targetId = userId || sessionId;
         if (targetId) {
-          console.log(
-            "Immediately broadcasting user.message.sent event before AI response:",
-            requestedChatId,
-            "with module info:",
-            moduleDetails
-          );
+          console.log("Broadcasting user.message.sent event:", requestedChatId);
           broadcastUserMessageSent(immediateMessageData, [targetId]);
         }
       } catch (error) {
@@ -224,23 +199,8 @@ export async function POST(request: Request) {
         onFinish: async ({ text }) => {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
-            let isNewChat = true;
-
             try {
-              // Check if this chat already exists
-              console.log("Checking if chat exists with ID:", requestedChatId);
-              const existingChat = await prisma.chat.findUnique({
-                where: { id: requestedChatId },
-              });
-
-              isNewChat = !existingChat;
-              console.log(
-                "Is this a new chat?",
-                isNewChat,
-                existingChat ? "Chat exists" : "Chat does not exist"
-              );
-
-              // If it's a new chat, prepare data for creation
+              // Prepare data for creation
               const chatData: {
                 id: string;
                 title: string;
@@ -269,7 +229,7 @@ export async function POST(request: Request) {
               }
 
               // If this chat should be forced to appear as the oldest, set an old timestamp
-              if (forceOldest && isNewChat) {
+              if (forceOldest) {
                 const oneYearAgo = new Date();
                 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
                 chatData.createdAt = oneYearAgo;
@@ -286,6 +246,15 @@ export async function POST(request: Request) {
                 },
                 create: chatData,
               });
+
+              // Determine if this was a new chat by comparing timestamps
+              // If timestamps are equal (accounting for millisecond precision differences),
+              // or this was forced as oldest, then it's a new chat
+              const isNewChat =
+                forceOldest ||
+                Math.abs(
+                  savedChat.createdAt.getTime() - savedChat.updatedAt.getTime()
+                ) < 1000;
 
               // Only broadcast for new chats
               if (isNewChat) {
@@ -315,16 +284,12 @@ export async function POST(request: Request) {
                 // Get module info if this is a module chat
                 if (savedChat.moduleId) {
                   try {
-                    const moduleData = await prisma.module.findUnique({
-                      where: { id: savedChat.moduleId },
-                      select: { id: true, name: true, icon: true },
-                    });
+                    const moduleData = await getModuleMeta(savedChat.moduleId);
 
                     if (moduleData) {
                       chatEventData.module = moduleData;
                       console.log(
-                        "Retrieved module info for chat.created event:",
-                        moduleData
+                        "Retrieved module info for chat.created event"
                       );
                     }
                   } catch (err) {
@@ -381,17 +346,11 @@ export async function POST(request: Request) {
                 // Get module info if this is a module chat
                 if (savedChat.moduleId) {
                   try {
-                    const moduleData = await prisma.module.findUnique({
-                      where: { id: savedChat.moduleId },
-                      select: { id: true, name: true, icon: true },
-                    });
+                    const moduleData = await getModuleMeta(savedChat.moduleId);
 
                     if (moduleData) {
                       chatEventData.module = moduleData;
-                      console.log(
-                        "Retrieved module info for existing chat:",
-                        moduleData
-                      );
+                      console.log("Retrieved module info for existing chat");
                     }
                   } catch (err) {
                     console.error(
@@ -418,13 +377,7 @@ export async function POST(request: Request) {
                   let moduleDetails = null;
                   if (savedChat.moduleId) {
                     try {
-                      const moduleData = await prisma.module.findUnique({
-                        where: { id: savedChat.moduleId },
-                        select: { id: true, name: true, icon: true },
-                      });
-                      if (moduleData) {
-                        moduleDetails = moduleData;
-                      }
+                      moduleDetails = await getModuleMeta(savedChat.moduleId);
                     } catch (err) {
                       console.error(
                         "Error fetching module details for event:",
@@ -505,4 +458,16 @@ function needsSearch(message: string): boolean {
     message.length > 15 &&
     SEARCH_INDICATORS.some((term) => message.includes(term.toLowerCase()))
   );
+}
+
+async function getModuleMeta(moduleId: string) {
+  try {
+    return await prisma.module.findUnique({
+      where: { id: moduleId },
+      select: { id: true, name: true, icon: true },
+    });
+  } catch (err) {
+    console.error("Error fetching module details:", err);
+    return null;
+  }
 }

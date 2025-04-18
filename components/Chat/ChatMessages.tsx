@@ -6,13 +6,11 @@ import CodeBlock from "./CodeBlock";
 import { Check, Copy } from "lucide-react";
 import type { Message } from "@ai-sdk/react";
 import { getOSModifierKey } from "@/lib/utils";
-
+import { toast } from "sonner";
 export interface ChatMessagesProps {
   messages: Message[];
   scrollContainerRef?: React.RefObject<HTMLDivElement>;
   modelName: string;
-  copiedMessageId?: string | null;
-  copyToClipboard?: (text: string, messageId: string) => void;
 }
 
 const UserMessage: React.FC<{
@@ -61,7 +59,7 @@ const UserMessage: React.FC<{
           onClick={() => copyToClipboard(message.content)}
           className="flex items-center gap-2 px-3 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
           aria-label="Copy message"
-          title={`Copy message (${getOSModifierKey()} + C)`}
+          title={`Copy message (${getOSModifierKey()}+C)`}
         >
           {isCopied ? (
             <Check className="h-4 w-4 text-green-500" />
@@ -191,12 +189,14 @@ export default function ChatMessages({
   >(null);
 
   const handleCopyToClipboard = (text: string, messageId: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setLocalCopiedMessageId(messageId);
-      setTimeout(() => setLocalCopiedMessageId(null), 2000);
-    });
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setLocalCopiedMessageId(messageId);
+        toast.success("Copied to clipboard");
+        setTimeout(() => setLocalCopiedMessageId(null), 2000);
+      })
+      .catch(() => toast.error("Failed to copy"));
   };
-
   return (
     <div className="flex-1 overflow-y-auto px-4 py-8">
       <div className="space-y-8 w-full max-w-full">

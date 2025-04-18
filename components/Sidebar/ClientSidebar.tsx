@@ -149,8 +149,8 @@ function ClientSidebarContent({
           if (moduleInfo) {
             chat.module = {
               id: moduleInfo.id,
-              name: moduleInfo.name,
-              icon: moduleInfo.icon,
+              name: moduleInfo?.name ?? "Module",
+              icon: moduleInfo?.icon ?? "📚",
             };
           }
         }
@@ -378,37 +378,37 @@ function ClientSidebarContent({
                       ? {
                           id: newChat.moduleId || existingChat.moduleId,
                           name:
-                            (newChat.module && newChat.module.name) ||
-                            (existingChat.module && existingChat.module.name) ||
+                            (newChat.module && newChat.module.name) ??
+                            (existingChat.module && existingChat.module.name) ??
                             modules.find(
                               (m) =>
                                 m.id ===
                                 (newChat.moduleId || existingChat.moduleId)
-                            )?.name ||
+                            )?.name ??
                             "Module",
                           icon:
-                            (newChat.module && newChat.module.icon) ||
-                            (existingChat.module && existingChat.module.icon) ||
+                            (newChat.module && newChat.module.icon) ??
+                            (existingChat.module && existingChat.module.icon) ??
                             modules.find(
                               (m) =>
                                 m.id ===
                                 (newChat.moduleId || existingChat.moduleId)
-                            )?.icon ||
+                            )?.icon ??
                             "📚",
                         }
                       : null;
 
-                  // Log module information for debugging
-                  console.log(
-                    "CHAT_CREATED replacing optimistic chat - moduleInfo:",
-                    moduleInfo
-                  );
-
+                  // Preserve UI state attributes
                   updatedChats[optimisticIdIndex] = {
-                    ...existingChat, // Keep any UI-related properties
-                    ...newChat, // Add server data
-                    module: moduleInfo, // Ensure module info is explicitly set
-                    _isOptimistic: false, // Mark as no longer optimistic
+                    ...existingChat,
+                    id: newChat.id,
+                    title: newChat.title,
+                    createdAt: newChat.createdAt,
+                    updatedAt: newChat.updatedAt,
+                    moduleId: newChat.moduleId,
+                    module: moduleInfo,
+                    _isOptimistic: false,
+                    _currentPath: existingChat._currentPath,
                   };
                   return updatedChats;
                 }
@@ -434,22 +434,22 @@ function ClientSidebarContent({
                     ? {
                         id: newChat.moduleId || existingChat.moduleId,
                         name:
-                          (newChat.module && newChat.module.name) ||
-                          (existingChat.module && existingChat.module.name) ||
+                          (newChat.module && newChat.module.name) ??
+                          (existingChat.module && existingChat.module.name) ??
                           modules.find(
                             (m) =>
                               m.id ===
                               (newChat.moduleId || existingChat.moduleId)
-                          )?.name ||
+                          )?.name ??
                           "Module",
                         icon:
-                          (newChat.module && newChat.module.icon) ||
-                          (existingChat.module && existingChat.module.icon) ||
+                          (newChat.module && newChat.module.icon) ??
+                          (existingChat.module && existingChat.module.icon) ??
                           modules.find(
                             (m) =>
                               m.id ===
                               (newChat.moduleId || existingChat.moduleId)
-                          )?.icon ||
+                          )?.icon ??
                           "📚",
                       }
                     : null;
@@ -460,11 +460,17 @@ function ClientSidebarContent({
                   moduleInfo
                 );
 
+                // Preserve UI state attributes
                 updatedChats[optimisticIndex] = {
-                  ...existingChat, // Keep any UI-related properties
-                  ...newChat, // Add server data
-                  module: moduleInfo, // Ensure module info is explicitly set
-                  _isOptimistic: false, // Mark as no longer optimistic
+                  ...existingChat,
+                  id: newChat.id,
+                  title: newChat.title,
+                  createdAt: newChat.createdAt,
+                  updatedAt: newChat.updatedAt,
+                  moduleId: newChat.moduleId,
+                  module: moduleInfo,
+                  _isOptimistic: false,
+                  _currentPath: existingChat._currentPath,
                 };
                 return updatedChats;
               } else {
@@ -474,11 +480,14 @@ function ClientSidebarContent({
                     (m) => m.id === newChat.moduleId
                   );
                   if (moduleInfo) {
-                    console.log("Adding module info to chat:", moduleInfo.name);
+                    console.log(
+                      "Adding module info to chat:",
+                      moduleInfo?.name
+                    );
                     newChat.module = {
                       id: moduleInfo.id,
-                      name: moduleInfo.name,
-                      icon: moduleInfo.icon,
+                      name: moduleInfo?.name ?? "Module",
+                      icon: moduleInfo?.icon ?? "📚",
                     };
                   }
                 }
@@ -538,9 +547,9 @@ function ClientSidebarContent({
                   const chatToUpdate = prevChats[chatIndex];
                   const updatedChat = {
                     ...chatToUpdate,
-                    title: messageData.chatTitle,
                     updatedAt: messageData.updatedAt,
                     moduleId: messageData.moduleId,
+                    // Do NOT update title for existing chats
                   };
 
                   // If missing module info, add it from modules list if possible
@@ -552,8 +561,8 @@ function ClientSidebarContent({
                     if (moduleInfo) {
                       updatedChat.module = {
                         id: moduleInfo.id,
-                        name: moduleInfo.name,
-                        icon: moduleInfo.icon,
+                        name: moduleInfo?.name ?? "Module",
+                        icon: moduleInfo?.icon ?? "📚",
                       };
                     }
                   }
@@ -631,9 +640,14 @@ function ClientSidebarContent({
                       id: messageData.chatId,
                       title: messageData.chatTitle,
                       updatedAt: messageData.updatedAt,
+                      createdAt:
+                        prevChats[optimisticChatIndex].createdAt ||
+                        new Date().toISOString(),
                       moduleId: messageData.moduleId,
+                      module: messageData.module || null,
                       _isOptimistic: false,
-                    };
+                      _currentPath: prevChats[optimisticChatIndex]._currentPath,
+                    } as Chat;
 
                     // Create a new array with the updated chat moved to the top
                     return [
@@ -643,7 +657,7 @@ function ClientSidebarContent({
                     ];
                   }
 
-                  // Find the chat to update by its ID
+                  // For existing chats, ONLY update position and timestamp - NOT title
                   const chatIndex = prevChats.findIndex(
                     (chat) => chat.id === messageData.chatId
                   );
@@ -655,11 +669,11 @@ function ClientSidebarContent({
                   // Extract and update the chat
                   const chatToUpdate = prevChats[chatIndex];
 
-                  // Create updated chat with new timestamp
+                  // Create updated chat with new timestamp only
                   const updatedChat = {
                     ...chatToUpdate,
-                    title: messageData.chatTitle,
                     updatedAt: messageData.updatedAt,
+                    // Do NOT update title for existing chats that aren't optimistic
                   };
 
                   // Create a new array with the chat moved to the top
@@ -692,9 +706,12 @@ function ClientSidebarContent({
                 // Look for "New Chat" entries first, regardless of optimisticChatId
                 const newChatIndex = prevChats.findIndex(
                   (chat) =>
-                    chat.title === "New Chat" &&
+                    (chat.title === "New Chat" ||
+                      chat._isOptimistic === true) &&
                     (chat.id === messageData.chatId ||
-                      chat._isOptimistic === true)
+                      chat.id === messageData.optimisticChatId ||
+                      (!messageData.optimisticChatId &&
+                        chat._isOptimistic === true))
                 );
 
                 if (newChatIndex >= 0) {
@@ -706,22 +723,22 @@ function ClientSidebarContent({
                       ? {
                           id: messageData.moduleId || existingChat.moduleId,
                           name:
-                            (messageData.module && messageData.module.name) ||
-                            (existingChat.module && existingChat.module.name) ||
+                            (messageData.module && messageData.module.name) ??
+                            (existingChat.module && existingChat.module.name) ??
                             modules.find(
                               (m) =>
                                 m.id ===
                                 (messageData.moduleId || existingChat.moduleId)
-                            )?.name ||
+                            )?.name ??
                             "Module",
                           icon:
-                            (messageData.module && messageData.module.icon) ||
-                            (existingChat.module && existingChat.module.icon) ||
+                            (messageData.module && messageData.module.icon) ??
+                            (existingChat.module && existingChat.module.icon) ??
                             modules.find(
                               (m) =>
                                 m.id ===
                                 (messageData.moduleId || existingChat.moduleId)
-                            )?.icon ||
+                            )?.icon ??
                             "📚",
                         }
                       : null;
@@ -736,6 +753,7 @@ function ClientSidebarContent({
                     moduleId: messageData.moduleId || existingChat.moduleId,
                     module: moduleInfo,
                     _isOptimistic: false,
+                    _currentPath: existingChat._currentPath,
                   };
 
                   // Move to top of list
@@ -744,6 +762,31 @@ function ClientSidebarContent({
                     ...updatedChats.slice(0, newChatIndex),
                     ...updatedChats.slice(newChatIndex + 1),
                   ];
+                }
+
+                // For existing chats, ONLY update position, timestamp - NEVER create optimistic entries
+                if (messageData.chatId) {
+                  const chatIndex = prevChats.findIndex(
+                    (chat) =>
+                      chat.id === messageData.chatId && !chat._isOptimistic
+                  );
+
+                  if (chatIndex !== -1) {
+                    // Just update the existing chat's timestamp to move it to the top
+                    // but PRESERVE the original title - only update timestamp
+                    const updatedChat = {
+                      ...prevChats[chatIndex],
+                      updatedAt: messageData.updatedAt,
+                      // Do NOT update title for existing chats with non-first messages
+                    };
+
+                    // Move to top of list without creating an optimistic entry
+                    return [
+                      updatedChat,
+                      ...prevChats.slice(0, chatIndex),
+                      ...prevChats.slice(chatIndex + 1),
+                    ];
+                  }
                 }
 
                 // Continue with the existing logic for other cases
@@ -766,6 +809,7 @@ function ClientSidebarContent({
                       moduleId: messageData.moduleId,
                       module: messageData.module || null,
                       _isOptimistic: false,
+                      _currentPath: prevChats[optimisticChatIndex]._currentPath,
                     } as Chat;
 
                     // Create a new array with the real chat replacing the optimistic one
@@ -829,8 +873,8 @@ function ClientSidebarContent({
                     const moduleObject = moduleInfo
                       ? {
                           id: messageData.moduleId,
-                          name: moduleInfo.name || "Module",
-                          icon: moduleInfo.icon || "📚",
+                          name: moduleInfo.name ?? "Module",
+                          icon: moduleInfo.icon ?? "📚",
                         }
                       : null;
 
@@ -850,6 +894,7 @@ function ClientSidebarContent({
                       moduleId: messageData.moduleId,
                       module: moduleObject,
                       _isOptimistic: false,
+                      _currentPath: prevChats[optimisticChatIndex]._currentPath,
                     } as Chat;
 
                     return [
@@ -874,8 +919,8 @@ function ClientSidebarContent({
                     const moduleObject = moduleInfo
                       ? {
                           id: messageData.moduleId,
-                          name: moduleInfo.name || "Module",
-                          icon: moduleInfo.icon || "📚",
+                          name: moduleInfo.name ?? "Module",
+                          icon: moduleInfo.icon ?? "📚",
                         }
                       : null;
 
@@ -904,8 +949,8 @@ function ClientSidebarContent({
                   const moduleObject = moduleInfo
                     ? {
                         id: messageData.moduleId,
-                        name: moduleInfo.name || "Module",
-                        icon: moduleInfo.icon || "📚",
+                        name: moduleInfo.name ?? "Module",
+                        icon: moduleInfo.icon ?? "📚",
                       }
                     : chatToUpdate.module;
 
@@ -1218,8 +1263,8 @@ function ClientSidebarContent({
           moduleId && moduleInfo
             ? {
                 id: moduleId,
-                name: moduleInfo.name || "Module",
-                icon: moduleInfo.icon || "📚",
+                name: moduleInfo?.name ?? "Module",
+                icon: moduleInfo?.icon ?? "📚",
               }
             : null,
         _isOptimistic: true, // Mark as optimistic to replace when real data arrives
@@ -1271,8 +1316,21 @@ function ClientSidebarContent({
         forceOldest = false,
         currentPath = ""
       ) => {
-        // We now want to add optimistic chats for all titles, including first messages
+        // We should ONLY add optimistic chats for brand new chats
+        // or when forceOldest is true (for welcome/initial chats)
         const effectiveModuleId = moduleId;
+
+        // Skip adding optimistic chats for paths that aren't new chat paths
+        // unless forceOldest is true (for welcome chats)
+        const isNewChatPath =
+          currentPath === "/chat" ||
+          (currentPath.endsWith("/chat") && !currentPath.includes("/chat/"));
+
+        if (!isNewChatPath && !forceOldest) {
+          // Return empty string to signal that we're not creating an optimistic chat
+          // for existing chat paths
+          return "";
+        }
 
         // Check if we already have an optimistic chat that matches this context
         const hasMatchingOptimisticChat = chats.some(
@@ -1283,6 +1341,7 @@ function ClientSidebarContent({
         );
 
         // Don't create a duplicate if we already have a matching optimistic chat
+        // or if this is not a new chat path (unless forceOldest is true)
         if (hasMatchingOptimisticChat && !forceOldest) {
           // Return the ID of the first matching optimistic chat
           const existingChat = chats.find(
@@ -1316,8 +1375,8 @@ function ClientSidebarContent({
           ) => string;
           __hasPendingOptimisticChat?: boolean;
         };
-        delete win.__sidebarChatUpdater;
-        delete win.__hasPendingOptimisticChat;
+        win.__sidebarChatUpdater = undefined;
+        win.__hasPendingOptimisticChat = undefined;
       }
     };
   }, [addOptimisticChat, chats]);

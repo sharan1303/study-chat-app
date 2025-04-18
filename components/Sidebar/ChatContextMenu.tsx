@@ -45,17 +45,31 @@ export function ChatContextMenu({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleOpenInNewTab = () => {
-    window.open(chatPath, "_blank");
+    window.open(chatPath, "_blank", "noopener,noreferrer");
   };
 
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
 
-      // Here you would call your API to delete the chat thread
-      // For example: await api.deleteChat(chatId);
+      // Call the API to delete the chat
+      const response = await fetch(`/api/chat/${chatId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete chat");
+      }
 
       toast.success(`Chat "${chatName}" deleted successfully`);
+
+      // Dispatch event to update UI
+      window.dispatchEvent(
+        new CustomEvent("chat-deleted", {
+          detail: { chatId },
+        })
+      );
 
       if (onDelete) {
         onDelete();
