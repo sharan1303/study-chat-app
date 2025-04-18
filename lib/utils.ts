@@ -90,8 +90,6 @@ export function decodeModuleSlug(encodedSlug: string): string {
   }
 
   try {
-    // Log the original slug for debugging
-    console.log(`Decoding slug: "${encodedSlug}"`);
 
     // Next.js already decodes the URL parameters, so we don't need to decode again
     // This avoids double-decoding issues that can corrupt the string
@@ -103,7 +101,6 @@ export function decodeModuleSlug(encodedSlug: string): string {
     // Ensure we don't return empty string
     const finalResult = result.trim() ? result.trim() : "unnamed-module";
 
-    console.log(`Decoded result: "${finalResult}"`);
     return finalResult;
   } catch (error) {
     console.error("Error decoding module slug:", error, encodedSlug);

@@ -19,6 +19,7 @@ export default async function NewChat() {
         chatId={chatId}
         initialMessages={[]}
         isAuthenticated={!!userId}
+        isNewChat={true}
       />
     </Suspense>
   );

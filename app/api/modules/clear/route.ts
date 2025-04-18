@@ -41,8 +41,6 @@ export async function DELETE(request: Request) {
     const deleteResult = await prisma.module.deleteMany({
       where: { userId },
     });
-
-    console.log(`Deleted ${deleteResult.count} modules for user ${userId}`);
     
     // Use structured logging for better production debugging
     console.log(

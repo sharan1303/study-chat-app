@@ -34,7 +34,7 @@ import Header from "../Main/Header";
 interface Module {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
   resourceCount: number;
   updatedAt: string;
@@ -49,22 +49,26 @@ interface Module {
  * either a filtered list of modules or a resource table through a nested component.
  *
  * @param searchParams - URL query parameters that set the initial UI state (e.g., active tab, resource upload dialog visibility, and preselected module).
+ * @param prefetchedModules - Optional pre-fetched modules to be used instead of fetching from the API.
  */
 export default function ModulesPageContent({
   searchParams,
+  prefetchedModules = [],
 }: {
   searchParams: URLSearchParams;
+  prefetchedModules?: Module[];
 }) {
   const { isLoaded, isSignedIn } = useAuth();
   const { sessionId, isLoading: sessionLoading } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
-  const [modules, setModules] = useState<Module[]>([]);
-  const [filteredModules, setFilteredModules] = useState<Module[]>([]);
+  const [modules, setModules] = useState<Module[]>(prefetchedModules);
+  const [filteredModules, setFilteredModules] =
+    useState<Module[]>(prefetchedModules);
   const [activeTab, setActiveTab] = useState(() => {
     // Get tab from URL param or default to "modules"
     return searchParams?.get("tab") || "modules";
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!prefetchedModules.length);
   const shouldOpenResourceUpload =
     searchParams?.get("openResourceUpload") === "true";
   const preselectedModuleId = searchParams?.get("moduleId");
@@ -80,21 +84,21 @@ export default function ModulesPageContent({
     handleResourceUpdate,
   } = useResources(!!isSignedIn, searchQuery);
 
-  // This effect fetches the modules data from the API
+  // This effect fetches the modules data only if needed
   useEffect(() => {
     async function fetchModules() {
       try {
         setIsLoading(true);
 
-        // Artificial delay to ensure loading state is visible
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Only fetch if we don't have prefetched data or the search query has changed
+        if (!prefetchedModules.length || searchQuery) {
+          const data = await api.getModules(searchQuery || undefined);
 
-        const data = await api.getModules(searchQuery || undefined);
-
-        // Extract modules from the response object
-        const modulesList = data.modules || [];
-        setModules(modulesList);
-        setFilteredModules(modulesList);
+          // Extract modules from the response object
+          const modulesList = data.modules || [];
+          setModules(modulesList);
+          setFilteredModules(modulesList);
+        }
       } catch (error) {
         console.error("Error fetching modules:", error);
         // Set modules to empty array on error
@@ -108,7 +112,14 @@ export default function ModulesPageContent({
     if (isLoaded && !sessionLoading) {
       fetchModules();
     }
-  }, [isSignedIn, isLoaded, sessionId, sessionLoading, searchQuery]);
+  }, [
+    isSignedIn,
+    isLoaded,
+    sessionId,
+    sessionLoading,
+    searchQuery,
+    prefetchedModules.length,
+  ]);
 
   // Listen for module creation events to refresh the module list
   useEffect(() => {
@@ -133,10 +144,10 @@ export default function ModulesPageContent({
     };
 
     // Listen for the module-created event
-    window.addEventListener("module-created", handleModuleCreated);
+    window.addEventListener("module.created", handleModuleCreated);
 
     return () => {
-      window.removeEventListener("module-created", handleModuleCreated);
+      window.removeEventListener("module.created", handleModuleCreated);
     };
   }, [isLoaded, sessionLoading, searchQuery, activeTab]);
 
@@ -149,10 +160,7 @@ export default function ModulesPageContent({
         const filtered = modules.filter(
           (module) =>
             module.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (module.description &&
-              module.description
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()))
+            module.context?.toLowerCase().includes(searchQuery.toLowerCase())
         );
         setFilteredModules(filtered);
       }
@@ -203,7 +211,7 @@ export default function ModulesPageContent({
   function ResourcesWrapper() {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           {searchQuery && (
             <p className="text-muted-foreground">
               Showing results for: &quot;{searchQuery}&quot;
@@ -273,7 +281,7 @@ export default function ModulesPageContent({
         <div className="px-6">
           <TabsList className="grid max-w-xl grid-cols-2">
             <TabsTrigger value="modules">Modules</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="uploads">Uploads</TabsTrigger>
           </TabsList>
 
           {/* Search bar with contextual button */}
@@ -284,7 +292,7 @@ export default function ModulesPageContent({
                 placeholder={
                   activeTab === "modules"
                     ? "Search modules..."
-                    : "Search resources..."
+                    : "Search uploads..."
                 }
                 className="pl-10"
                 value={searchQuery}
@@ -309,7 +317,7 @@ export default function ModulesPageContent({
         </div>
 
         {/* Scrollable content area (only this part scrolls) */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth scrollbar-smooth pb-6 pl-6 pr-3">
+        <div className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth scrollbar-smooth pb-6 pl-6 pr-6">
           <TabsContent value="modules" className="h-full">
             {isLoading ? (
               <div className="flex items-center justify-center pt-10">
@@ -339,10 +347,6 @@ export default function ModulesPageContent({
                   }
 
                   const moduleSlug = encodeModuleSlug(module.name);
-                  console.log(
-                    `Creating link for "${module.name}" → "${moduleSlug}"`
-                  );
-
 
                   return (
                     <Link
@@ -362,8 +366,8 @@ export default function ModulesPageContent({
                           <div className="text-sm text-muted-foreground">
                             {module.resourceCount}{" "}
                             {module.resourceCount === 1
-                              ? "resource"
-                              : "resources"}
+                              ? "uploaded file"
+                              : "uploaded files"}
                           </div>
                         </CardContent>
                         <CardFooter className="text-xs text-muted-foreground">
@@ -377,7 +381,7 @@ export default function ModulesPageContent({
             )}
           </TabsContent>
 
-          <TabsContent value="resources" className="h-full">
+          <TabsContent value="uploads" className="h-full">
             <ResourcesWrapper />
           </TabsContent>
         </div>

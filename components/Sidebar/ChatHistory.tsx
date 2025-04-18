@@ -1,12 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquare, X } from "lucide-react";
+import Link from "next/link";
+import { MessageSquare, X, ExternalLink, Plus, Trash } from "lucide-react";
 import { cn, encodeModuleSlug } from "@/lib/utils";
-import { formatDate } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,11 +18,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { getOrCreateSessionIdClient } from "@/lib/session";
 import { useNavigation } from "./SidebarParts";
 
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
+
+// Add the Chat interface export to resolve the import error
 export interface Chat {
   id: string;
   title: string;
@@ -34,55 +41,113 @@ export interface Chat {
     icon: string;
     id: string;
   } | null;
-  _isOptimistic?: boolean; // Optional flag for optimistic UI updates
+  _isOptimistic?: boolean;
+  _currentPath?: string; // Store the current path for active state
+}
+
+interface ChatHistoryProps {
+  chats?: Chat[];
+  loading?: boolean;
+  maxWidth?: string;
 }
 
 export default function ChatHistory({
-  chats,
-  loading,
+  chats = [],
+  loading = false,
   maxWidth,
-}: {
-  chats: Chat[];
-  loading: boolean;
-  maxWidth?: string;
-}) {
+}: ChatHistoryProps) {
   const pathname = usePathname();
-  const [chatToDelete, setChatToDelete] = React.useState<Chat | null>(null);
-  const [sessionId, setSessionId] = React.useState<string | null>(null);
+  const [chatToDelete, setChatToDelete] = useState<Chat | null>(null);
   const { navigate } = useNavigation();
 
-  // Debug: Log when chat data changes
-  React.useEffect(() => {
-    console.log("ChatHistory received updated chats:", chats.length);
-  }, [chats]);
+  // Function to group chats by time periods
+  const groupChatsByDate = (chats: Chat[]) => {
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0); // Start of today
 
-  // Load sessionId from localStorage on component mount (client-side only)
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedSessionId = getOrCreateSessionIdClient();
-      console.log(
-        "[ChatHistory] Retrieved sessionId:",
-        storedSessionId?.substring(0, 8) + "..."
-      );
-      if (storedSessionId) {
-        setSessionId(storedSessionId);
-      }
-    }
-  }, []);
+    const oneWeekAgo = new Date(now);
+    oneWeekAgo.setDate(now.getDate() - 7);
+
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setDate(now.getDate() - 30);
+
+    const todayChats: Chat[] = [];
+    const last7Days: Chat[] = [];
+    const last30Days: Chat[] = [];
+    const older: Chat[] = [];
+
+    [...chats]
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+      .forEach((chat) => {
+        // Always put optimistic chats in Today section
+        if (chat._isOptimistic) {
+          todayChats.push(chat);
+          return;
+        }
+
+        const chatDate = new Date(chat.updatedAt);
+
+        if (chatDate >= today) {
+          todayChats.push(chat);
+        } else if (chatDate >= oneWeekAgo) {
+          last7Days.push(chat);
+        } else if (chatDate >= oneMonthAgo) {
+          last30Days.push(chat);
+        } else {
+          older.push(chat);
+        }
+      });
+
+    return {
+      today: todayChats,
+      last7Days,
+      last30Days,
+      older,
+    };
+  };
 
   const isActiveChat = (chat: Chat) => {
-    // Special case for welcome chat - only check the welcome path
+    // Special case for welcome chat
     if (chat.title === "Welcome to Study Chat") {
       return pathname === "/chat/welcome";
     }
 
+    // If a _currentPath is stored (for optimistic chats), use it for matching
+    if (chat._currentPath && pathname === chat._currentPath) {
+      return true;
+    }
+
+    // Check exact path match first - highest priority
     if (pathname === `/chat/${chat.id}`) {
       return true;
     }
 
+    // Check module-specific paths
     if (chat.moduleId && chat.module) {
       const encodedName = encodeModuleSlug(chat.module.name);
-      return pathname === `/${encodedName}/chat/${chat.id}`;
+      if (pathname === `/${encodedName}/chat/${chat.id}`) {
+        return true;
+      }
+    }
+
+    // Special case for optimistic chats and new chats
+    // This will activate when we're on a root path (/chat) or a module chat path
+    if (chat._isOptimistic) {
+      // If we're on a path that ends with just /chat or /moduleName/chat
+      const isModulePath = pathname.indexOf("/chat") > 1; // Like /moduleName/chat
+      const isRootPath = pathname === "/chat";
+
+      if (chat.moduleId) {
+        // Module-specific new chat - active when we're on the module chat path
+        return isModulePath && !pathname.includes("/chat/");
+      } else {
+        // Regular new chat - active when we're on the root chat path
+        return isRootPath;
+      }
     }
 
     return false;
@@ -102,169 +167,188 @@ export default function ChatHistory({
 
   const handleDeleteChat = async (chat: Chat) => {
     try {
-      // Build URL with sessionId for anonymous users
-      let url = `/api/chat/${chat.id}`;
-      if (sessionId) {
-        url += `?sessionId=${sessionId}`;
-        console.log(
-          `[ChatHistory] Deleting chat using sessionId: ${sessionId.substring(
-            0,
-            8
-          )}...`
-        );
-      } else {
-        console.log(
-          `[ChatHistory] Warning: Attempting to delete chat without sessionId`
-        );
-      }
-
-      console.log(
-        `[ChatHistory] Deleting chat with ID: ${chat.id}, URL: ${url}`
-      );
-
-      const response = await fetch(url, {
+      // Add your delete API call here
+      const response = await fetch(`/api/chat/${chat.id}`, {
         method: "DELETE",
-        credentials: "include", // This ensures cookies are sent with the request
+        credentials: "include",
       });
 
-      console.log(`Delete response status: ${response.status}`);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error deleting chat: ${errorText}`);
-        throw new Error(`Failed to delete chat: ${errorText}`);
+        throw new Error("Failed to delete chat");
       }
 
       toast.success("Chat deleted successfully");
 
-      // Remove deleted chat from UI immediately
+      // Dispatch event to update UI
       window.dispatchEvent(
         new CustomEvent("chat-deleted", {
           detail: { chatId: chat.id },
         })
       );
-
-      // If we're on the deleted chat's page, redirect to /chat
-      if (isActiveChat(chat)) {
-        navigate("/chat");
-      }
     } catch (error) {
       console.error("Error deleting chat:", error);
       toast.error("Failed to delete chat");
     }
   };
 
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center px-4 pt-4 pb-2 border-t">
-        <h3 className="text-sm font-medium">Chat History</h3>
-      </div>
+  const groupedChats = useMemo(() => groupChatsByDate(chats), [chats]);
 
-      <div className="flex-1 overflow-hidden">
-        {loading ? (
-          <ScrollArea className="h-full">
-            <div className="space-y-1 p-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="px-2 py-3 group/chat">
-                  <div className="flex items-center">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4 rounded flex-shrink-0" />
-                      <Skeleton className="h-4 w-[180px] rounded" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        ) : chats.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground"></div>
-        ) : (
-          <ScrollArea className="h-full max-w-full">
-            <div className="space-y-1 p-2">
-              {chats
-                .filter(
-                  (chat, index, self) =>
-                    // Filter out duplicate welcome chats
-                    chat.title !== "Welcome to Study Chat" ||
-                    index ===
-                      self.findIndex((c) => c.title === "Welcome to Study Chat")
-                )
-                .map((chat) => (
-                  <div
-                    key={chat.id}
-                    className="group/chat"
-                    style={{ maxWidth: maxWidth }}
+  const renderChatGroup = (chats: Chat[], title: string) => {
+    if (chats.length === 0) return null;
+
+    return (
+      <div className="mb-3">
+        <h3 className="text-xs text-muted-foreground font-medium px-4 mb-1 pb-1 border-b border-border/40">
+          {title}
+        </h3>
+        {chats.map((chat) => (
+          <ContextMenu key={chat.id}>
+            <ContextMenuTrigger className="w-full">
+              <div className="group/chat relative px-1">
+                <div
+                  className={cn(
+                    "w-full text-left py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
+                    isActiveChat(chat)
+                      ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
+                      : ""
+                  )}
+                  style={{ maxWidth: maxWidth }}
+                >
+                  <button
+                    type="button"
+                    className="flex-1 flex items-center gap-2 truncate pl-3"
+                    onClick={() => navigateToChat(chat)}
                   >
-                    <div
-                      className={cn(
-                        "w-full text-left px-2 py-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground flex items-center justify-between",
-                        isActiveChat(chat)
-                          ? "bg-accent text-accent-foreground font-regular border-r-4 border-primary shadow-sm"
-                          : ""
-                      )}
-                    >
-                      <button
-                        type="button"
-                        className="flex-1 flex items-center justify-between truncate"
-                        onClick={() => {
-                          navigateToChat(chat);
-                        }}
-                      >
-                        <div className="flex items-center truncate group-hover/chat:max-w-[calc(100%-70px)]">
-                          <MessageSquare
-                            size={14}
-                            className="mr-2 mt-0.5 flex-shrink-0"
-                          />
-                          <span className="truncate">{chat.title}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground hidden group-hover/chat:inline whitespace-nowrap pr-1">
-                          {formatDate(chat.updatedAt)}
-                        </span>
-                      </button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 ml-1 opacity-0 group-hover/chat:opacity-100 hover:bg-red-500 hover:text-white transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setChatToDelete(chat);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Thread</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete &quot;{chat.title}
-                              &quot;? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              onClick={() => {
-                                if (chatToDelete) {
-                                  handleDeleteChat(chatToDelete);
-                                }
-                              }}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    {chat.module ? (
+                      <span className="flex-shrink-0">{chat.module.icon}</span>
+                    ) : (
+                      <MessageSquare size={14} className="flex-shrink-0" />
+                    )}
+                    <span className="truncate">{chat.title}</span>
+                  </button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover/chat:opacity-100 hover:text-white hover:bg-red-600 transition-opacity mr-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setChatToDelete(chat);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Module tooltip on hover */}
+                {chat.module && (
+                  <div className="absolute mr-3 left-0 right-12 top-0 bottom-0 flex items-center opacity-0 group-hover/chat:opacity-100 pointer-events-none">
+                    <div className="bg-popover text-popover-foreground text-xs px-2 py-1 rounded-md shadow-md ml-auto transform translate-x-4 hidden group-hover/chat:block">
+                      <span className="flex items-center gap-1">
+                        <span className="truncate">{chat.module.name}</span>
+                      </span>
                     </div>
                   </div>
-                ))}
-            </div>
-          </ScrollArea>
-        )}
+                )}
+              </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-48">
+              <ContextMenuItem
+                onClick={() => {
+                  const url = chat.moduleId
+                    ? `/${encodeModuleSlug(chat.module?.name || "")}/chat/${
+                        chat.id
+                      }`
+                    : `/chat/${chat.id}`;
+                  window.open(url, "_blank");
+                }}
+                className="cursor-pointer text-xs"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" /> Open in new tab
+              </ContextMenuItem>
+              {chat.moduleId && chat.module && (
+                <ContextMenuItem
+                  onClick={() =>
+                    navigate(`/${encodeModuleSlug(chat.module?.name || "")}`)
+                  }
+                  className="cursor-pointer text-xs"
+                >
+                  <MessageSquare className="mr-2 h-4 w-4" /> Go to module
+                </ContextMenuItem>
+              )}
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onClick={() => setChatToDelete(chat)}
+                className="cursor-pointer text-destructive focus:text-destructive text-xs"
+              >
+                <Trash className="mr-2 h-4 w-4" /> Delete chat
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
+        ))}
       </div>
+    );
+  };
+
+  return (
+    <div className="h-full overflow-hidden">
+      <div className="flex items-center justify-between px-4 h-8">
+        <h2 className="text-sm font-semibold">Chat History</h2>
+      </div>
+      <ScrollArea className="h-full pb-8">
+        <div className="py-1">
+          {loading ? (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-r-transparent" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {renderChatGroup(groupedChats.today, "Today")}
+              {renderChatGroup(groupedChats.last7Days, "Last 7 Days")}
+              {renderChatGroup(groupedChats.last30Days, "Last 30 Days")}
+              {renderChatGroup(groupedChats.older, "Older")}
+
+              {!loading && chats.length === 0 && (
+                <div className="px-4 py-3 text-center">
+                  <p className="text-sm text-muted-foreground">No chats yet</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={!!chatToDelete}
+        onOpenChange={(open) => {
+          if (!open) setChatToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Chat</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this chat? This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={() => {
+                if (chatToDelete) {
+                  handleDeleteChat(chatToDelete);
+                }
+                setChatToDelete(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

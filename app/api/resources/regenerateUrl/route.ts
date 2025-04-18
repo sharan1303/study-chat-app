@@ -14,17 +14,12 @@ async function createSignedUrlWithRetry(
   filePath: string,
   expirySeconds: number
 ) {
-  console.log("🔄 Generating signed URL for path:", filePath);
   const supabase = getSupabaseAdmin();
 
   const signedUrlResult = await supabase.storage
     .from("resources")
     .createSignedUrl(filePath, expirySeconds);
 
-  console.log(
-    "📋 Signed URL result:",
-    JSON.stringify(signedUrlResult, null, 2)
-  );
 
   // If there's no error or it's not JWT-related, return the original result
   if (
@@ -37,9 +32,6 @@ async function createSignedUrlWithRetry(
   ) {
     return signedUrlResult;
   }
-
-  // Handle JWT token issues with a retry
-  console.log("🔑 JWT token issue detected. Trying with refreshed client");
 
   // Create a completely new client instance
   const freshSupabase = getSupabaseAdmin();
@@ -69,12 +61,10 @@ async function createSignedUrlWithRetry(
  * @returns A JSON response with the updated resource details on success, or an error message with a corresponding HTTP status.
  */
 export async function POST(request: NextRequest) {
-  console.log("🔄 URL REGENERATION - Request received");
 
   const { userId } = await auth();
 
   if (!userId) {
-    console.log("❌ Authentication failed - No user ID");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -90,7 +80,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the resource and verify ownership
-    console.log(`🔍 Finding resource - ID: ${resourceId}, User ID: ${userId}`);
     const resource = await prisma.resource.findUnique({
       where: {
         id: resourceId,
@@ -116,18 +105,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("🔍 Original URL:", originalUrl);
-
     // Extract the file path from the URL
     let filePath: string | null = null;
 
     try {
-      // Try multiple methods to extract the file path
-      console.log("🔍 Attempting to extract file path from URL");
 
       // Method 1: Extract from resources/ path pattern
       const match = originalUrl.match(/\/resources\/([^?]+)/);
-      console.log("📋 Method 1 match result:", match);
 
       if (match && match[1]) {
         filePath = match[1];
@@ -136,7 +120,6 @@ export async function POST(request: NextRequest) {
         const objectMatch = originalUrl.match(
           /\/object\/(sign|public)\/resources\/([^?]+)/
         );
-        console.log("📋 Method 2 match result:", objectMatch);
 
         if (objectMatch && objectMatch[2]) {
           filePath = objectMatch[2];
@@ -145,7 +128,6 @@ export async function POST(request: NextRequest) {
           const tokenMatch = originalUrl.match(
             /token=[^&]+.*\/resources\/([^?&]+)/
           );
-          console.log("📋 Method 3 match result:", tokenMatch);
 
           if (tokenMatch && tokenMatch[1]) {
             filePath = tokenMatch[1];
@@ -163,8 +145,6 @@ export async function POST(request: NextRequest) {
                 resourcesIndex < pathParts.length - 1
               ) {
                 filePath = pathParts.slice(resourcesIndex + 1).join("/");
-              } else {
-                console.log("❌ Method 4 failed to extract path");
               }
             } catch (urlError) {
               console.error("❌ URL parsing error:", urlError);
@@ -192,7 +172,6 @@ export async function POST(request: NextRequest) {
     filePath = filePath.startsWith("/") ? filePath.substring(1) : filePath;
     // Remove any query parameters or hash fragments
     filePath = filePath.split("?")[0].split("#")[0];
-    console.log("🔄 Final file path for signed URL:", filePath);
 
     // Generate a new signed URL (valid for 12 hours)
     const signedUrlResult = await createSignedUrlWithRetry(
@@ -219,11 +198,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("✅ Successfully generated new signed URL");
-
     // Update the resource with the new URL
     try {
-      console.log("🔄 Updating resource in database with new URL");
       const updatedResource = await prisma.resource.update({
         where: {
           id: resourceId,
@@ -232,8 +208,6 @@ export async function POST(request: NextRequest) {
           fileUrl: signedUrlResult.data.signedUrl,
         },
       });
-
-      console.log("✅ Database update successful");
 
       return NextResponse.json({
         id: updatedResource.id,

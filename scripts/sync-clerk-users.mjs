@@ -1,8 +1,9 @@
-import { clerkClient } from "@clerk/clerk-sdk-node";
+import { Clerk } from "@clerk/express";
 import { PrismaClient } from "@prisma/client";
 import "dotenv/config";
 
-// No need to initialize with secretKey as it uses the env variable automatically
+// Initialize Clerk with the secretKey
+const clerk = new Clerk({ apiKey: process.env.CLERK_SECRET_KEY });
 const prisma = new PrismaClient();
 
 /**
@@ -27,7 +28,7 @@ async function syncUsers() {
 
   try {
     // Get all users from Clerk
-    const { data: clerkUsers } = await clerkClient.users.getUserList();
+    const clerkUsers = await clerk.users.getUserList();
     console.log(`Found ${clerkUsers?.length || 0} users in Clerk`);
 
     // Process each user

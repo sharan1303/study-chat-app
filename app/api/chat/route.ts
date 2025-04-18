@@ -7,7 +7,11 @@ import { getModuleContext } from "@/lib/modules";
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { formatChatTitle, generateId } from "@/lib/utils";
-import { broadcastChatCreated, broadcastMessageCreated } from "@/lib/events";
+import {
+  broadcastChatCreated,
+  broadcastMessageCreated,
+  broadcastUserMessageSent,
+} from "@/lib/events";
 import {
   createGeneralSystemPrompt,
   createModuleSystemPrompt,
@@ -32,6 +36,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { messages, chatId, moduleId } = body;
     const sessionId = body.sessionId || null;
+    // We keep this parameter but don't use it anymore since we always want to broadcast AI responses
+    // const skipMessageBroadcast = body.skipMessageBroadcast || false;
+    const optimisticChatId = body.optimisticChatId || null;
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -49,6 +56,38 @@ export async function POST(request: Request) {
         { error: "Session ID or authentication required to save chat history" },
         { status: 401 }
       );
+    }
+
+    // Immediately send a user.message.sent event to update the sidebar
+    if (shouldSaveHistory && (userId || sessionId)) {
+      try {
+        // Get any module details if this is a module chat
+        const moduleDetails = moduleId ? await getModuleMeta(moduleId) : null;
+
+        // Get the last user message for the chat title
+        const lastMessage = messages[messages.length - 1];
+        const messageTitle = formatChatTitle(lastMessage.content);
+
+        // Send an immediate event with the user's message
+        const immediateMessageData = {
+          id: generateId(),
+          chatId: requestedChatId,
+          chatTitle: messageTitle,
+          updatedAt: new Date().toISOString(),
+          moduleId: moduleId,
+          optimisticChatId: optimisticChatId,
+          module: moduleDetails,
+        };
+
+        const targetId = userId || sessionId;
+        if (targetId) {
+          console.log("Broadcasting user.message.sent event:", requestedChatId);
+          broadcastUserMessageSent(immediateMessageData, [targetId]);
+        }
+      } catch (error) {
+        console.error("Error broadcasting immediate user message:", error);
+        // Continue processing even if this fails
+      }
     }
 
     let user = null;
@@ -156,30 +195,33 @@ export async function POST(request: Request) {
       const result = streamText({
         model: google("gemini-2.0-flash"),
         messages: formattedMessages,
-        temperature: 0.10,
+        temperature: 0.1,
         onFinish: async ({ text }) => {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
             try {
-              const isNewChat = !chatId; // No chatId means it's a new chat
-
-              // Create data for upsert
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const chatData: any = {
+              // Prepare data for creation
+              const chatData: {
+                id: string;
+                title: string;
+                moduleId: string | null;
+                messages: { role: string; content: string }[];
+                createdAt: Date;
+                updatedAt: Date;
+                userId?: string;
+                sessionId?: string;
+              } = {
                 id: requestedChatId,
                 title: chatTitle,
+                moduleId: moduleId,
                 messages: messages.concat([
                   { role: "assistant", content: text },
                 ]),
-                moduleId: isModuleMode ? moduleId : null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
               };
 
-              // Special handling for welcome chat
-              const isWelcomeChat =
-                requestedChatId === "welcome-chat" ||
-                chatTitle === "Welcome to Study Chat";
-
-              // Add either userId or sessionId based on authentication state
+              // Add user ID or session ID based on authentication status
               if (userId) {
                 chatData.userId = userId;
               } else if (sessionId) {
@@ -187,7 +229,7 @@ export async function POST(request: Request) {
               }
 
               // If this chat should be forced to appear as the oldest, set an old timestamp
-              if ((forceOldest && isNewChat) || isWelcomeChat) {
+              if (forceOldest) {
                 const oneYearAgo = new Date();
                 oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
                 chatData.createdAt = oneYearAgo;
@@ -205,49 +247,160 @@ export async function POST(request: Request) {
                 create: chatData,
               });
 
+              // Determine if this was a new chat by comparing timestamps
+              // If timestamps are equal (accounting for millisecond precision differences),
+              // or this was forced as oldest, then it's a new chat
+              const isNewChat =
+                forceOldest ||
+                Math.abs(
+                  savedChat.createdAt.getTime() - savedChat.updatedAt.getTime()
+                ) < 1000;
+
               // Only broadcast for new chats
               if (isNewChat) {
                 // Create single chat creation event
-                const chatEventData = {
+                const chatEventData: {
+                  id: string;
+                  title: string;
+                  moduleId: string | null;
+                  createdAt: Date;
+                  updatedAt: Date;
+                  sessionId: string | null;
+                  optimisticChatId?: string;
+                  module: { id: string; name: string; icon: string } | null;
+                } = {
                   id: savedChat.id,
                   title: savedChat.title,
                   moduleId: savedChat.moduleId,
                   createdAt: savedChat.createdAt,
                   updatedAt: savedChat.updatedAt,
                   sessionId: sessionId,
+                  // Include optimisticChatId if it was provided, to help client replace the optimistic chat
+                  optimisticChatId: optimisticChatId,
+                  // Include module info if available
+                  module: null, // Will be populated below
                 };
+
+                // Get module info if this is a module chat
+                if (savedChat.moduleId) {
+                  try {
+                    const moduleData = await getModuleMeta(savedChat.moduleId);
+
+                    if (moduleData) {
+                      chatEventData.module = moduleData;
+                      console.log(
+                        "Retrieved module info for chat.created event"
+                      );
+                    }
+                  } catch (err) {
+                    console.error(
+                      "Error fetching module details for chat.created event:",
+                      err
+                    );
+                  }
+                }
 
                 // Determine target ID for broadcast
                 const targetId = userId || sessionId;
 
                 if (targetId) {
                   console.log(
-                    `Broadcasting chat creation to ${
-                      userId ? "user " + userId : "session " + sessionId
-                    }`
+                    "Broadcasting chat.created event for new chat:",
+                    savedChat.id,
+                    "with module info:",
+                    chatEventData.module
+                  );
+                  console.log("Target ID for broadcast:", targetId);
+                  broadcastChatCreated(chatEventData, [targetId]);
+                } else {
+                  console.warn(
+                    "No target ID found for broadcasting chat.created event"
+                  );
+                }
+              } else {
+                console.log(
+                  "Chat already exists, not sending chat.created event"
+                );
+
+                // TEMPORARY FIX: Also send chat.created for existing chats to help debug
+                const chatEventData: {
+                  id: string;
+                  title: string;
+                  moduleId: string | null;
+                  createdAt: Date;
+                  updatedAt: Date;
+                  sessionId: string | null;
+                  optimisticChatId?: string;
+                  module: { id: string; name: string; icon: string } | null;
+                } = {
+                  id: savedChat.id,
+                  title: savedChat.title,
+                  moduleId: savedChat.moduleId,
+                  createdAt: savedChat.createdAt,
+                  updatedAt: savedChat.updatedAt,
+                  sessionId: sessionId,
+                  optimisticChatId: optimisticChatId,
+                  module: null, // Will be populated below
+                };
+
+                // Get module info if this is a module chat
+                if (savedChat.moduleId) {
+                  try {
+                    const moduleData = await getModuleMeta(savedChat.moduleId);
+
+                    if (moduleData) {
+                      chatEventData.module = moduleData;
+                      console.log("Retrieved module info for existing chat");
+                    }
+                  } catch (err) {
+                    console.error(
+                      "Error fetching module details for existing chat:",
+                      err
+                    );
+                  }
+                }
+
+                const targetId = userId || sessionId;
+                if (targetId) {
+                  console.log(
+                    "TEMPORARY DEBUG: Broadcasting chat.created for existing chat:",
+                    savedChat.id,
+                    "with module info:",
+                    chatEventData.module
                   );
                   broadcastChatCreated(chatEventData, [targetId]);
                 }
-              } else {
-                // For existing chats, broadcast message created event
+
+                // For existing chats, always broadcast message created event
                 try {
+                  // Get any module details if this is a module chat
+                  let moduleDetails = null;
+                  if (savedChat.moduleId) {
+                    try {
+                      moduleDetails = await getModuleMeta(savedChat.moduleId);
+                    } catch (err) {
+                      console.error(
+                        "Error fetching module details for event:",
+                        err
+                      );
+                    }
+                  }
+
                   const messageData = {
                     id: generateId(),
                     chatId: savedChat.id,
                     chatTitle: savedChat.title,
                     updatedAt: savedChat.updatedAt.toISOString(),
+                    moduleId: savedChat.moduleId,
+                    // Include optimistic chat ID if it was provided
+                    optimisticChatId: optimisticChatId,
+                    // Include module info if available for better client-side handling
+                    module: moduleDetails,
                   };
 
                   const targetId = userId || sessionId;
 
                   if (targetId) {
-                    console.log(
-                      `Broadcasting message creation for chat ${
-                        savedChat.id
-                      } to ${
-                        userId ? "user " + userId : "session " + sessionId
-                      }`
-                    );
                     broadcastMessageCreated(messageData, [targetId]);
                   }
                 } catch (error) {
@@ -305,4 +458,16 @@ function needsSearch(message: string): boolean {
     message.length > 15 &&
     SEARCH_INDICATORS.some((term) => message.includes(term.toLowerCase()))
   );
+}
+
+async function getModuleMeta(moduleId: string) {
+  try {
+    return await prisma.module.findUnique({
+      where: { id: moduleId },
+      select: { id: true, name: true, icon: true },
+    });
+  } catch (err) {
+    console.error("Error fetching module details:", err);
+    return null;
+  }
 }

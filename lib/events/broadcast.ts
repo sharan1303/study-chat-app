@@ -7,15 +7,8 @@ export function broadcastEvent(
   targetIds?: string[]
 ) {
   if (!global.sseClients || global.sseClients.length === 0) {
-    console.log("No SSE clients to broadcast to");
     return;
   }
-
-  console.log(
-    `Broadcasting event ${event} to ${
-      targetIds ? targetIds.length + " specific" : "all"
-    } clients`
-  );
 
   // Check if we're targeting specific clients
   if (targetIds && targetIds.length > 0) {
@@ -41,7 +34,6 @@ export function broadcastEvent(
     // Send to specific clients if targetIds is provided, otherwise send to all
     if (!targetIds || targetIds.includes(client.id)) {
       try {
-        console.log(`Sending ${event} event to client ${client.id}`);
         client.send({
           type: event,
           data,
@@ -53,8 +45,6 @@ export function broadcastEvent(
       }
     }
   });
-
-  console.log(`Successfully sent ${event} event to ${sentCount} clients`);
 }
 
 // Function to set up the broadcast event - to be called from the route.ts file

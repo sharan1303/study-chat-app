@@ -36,12 +36,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `API: Migrating anonymous data from sessionId=${sessionId.substring(
-        0,
-        8
-      )}... to userId=${effectiveUserId.substring(0, 8)}...`
-    );
 
     // Start a transaction to ensure data integrity
     const result = await prisma.$transaction(async (prismaClient) => {
@@ -50,8 +44,6 @@ export async function POST(request: NextRequest) {
         where: { sessionId },
         include: { resources: true },
       });
-
-      console.log(`API: Found ${modules.length} modules to migrate`);
 
       // 2. Update all modules to associate them with the user
       let migratedModules = 0;
@@ -64,7 +56,6 @@ export async function POST(request: NextRequest) {
           },
         });
         migratedModules = modules.length;
-        console.log(`API: Migrated ${migratedModules} modules`);
       }
 
       // 3. Find all resources with this sessionId (that weren't already included with modules)
@@ -73,10 +64,6 @@ export async function POST(request: NextRequest) {
           moduleId: { equals: undefined }, // Using equals for null check
         },
       });
-
-      console.log(
-        `API: Found ${orphanedResources.length} orphaned resources to migrate`
-      );
 
       // 4. Update all resources to associate them with the user
       let migratedResources = 0;
@@ -90,15 +77,12 @@ export async function POST(request: NextRequest) {
           },
         });
         migratedResources = orphanedResources.length;
-        console.log(`API: Migrated ${migratedResources} orphaned resources`);
       }
       
       // 6. Find and migrate all chats associated with this sessionId
       const chats = await prismaClient.chat.findMany({
         where: { sessionId },
       });
-
-      console.log(`API: Found ${chats.length} chats to migrate`);
 
       let migratedChats = 0;
       if (chats.length > 0) {
@@ -110,7 +94,6 @@ export async function POST(request: NextRequest) {
           },
         });
         migratedChats = chats.length;
-        console.log(`API: Migrated ${migratedChats} chats`);
       }
 
       return { migratedModules, migratedResources, migratedChats };

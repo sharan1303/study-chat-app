@@ -29,13 +29,11 @@ export async function POST(req: Request) {
   try {
     // Get the raw body as text
     const rawBody = await req.text();
-    console.log("Raw body received, length:", rawBody.length);
 
     // Parse the JSON data
     let jsonData;
     try {
       jsonData = JSON.parse(rawBody);
-      console.log("Event type from payload:", jsonData.type);
     } catch (err) {
       console.error("Error parsing webhook body:", err);
       return new Response("Invalid JSON payload", { status: 400 });
@@ -72,12 +70,6 @@ export async function POST(req: Request) {
     const svix_timestamp = req.headers.get("svix-timestamp");
     const svix_signature = req.headers.get("svix-signature");
 
-    console.log("Webhook headers:", {
-      svix_id_exists: !!svix_id,
-      svix_timestamp_exists: !!svix_timestamp,
-      svix_signature_exists: !!svix_signature,
-    });
-
     if (!svix_id || !svix_timestamp || !svix_signature) {
       console.error("Missing svix headers");
       return new Response("Missing svix headers", { status: 400 });
@@ -86,11 +78,6 @@ export async function POST(req: Request) {
     // Create webhook instance and verify
     let event: WebhookEvent;
     try {
-      console.log(
-        "Attempting to verify webhook with secret starting with:",
-        WEBHOOK_SECRET.substring(0, 5) + "..."
-      );
-
       const webhook = new Webhook(WEBHOOK_SECRET);
       event = webhook.verify(rawBody, {
         "svix-id": svix_id,
@@ -98,7 +85,6 @@ export async function POST(req: Request) {
         "svix-signature": svix_signature,
       }) as WebhookEvent;
 
-      console.log("Webhook verified successfully");
     } catch (err) {
       console.error("Detailed webhook verification error:", {
         error: err,
@@ -117,7 +103,6 @@ export async function POST(req: Request) {
 
     // Handle the webhook event
     const eventType = event.type;
-    console.log(`Webhook received and verified: ${eventType}`);
 
     if (eventType === "user.created" || eventType === "user.updated") {
       return await processUserData(event.data as unknown as ClerkUserData);
@@ -163,13 +148,11 @@ async function processUserData(userData: ClerkUserData) {
 
   try {
     // Check if user exists
-    console.log(`Checking if user ${id} exists in database`);
     const existingUser = await prisma.user.findUnique({
       where: { id },
     });
 
     if (existingUser) {
-      console.log(`User ${id} exists, updating...`);
       // Update user
       await prisma.user.update({
         where: { id },
@@ -180,10 +163,8 @@ async function processUserData(userData: ClerkUserData) {
             : "Anonymous User",
         },
       });
-      console.log(`Updated user ${id} in database`);
       return NextResponse.json({ status: "success", action: "updated" });
     } else {
-      console.log(`User ${id} does not exist, creating...`);
       // Create user
       await prisma.user.create({
         data: {

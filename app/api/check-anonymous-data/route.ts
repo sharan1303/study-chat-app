@@ -56,12 +56,6 @@ export async function GET(request: NextRequest) {
 
     const hasData = moduleCount > 0 || chatCount > 0;
 
-    console.log(
-      `API: Check anonymous data for sessionId=${sessionId?.substring(
-        0,
-        8
-      )}..., userId=${userId || "none"} - hasData=${hasData}`
-    );
 
     return NextResponse.json({
       hasData,

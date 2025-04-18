@@ -39,6 +39,7 @@ next-env.d.ts
 # cursor & vscode
 .cursor
 .vscode
+.cursorignore
 
 # clerk configuration (can include secrets)
 /.clerk/

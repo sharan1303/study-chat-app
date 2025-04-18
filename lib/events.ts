@@ -25,6 +25,7 @@ export const EVENT_TYPES = {
   MODULE_UPDATED: "module.updated",
   MODULE_DELETED: "module.deleted",
   MESSAGE_CREATED: "message.created",
+  USER_MESSAGE_SENT: "user.message.sent",
   DATA_MIGRATED: "data.migrated",
   RESOURCE_CREATED: "resource.created",
   RESOURCE_UPDATED: "resource.updated",
@@ -53,6 +54,7 @@ export function broadcastEvent(
   // Initialize metrics
   const metrics = { sent: 0, skipped: 0 };
 
+
   if (!global.sseClients || global.sseClients.length === 0) {
     return metrics;
   }
@@ -71,7 +73,11 @@ export function broadcastEvent(
           timestamp: new Date().toISOString(),
         });
         metrics.sent++;
-      } catch {
+      } catch (error) {
+        console.error(
+          `[BROADCAST DEBUG] Error sending event to client ID: ${client.id}`,
+          error
+        );
         metrics.skipped++;
       }
     } else {
@@ -84,7 +90,9 @@ export function broadcastEvent(
 
 // Specialized event broadcasters
 export function broadcastChatCreated(
-  chat: Omit<Chat, "messages" | "updatedAt" | "userId">,
+  chat: Omit<Chat, "messages" | "updatedAt" | "userId"> & {
+    optimisticChatId?: string;
+  },
   targetIds?: string[]
 ) {
   return broadcastEvent(EVENT_TYPES.CHAT_CREATED, chat, targetIds);
@@ -96,6 +104,7 @@ export function broadcastMessageCreated(
     chatId: string;
     chatTitle: string;
     updatedAt: string;
+    moduleId: string | null;
   },
   targetIds?: string[]
 ) {
@@ -177,4 +186,24 @@ export function broadcastResourceDeleted(
     );
   }
   return broadcastEvent(EVENT_TYPES.RESOURCE_DELETED, resourceData, targetIds);
+}
+
+// New function to broadcast when a user sends a message
+export function broadcastUserMessageSent(
+  messageData: {
+    id: string;
+    chatId: string;
+    chatTitle: string;
+    updatedAt: string;
+    moduleId: string | null;
+    module?: {
+      id: string;
+      name: string;
+      icon: string;
+    } | null;
+    optimisticChatId?: string;
+  },
+  targetIds?: string[]
+) {
+  return broadcastEvent(EVENT_TYPES.USER_MESSAGE_SENT, messageData, targetIds);
 }

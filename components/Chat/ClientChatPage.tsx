@@ -8,12 +8,28 @@ import { ModuleWithResources } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 import { encodeModuleSlug } from "@/lib/utils";
 import Header from "../Main/Header";
+import dynamic from "next/dynamic";
 
-// Import the extracted components
-import ChatMessages from "./ChatMessages";
+// Import the components that don't need to be loaded dynamically
 import ChatInput from "./ChatInput";
 import ChatModuleHeader from "./ChatModuleHeader";
-import WelcomeScreen from "./WelcomeScreen";
+
+// Dynamically import components that are not needed immediately
+const ChatMessages = dynamic(() => import("./ChatMessages"), {
+  loading: () => (
+    <div className="flex-1 overflow-y-auto p-4">
+      <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+    </div>
+  ),
+  ssr: false,
+});
+
+const WelcomeScreen = dynamic(() => import("./WelcomeScreen"), {
+  loading: () => (
+    <div className="text-center flex items-center justify-center h-96"></div>
+  ),
+  ssr: false,
+});
 
 /**
  * Renders a full-screen chat interface with message history, input, and an optional module header.
@@ -28,6 +44,7 @@ import WelcomeScreen from "./WelcomeScreen";
  * @param isAuthenticated - Indicates whether the user is authenticated (defaults to true).
  * @param initialTitle - Optional initial title for the chat.
  * @param forceOldest - When true, ensures this chat appears as the oldest in history (for unauthenticated users).
+ * @param isNewChat - When true, shows as "New Chat" in the UI until first message
  *
  * @returns The rendered chat interface as a React element.
  */
@@ -38,6 +55,7 @@ export default function ClientChatPage({
   isAuthenticated = true,
   initialTitle,
   forceOldest = false,
+  isNewChat = false,
 }: {
   initialModuleDetails?: ModuleWithResources | null;
   chatId: string;
@@ -45,8 +63,20 @@ export default function ClientChatPage({
   isAuthenticated?: boolean;
   initialTitle?: string;
   forceOldest?: boolean;
+  isNewChat?: boolean;
 }) {
   const [showLogo, setShowLogo] = React.useState(false);
+
+  // Store the optimistic chat ID
+  const [optimisticChatId, setOptimisticChatId] = React.useState<string | null>(
+    null
+  );
+
+  // Track if this is a new chat to update title on first message
+  const [isFirstMessage, setIsFirstMessage] = React.useState(isNewChat);
+  const [displayTitle, setDisplayTitle] = React.useState(
+    isNewChat ? "New Chat" : initialTitle
+  );
 
   // After mounting, we have access to the theme
   React.useEffect(() => {
@@ -61,9 +91,18 @@ export default function ClientChatPage({
   const [activeModule] = React.useState<string | null>(
     initialModuleDetails?.id ?? null
   );
-  const [moduleDetails] = React.useState<ModuleWithResources | null>(
-    initialModuleDetails ?? null
-  );
+  const [moduleDetails, setModuleDetails] =
+    React.useState<ModuleWithResources | null>(initialModuleDetails ?? null);
+
+  // Update moduleDetails when initialModuleDetails changes
+  React.useEffect(() => {
+    if (initialModuleDetails) {
+      setModuleDetails(initialModuleDetails);
+    } else {
+      setModuleDetails(null);
+    }
+  }, [initialModuleDetails]);
+
   const router = useRouter();
 
   // Get the session ID from local storage for anonymous users
@@ -75,7 +114,8 @@ export default function ClientChatPage({
     | ((
         title: string,
         moduleId: string | null,
-        forceOldest?: boolean
+        forceOldest?: boolean,
+        currentPath?: string
       ) => string)
     | null
   >(null);
@@ -87,8 +127,10 @@ export default function ClientChatPage({
         __sidebarChatUpdater?: (
           title: string,
           moduleId: string | null,
-          forceOldest?: boolean
+          forceOldest?: boolean,
+          currentPath?: string
         ) => string;
+        __hasPendingOptimisticChat?: boolean;
       };
       if (win.__sidebarChatUpdater) {
         sidebarChatUpdater.current = win.__sidebarChatUpdater;
@@ -133,11 +175,26 @@ export default function ClientChatPage({
     chatId,
   ]);
 
-  // Reference to the scroll container, but don't auto-scroll
+  // Reference to the scroll container - needed for auto-scrolling
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Default model name - we'll try to retrieve it dynamically if possible
   const [modelName, setModelName] = React.useState<string>("Gemini 2.0 Flash");
+
+  // Track if the user has copied a message
+  const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(
+    null
+  );
+
+  const copyToClipboard = React.useCallback(
+    (text: string, messageId: string) => {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedMessageId(messageId);
+        setTimeout(() => setCopiedMessageId(null), 2000);
+      });
+    },
+    []
+  );
 
   // Memoize the chat options to prevent unnecessary re-initialization
   const chatOptions = React.useMemo(
@@ -152,6 +209,7 @@ export default function ClientChatPage({
         sessionId: !isAuthenticated ? sessionId : undefined,
         title: initialTitle,
         forceOldest: forceOldest,
+        optimisticChatId: optimisticChatId,
       },
       onResponse: (response: Response) => {
         // Try to extract model information from headers if available
@@ -184,7 +242,6 @@ export default function ClientChatPage({
               // Check if we need to update the URL (if it doesn't already contain the chat ID)
               if (!currentPath.endsWith(`/${chatId}`)) {
                 const newPath = `/${encodedName}/chat/${chatId}`;
-                console.log(`Updating URL to: ${newPath}`);
                 router.replace(newPath, { scroll: false });
               }
             }
@@ -205,6 +262,7 @@ export default function ClientChatPage({
       router,
       initialTitle,
       forceOldest,
+      optimisticChatId,
     ]
   );
 
@@ -216,20 +274,39 @@ export default function ClientChatPage({
     isLoading: chatLoading,
   } = useChat(chatOptions);
 
-  const [copiedMessageId, setCopiedMessageId] = React.useState<string | null>(
-    null
-  );
+  // Keep track if we've already updated the title for first message
+  const hasUpdatedTitle = React.useRef(false);
 
-  const copyToClipboard = React.useCallback(
-    (text: string, messageId: string) => {
-      navigator.clipboard.writeText(text).then(() => {
-        setCopiedMessageId(messageId);
-        setTimeout(() => setCopiedMessageId(null), 2000);
-      });
-    },
-    []
-  );
+  // When messages change, check if we should update the title
+  React.useEffect(() => {
+    // Only update title for truly new chats with their first message
+    if (
+      isFirstMessage &&
+      messages.length > 0 &&
+      messages[0].role === "user" &&
+      !hasUpdatedTitle.current &&
+      isNewChat && // Make sure this is actually a new chat
+      (chatId === "new" || !chatId.includes("-")) // Additional check for truly new chat IDs
+    ) {
+      // Update the display title with the first user message
+      const firstUserMessage = messages[0].content.substring(0, 50);
+      const displayedTitle =
+        firstUserMessage + (firstUserMessage.length >= 50 ? "..." : "");
+      setDisplayTitle(displayedTitle);
 
+      setIsFirstMessage(false);
+      hasUpdatedTitle.current = true;
+    }
+  }, [
+    messages,
+    isFirstMessage,
+    activeModule,
+    optimisticChatId,
+    chatId,
+    isNewChat,
+  ]);
+
+  // Function to handle navigation to module details page
   const navigateToModuleDetails = React.useCallback(() => {
     if (moduleDetails) {
       const encodedName = encodeModuleSlug(moduleDetails.name);
@@ -237,45 +314,58 @@ export default function ClientChatPage({
     }
   }, [moduleDetails, router]);
 
-  // Add a callback for when the first message is sent
-  const handleFirstMessageSent = React.useCallback(
-    (message: string) => {
-      // Update the chat history optimistically when the first message is sent
-      if (sidebarChatUpdater.current && messages.length === 0) {
-        // Create a chat title from the first message
-        const chatTitle =
-          message.substring(0, 30) + (message.length > 30 ? "..." : "");
-        sidebarChatUpdater.current(chatTitle, activeModule, forceOldest);
-
-        // Log for anonymous users
-        if (!isAuthenticated && sessionId) {
-          console.log(
-            `Creating optimistic chat for anonymous user with sessionId: ${sessionId}`
-          );
-        }
-      }
-    },
-    [messages.length, isAuthenticated, activeModule, sessionId, forceOldest]
-  );
-
   // Handle form submission with optimized event handler
   const handleFormSubmit = React.useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
       if (input.trim() && !chatLoading) {
-        // Track if this is the first message for the optimistic UI update
-        const isFirstMessage = messages.length === 0;
+        // ONLY add optimistic entry for truly new chats with no messages
+        // and only on the root chat path
+        if (
+          isNewChat &&
+          messages.length === 0 &&
+          sidebarChatUpdater.current &&
+          (chatId === "new" || !chatId.includes("-"))
+        ) {
+          // Create a first message-based title
+          const title =
+            input.trim().substring(0, 50) + (input.length > 50 ? "..." : "");
 
-        // Submit the form
-        handleSubmit(e);
+          // Save the current path to help with maintaining the active state
+          const currentPath = window.location.pathname;
 
-        // If this is the first message, trigger the optimistic UI update
-        if (isFirstMessage) {
-          handleFirstMessageSent(input.trim());
+          // Only add optimistic chat if we're on a root chat path AND this is a new chat
+          if (
+            (currentPath === "/chat" || currentPath.endsWith("/chat")) &&
+            !optimisticChatId
+          ) {
+            // Add the chat optimistically to the sidebar and store the ID
+            const newOptimisticId = sidebarChatUpdater.current(
+              title,
+              activeModule,
+              false,
+              currentPath
+            );
+            if (newOptimisticId) {
+              setOptimisticChatId(newOptimisticId);
+            }
+          }
         }
+
+        handleSubmit(e);
       }
     },
-    [input, chatLoading, handleSubmit, messages.length, handleFirstMessageSent]
+    [
+      input,
+      chatLoading,
+      handleSubmit,
+      isNewChat,
+      messages.length,
+      sidebarChatUpdater,
+      activeModule,
+      chatId,
+      optimisticChatId,
+    ]
   );
 
   // Handle keyboard event
@@ -297,6 +387,14 @@ export default function ClientChatPage({
       {/* Header component */}
       <Header />
 
+      {/* Module Header - Fixed position */}
+      {moduleDetails && (
+        <ChatModuleHeader
+          moduleDetails={moduleDetails}
+          navigateToModuleDetails={navigateToModuleDetails}
+        />
+      )}
+
       {/* Main Content Area with Scrollbar - Make it span the full page */}
       <div
         ref={scrollContainerRef}
@@ -304,14 +402,6 @@ export default function ClientChatPage({
           messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
         } pr-0 scroll-smooth scrollbar-smooth custom-scrollbar`}
       >
-        {/* Chat Header - Now inside the scrollable area */}
-        {moduleDetails && (
-          <ChatModuleHeader
-            moduleDetails={moduleDetails}
-            navigateToModuleDetails={navigateToModuleDetails}
-          />
-        )}
-
         {/* Chat content centered container */}
         <div className="flex-1">
           {/* Ensure chat thread has same width as input by using identical container classes */}
@@ -324,8 +414,6 @@ export default function ClientChatPage({
                 <div className="flex flex-col space-y-8 pt-14 px-4 pb-8">
                   <ChatMessages
                     messages={messages}
-                    copiedMessageId={copiedMessageId}
-                    copyToClipboard={copyToClipboard}
                     modelName={modelName}
                   />
                 </div>

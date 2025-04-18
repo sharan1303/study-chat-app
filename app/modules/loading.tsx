@@ -1,6 +1,6 @@
 import { ButtonSkeleton } from "@/components/ui/button-skeleton";
 import { Input } from "@/components/ui/input";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, SunMoon, Plus } from "lucide-react";
 import { Search } from "lucide-react";
 
 /**
@@ -13,13 +13,15 @@ import { Search } from "lucide-react";
 export default function Loading() {
   return (
     <div className="flex-1 space-y-2.5">
-      <div className="flex items-center justify-between pt-4 px-6">
+      <div className="flex items-center justify-between pt-4 pl-6 pr-3">
         <h1 className="add-margin-for-headers text-xl">Dashboard</h1>
-        <div className="flex items-center gap-3 -mt-0.5">
+        <div className="flex items-center gap-1 -mt-0.5">
           <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
             <Search className="h-4 w-4" />
           </ButtonSkeleton>
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <ButtonSkeleton variant="ghost" size="icon" className="h-9 w-9">
+            <SunMoon className="h-4 w-4" />
+          </ButtonSkeleton>
         </div>
       </div>
 
@@ -31,7 +33,7 @@ export default function Loading() {
           </div>
           <div className="flex items-center justify-center mt-1 h-7 w-auto rounded-sm">
             <span className="pr-1 font-medium text-sm text-muted-foreground">
-              Resources
+              Uploads
             </span>
           </div>
         </div>
@@ -54,7 +56,7 @@ export default function Loading() {
 
         {/* Empty area for modules to load into */}
         <div className="flex items-center justify-center pt-12">
-          <Loader2 />
+          <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       </div>
     </div>

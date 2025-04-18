@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
         uniqueError instanceof Error &&
         uniqueError.message.includes("Unique constraint")
       ) {
-        console.log("Welcome chat ID collision, using session-specific ID");
         const fallbackId = `welcome-${sessionId.substring(0, 8)}`;
 
         const fallbackChat = await prisma.chat.create({

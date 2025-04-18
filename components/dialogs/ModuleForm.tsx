@@ -27,7 +27,7 @@ import { encodeModuleSlug } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  description: z.string().optional(),
+  context: z.string().optional(),
   icon: z.string().min(1, "Please select an icon"),
 });
 
@@ -55,7 +55,7 @@ interface ModuleFormProps {
   initialData?: {
     id: string;
     name: string;
-    description?: string;
+    context?: string;
     icon: string;
   };
   successEventName?: string;
@@ -82,7 +82,7 @@ export const ModuleForm = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: initialData?.name || "",
-      description: initialData?.description || "",
+      context: initialData?.context || "",
       icon: initialData?.icon || "📚",
     },
   });
@@ -106,15 +106,12 @@ export const ModuleForm = ({
   };
 
   const onSubmit = async (values: FormValues) => {
-    console.log("Form submitted with values:", values);
     setFormError(null);
 
     try {
       setIsSubmitting(true);
 
       if (initialData) {
-        // Update existing module
-        console.log("Updating module:", initialData.id);
 
         // Check if we need to add sessionId
         let updateUrl = `/api/modules/${initialData.id}`;
@@ -123,7 +120,6 @@ export const ModuleForm = ({
         }
 
         const updateResponse = await axios.post(updateUrl, values);
-        console.log("Module updated response:", updateResponse.data);
         toast.success("Module updated");
 
         // First close the dialog
@@ -137,12 +133,9 @@ export const ModuleForm = ({
         }
         // SSE will handle the update, no need for additional refreshes
       } else {
-        // Create new module
-        console.log("Creating new module");
 
         try {
           const createdModule = await api.createModule(values);
-          console.log("Module created response:", createdModule);
 
           // Close the dialog
           triggerSuccess();
@@ -208,13 +201,13 @@ export const ModuleForm = ({
 
           <FormField
             control={form.control}
-            name="description"
+            name="context"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description (optional)</FormLabel>
+                <FormLabel>Context</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Enter a brief description of this module"
+                    placeholder="Give some context about this module"
                     {...field}
                     value={field.value || ""}
                   />

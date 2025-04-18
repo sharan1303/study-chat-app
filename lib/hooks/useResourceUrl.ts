@@ -24,26 +24,20 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
 
   // Function to regenerate the URL
   const regenerateUrl = useCallback(async (): Promise<string | null> => {
-    console.log("🚀 regenerateUrl FUNCTION CALLED - START OF FUNCTION");
 
     if (!resourceId) {
       console.log("⚠️ Cannot regenerate URL: No resource ID provided");
       return null;
     }
 
-    console.log("🔄 Starting URL regeneration - Resource ID:", resourceId);
-    console.log("🔍 Current URL:", initialUrl);
-
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log("📤 Sending regeneration request to API");
 
       // Add timeout to fetch request
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log("⏱️ Request timeout - Aborting");
         controller.abort();
       }, 15000); // 15 second timeout
 
@@ -63,7 +57,6 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
       });
 
       clearTimeout(timeoutId);
-      console.log("📥 Received response - Status:", response.status);
 
       // Handle non-OK responses
       if (!response.ok) {
@@ -84,9 +77,6 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
 
             // Retry logic
             if (retryCount < 2) {
-              console.log(
-                `⏱️ Retry attempt ${retryCount + 1} - Waiting 1 second...`
-              );
               setRetryCount((prev) => prev + 1);
 
               // Wait a second and try again
@@ -111,9 +101,7 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
       }
 
       // Parse the response JSON
-      console.log("🔄 Parsing response body");
       const data = await response.json();
-      console.log("📋 Response data:", data);
 
       if (!data.url) {
         console.error("❌ No URL returned in response");
@@ -121,7 +109,6 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
       }
 
       // Update the URL state
-      console.log("✅ Setting new URL:", data.url);
       setUrl(data.url);
 
       return data.url;
@@ -133,7 +120,6 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
       return null;
     } finally {
       setIsLoading(false);
-      console.log("🔄 Regeneration process completed");
     }
   }, [resourceId, initialUrl, retryCount]);
 

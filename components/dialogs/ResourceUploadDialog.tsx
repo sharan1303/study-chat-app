@@ -43,7 +43,7 @@ const formSchema = z.object({
 interface Module {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
 }
 
@@ -117,7 +117,6 @@ export function ResourceUploadDialog({
       try {
         setIsLoading(true);
         setModuleLoadError(null);
-        console.log("Fetching modules...");
         // Get session ID for anonymous users
         const sessionId = getOrCreateSessionIdClient();
 
@@ -125,14 +124,9 @@ export function ResourceUploadDialog({
         let url = "/api/modules";
         if (sessionId) {
           url += `?sessionId=${sessionId}`;
-          console.log(
-            "Using sessionId for module fetch:",
-            `${sessionId.substring(0, 8)}...`
-          );
         }
 
         const response = await axios.get(url);
-        console.log("Modules API response:", response.data);
 
         // Handle the response data format - API returns { modules: [...] }
         if (
@@ -140,13 +134,8 @@ export function ResourceUploadDialog({
           response.data.modules &&
           Array.isArray(response.data.modules)
         ) {
-          console.log(
-            "Setting modules from response.data.modules:",
-            response.data.modules
-          );
           setModules(response.data.modules);
         } else if (response.data && Array.isArray(response.data)) {
-          console.log("Setting modules from response.data:", response.data);
           setModules(response.data);
         } else {
           // Set modules to empty array if data is not in expected format
@@ -219,10 +208,6 @@ export function ResourceUploadDialog({
               let url = "/api/resources/upload";
               if (sessionId) {
                 url += `?sessionId=${sessionId}`;
-                console.log(
-                  "Using sessionId for upload:",
-                  `${sessionId.substring(0, 8)}...`
-                );
               }
 
               return await axios.post(url, formData, {

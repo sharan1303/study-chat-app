@@ -3,12 +3,13 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import { SESSION_ID_KEY } from "@/lib/session";
 import { broadcastModuleCreated } from "@/lib/events";
+import { Prisma } from "@prisma/client";
 
 // Define a type for the module with count
 type ModuleWithCount = {
   id: string;
   name: string;
-  description: string | null;
+  context: string | null;
   icon: string;
   createdAt: Date;
   updatedAt: Date;
@@ -27,13 +28,7 @@ async function processModulesRequest(
   exactMatch?: boolean
 ) {
   try {
-    // Debug the auth state
-    console.log("API processModulesRequest auth state:", {
-      userId,
-      sessionId,
-      hasUserId: !!userId,
-      hasSessionId: !!sessionId,
-    });
+
 
     // Either userId or sessionId must be provided
     if (!userId && !sessionId) {
@@ -44,31 +39,25 @@ async function processModulesRequest(
     }
 
     // Build the where clause based on either userId or sessionId
-    const where = {};
+    const where: Prisma.ModuleWhereInput = {};
 
     if (userId) {
-      // @ts-expect-error - Dynamic property assignment
       where.userId = userId;
     } else if (sessionId) {
-      // @ts-expect-error - Dynamic property assignment
       where.sessionId = sessionId;
     }
 
     // Add name filtering if provided
     if (name) {
       if (exactMatch) {
-        // Use equals with case insensitivity for exact match
-        // @ts-expect-error - Dynamic property assignment
         where.name = {
           equals: name,
-          mode: "insensitive" as const,
+          mode: "insensitive",
         };
       } else {
-        // Use contains with case insensitivity for fuzzy match
-        // @ts-expect-error - Dynamic property assignment
         where.name = {
           contains: name,
-          mode: "insensitive" as const,
+          mode: "insensitive",
         };
       }
     }
@@ -88,7 +77,7 @@ async function processModulesRequest(
     const formattedModules = modules.map((module: ModuleWithCount) => ({
       id: module.id,
       name: module.name,
-      description: module.description,
+      context: module.context,
       icon: module.icon,
       resourceCount: module._count.resources,
       createdAt: module.createdAt.toISOString(),
@@ -109,36 +98,31 @@ async function processModulesRequest(
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
   const searchParams = request.nextUrl.searchParams;
-  const name = searchParams.get("name") || undefined;
+  const sessionId = searchParams.get("sessionId");
+  const userIdFromQuery = searchParams.get("userId") || userId;
+  const name = searchParams.get("name");
   const exactMatch = searchParams.get("exactMatch") === "true";
 
-  // Get sessionId from URL - try both parameter names for compatibility
-  const sessionIdFromParam = searchParams.get("sessionId");
-  const sessionIdFromKey = searchParams.get(SESSION_ID_KEY);
-  const sessionId = sessionIdFromParam || sessionIdFromKey;
-
-  // Debug the request params
-  console.log("GET /api/modules params:", {
-    userId,
-    sessionId,
+  // Log the request parameters
+  console.log(`GET /api/modules - Query parameters:`, {
+    sessionId: sessionId ? `${sessionId.substring(0, 8)}...` : null,
+    userId: userIdFromQuery ? `${userIdFromQuery.substring(0, 8)}...` : null,
     name,
     exactMatch,
-    searchParams: Object.fromEntries(searchParams.entries()),
   });
 
-  // If no userId and no sessionId was provided in the URL, return error
-  if (!userId && !sessionId) {
-    console.error("Neither userId nor sessionId provided");
-    return NextResponse.json(
-      { error: "Session ID or authentication required" },
-      { status: 401 }
-    );
+  // Require either a sessionId or userId
+  if (!sessionId && !userIdFromQuery) {
+    console.error(`Unauthorized modules request - no sessionId or userId`);
+    return new Response("Session ID or authentication required", {
+      status: 401,
+    });
   }
 
   return processModulesRequest(
-    userId || null,
+    userIdFromQuery || null,
     sessionId || null,
-    name,
+    name || undefined,
     exactMatch
   );
 }
@@ -162,7 +146,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { name, description, icon } = await request.json();
+    const { name, context, icon } = await request.json();
 
     if (!name || name.trim().length < 2) {
       return NextResponse.json(
@@ -174,7 +158,7 @@ export async function POST(request: NextRequest) {
     // Create data object
     const data = {
       name,
-      description,
+      context,
       icon: icon || "📚",
     };
 
@@ -182,17 +166,11 @@ export async function POST(request: NextRequest) {
     if (userId) {
       // @ts-expect-error - Known property but type system disagrees
       data.userId = userId;
-      console.log(`Creating module with userId: ${userId}`);
     } else if (sessionId) {
       // @ts-expect-error - Known property but type system disagrees
       data.sessionId = sessionId;
-      console.log(`Creating module with sessionId: ${sessionId}`);
     }
 
-    console.log(
-      "Module data being sent to database:",
-      JSON.stringify(data, null, 2)
-    );
 
     // Create the module with Prisma
     const moduleData = await prisma.module.create({ data });
@@ -201,7 +179,6 @@ export async function POST(request: NextRequest) {
     // Broadcast event for real-time updates
     const targetId = userId || sessionId;
     if (targetId) {
-      console.log(`Broadcasting module creation event to client ${targetId}`);
       const broadcastResult = broadcastModuleCreated(moduleData, [targetId]);
       console.log("Broadcast result:", broadcastResult);
     } else {

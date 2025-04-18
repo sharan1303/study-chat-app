@@ -64,7 +64,7 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
   if (language || (className && className.trim() !== "")) {
     return (
       <div
-        className={`my-3 overflow-hidden rounded-md ${
+        className={`my-3 overflow-hidden rounded-md w-full max-w-full ${
           isShellLanguage
             ? "shadow-[0_4px_8px_rgba(0,0,0,0.3)] dark:shadow-gray-950/70"
             : "shadow-md"
@@ -100,6 +100,9 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
               borderRadius: "0 0 0.375rem 0.375rem",
               fontSize: "0.875rem",
               lineHeight: "1.5",
+              width: "100%",
+              maxWidth: "100%",
+              overflowX: "auto",
             } as ExtendedCSSProperties
           }
           wrapLongLines={true}
@@ -107,6 +110,8 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
             style: {
               fontFamily:
                 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+              wordBreak: "break-word",
+              whiteSpace: "pre-wrap",
             },
           }}
           PreTag="div"

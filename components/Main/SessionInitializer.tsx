@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { getOrCreateSessionIdClient, SESSION_ID_KEY } from "@/lib/session";
+import {
+  getOrCreateSessionIdClient,
+  SESSION_ID_KEY,
+  SESSION_COOKIE_NAME,
+} from "@/lib/session";
+import Cookies from "js-cookie";
 
 // Client component to initialize session on page load
 export function SessionInitializer() {
@@ -18,47 +23,66 @@ export function SessionInitializer() {
             "Session initialization failed - no session ID returned"
           );
 
-          // Check if localStorage is available
+          // Try manual recovery with cookies first, then localStorage
           try {
-            if (typeof localStorage !== "undefined") {
-              console.log("localStorage is available");
-            } else {
-              console.error("localStorage is not available");
-            }
-          } catch (storageError) {
-            console.error("Error checking localStorage:", storageError);
-          }
-
-          // Try to manually set a session ID
-          try {
-            if (typeof localStorage !== "undefined") {
+            // Check if cookies API is available
+            if (typeof document !== "undefined") {
+              // Create a fallback session ID
               const tempSessionId =
                 crypto.randomUUID?.() ||
-                Array.from(new Array(36), () => 
+                Array.from(new Array(36), () =>
                   Math.floor(Math.random() * 16).toString(16)
-                ).join('');
-              localStorage.setItem(SESSION_ID_KEY, tempSessionId);
-              console.log("Manually set session ID:", tempSessionId);
+                ).join("");
+
+              // Try to set cookie directly
+              Cookies.set(SESSION_COOKIE_NAME, tempSessionId, {
+                path: "/",
+                expires: 365,
+                sameSite: "lax",
+                secure: process.env.NODE_ENV === "production",
+              });
+
+              // Also set in localStorage as fallback
+              try {
+                if (typeof localStorage !== "undefined") {
+                  localStorage.setItem(SESSION_ID_KEY, tempSessionId);
+                }
+              } catch (storageError) {
+                console.error(
+                  "Error using localStorage fallback:",
+                  storageError
+                );
+              }
             }
           } catch (manualSetError) {
-            console.error("Error manually setting session ID:", manualSetError);
+            console.error("Error manually setting session:", manualSetError);
           }
         }
 
-        // Verify the session was stored
-        let storedSessionId;
+        // Verify the session was stored - check cookie first, then localStorage
         try {
-          storedSessionId = localStorage.getItem(SESSION_ID_KEY);
-          console.log("Stored session ID:", storedSessionId);
+          const cookieSessionId = Cookies.get(SESSION_COOKIE_NAME);
 
-          if (!storedSessionId) {
-            console.error("Failed to store session ID in localStorage");
-            // Retry once
-            const retrySessionId = getOrCreateSessionIdClient();
-            console.log("Retried session initialization:", retrySessionId);
+          if (!cookieSessionId) {
+            console.error("Failed to store session in cookies");
+
+            // Check localStorage as fallback
+            const storedSessionId = localStorage.getItem(SESSION_ID_KEY);
+            if (storedSessionId) {
+              // Try to restore cookie from localStorage
+              Cookies.set(SESSION_COOKIE_NAME, storedSessionId, {
+                path: "/",
+                expires: 365,
+                sameSite: "lax",
+                secure: process.env.NODE_ENV === "production",
+              });
+            } else {
+              // Retry once
+              const retrySessionId = getOrCreateSessionIdClient();
+            }
           }
         } catch (verifyError) {
-          console.error("Error verifying session ID:", verifyError);
+          console.error("Error verifying session:", verifyError);
         }
       } catch (error) {
         console.error("Error initializing session:", error);

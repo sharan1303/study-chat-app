@@ -5,7 +5,7 @@ import prisma from "./prisma";
 /**
  * Retrieves a module's context information as a formatted string.
  *
- * This asynchronous function fetches a module by its unique identifier from the database, including its associated resources. If found, it returns a string that includes the module's name, an optional description, and a list of resources formatted with each resource's title and type separated by two newlines. If no module is found, it returns "No module information available."
+ * This asynchronous function fetches a module by its unique identifier from the database, including its associated resources. If found, it returns a string that includes the module's name, context given, and a list of resources formatted with each resource's title and type separated by two newlines. If no module is found, it returns "No module information available."
  *
  * @param moduleId - The unique identifier of the module.
  * @returns A formatted string representing the module's details or a message indicating the absence of module data.
@@ -26,8 +26,7 @@ export async function getModuleContext(moduleId: string): Promise<string> {
 
   return `
     Module: ${modules.name}
-    Description: ${modules.description || ""}
-    
+    Context: ${modules.context || "No context provided"}
     Resources:
     ${resourcesContext}
   `;
