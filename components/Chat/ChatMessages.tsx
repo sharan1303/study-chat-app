@@ -7,6 +7,8 @@ import { Check, Copy } from "lucide-react";
 import type { Message } from "@ai-sdk/react";
 import { getOSModifierKey } from "@/lib/utils";
 import { toast } from "sonner";
+import FileAttachment from "@/components/Chat/FileAttachment";
+
 export interface ChatMessagesProps {
   messages: Message[];
   scrollContainerRef?: React.RefObject<HTMLDivElement>;
@@ -27,7 +29,11 @@ const UserMessage: React.FC<{
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         if (messageRef.current?.matches(":hover")) {
           e.preventDefault();
-          copyToClipboard(message.content);
+          copyToClipboard(
+            typeof message.content === "string"
+              ? message.content
+              : "Content contains attachments"
+          );
         }
       }
     };
@@ -45,18 +51,48 @@ const UserMessage: React.FC<{
       className="flex flex-col items-end group relative"
     >
       <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words">
-        <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+        {typeof message.content === "string" ? (
+          <div>{message.content}</div>
+        ) : Array.isArray(message.content) ? (
+          message.content.map((part, i) => {
+            if (part.type === "text") {
+              return <div key={i}>{part.text}</div>;
+            } else if (part.type === "file") {
+              return (
+                <FileAttachment
+                  key={i}
+                  file={part}
+                  index={i}
+                  messageId={message.id}
+                />
+              );
+            }
+            return null;
+          })
+        ) : (
+          <div>Unsupported content format</div>
+        )}
       </div>
       <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
-              copyToClipboard(message.content);
+              copyToClipboard(
+                typeof message.content === "string"
+                  ? message.content
+                  : "Content contains attachments"
+              );
             }
           }}
           type="button"
-          onClick={() => copyToClipboard(message.content)}
+          onClick={() =>
+            copyToClipboard(
+              typeof message.content === "string"
+                ? message.content
+                : "Content contains attachments"
+            )
+          }
           className="flex items-center gap-2 px-3 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
           aria-label="Copy message"
           title={`Copy message (${getOSModifierKey()}+C)`}
@@ -87,7 +123,11 @@ const AssistantMessage: React.FC<{
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         if (messageRef.current?.matches(":hover")) {
           e.preventDefault();
-          copyToClipboard(message.content);
+          copyToClipboard(
+            typeof message.content === "string"
+              ? message.content
+              : "Content contains attachments"
+          );
         }
       }
     };
@@ -105,61 +145,91 @@ const AssistantMessage: React.FC<{
       className="text-gray-800 dark:text-gray-200 group relative"
     >
       <div className="prose prose-xs dark:prose-invert max-w-none w-full break-words prose-spacing text-sm">
-        <ReactMarkdown
-          components={{
-            h1: (props) => (
-              <h1
-                className="text-xl font-bold my-5"
-                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
-              />
-            ),
-            h2: (props) => (
-              <h2
-                className="text-lg font-semibold my-4"
-                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
-              />
-            ),
-            h3: (props) => (
-              <h3
-                className="text-lg font-medium my-4"
-                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
-              />
-            ),
-            h4: (props) => (
-              <h4
-                className="text-lg font-medium my-3"
-                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
-              />
-            ),
-            p: (props) => (
-              <p
-                className="my-3"
-                {...(props as React.HTMLAttributes<HTMLParagraphElement>)}
-              />
-            ),
-            // @ts-expect-error - ReactMarkdown types don't include inline
-            code: ({ inline, className, children, ...props }) => {
+        {typeof message.content === "string" ? (
+          <ReactMarkdown
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || "");
+                return !inline && match ? (
+                  <CodeBlock
+                    key={Math.random()}
+                    language={match[1]}
+                    value={String(children).replace(/\n$/, "")}
+                    {...props}
+                  />
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        ) : Array.isArray(message.content) ? (
+          message.content.map((part, i) => {
+            if (part.type === "text") {
               return (
-                <CodeBlock inline={inline} className={className} {...props}>
-                  {children}
-                </CodeBlock>
+                <ReactMarkdown
+                  key={i}
+                  components={{
+                    code({ node, inline, className, children, ...props }) {
+                      const match = /language-(\w+)/.exec(className || "");
+                      return !inline && match ? (
+                        <CodeBlock
+                          key={Math.random()}
+                          language={match[1]}
+                          value={String(children).replace(/\n$/, "")}
+                          {...props}
+                        />
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {part.text}
+                </ReactMarkdown>
               );
-            },
-          }}
-        >
-          {message.content}
-        </ReactMarkdown>
+            } else if (part.type === "file") {
+              return (
+                <FileAttachment
+                  key={i}
+                  file={part}
+                  index={i}
+                  messageId={message.id}
+                />
+              );
+            }
+            return null;
+          })
+        ) : (
+          <div>Unsupported content format</div>
+        )}
       </div>
       <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
         <button
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
-              copyToClipboard(message.content);
+              copyToClipboard(
+                typeof message.content === "string"
+                  ? message.content
+                  : "Content contains attachments"
+              );
             }
           }}
           type="button"
-          onClick={() => copyToClipboard(message.content)}
+          onClick={() =>
+            copyToClipboard(
+              typeof message.content === "string"
+                ? message.content
+                : "Content contains attachments"
+            )
+          }
           className="flex items-center gap-2 px-3 py-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
           aria-label="Copy message"
           title={`Copy message (${getOSModifierKey()}+C)`}
@@ -189,7 +259,8 @@ export default function ChatMessages({
   >(null);
 
   const handleCopyToClipboard = (text: string, messageId: string) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard
+      .writeText(text)
       .then(() => {
         setLocalCopiedMessageId(messageId);
         toast.success("Copied to clipboard");
