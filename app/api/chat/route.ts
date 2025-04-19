@@ -18,6 +18,26 @@ import {
   SEARCH_INDICATORS,
 } from "@/lib/prompts";
 
+// Define types for message content structures
+interface ContentPart {
+  type: string;
+  [key: string]: any;
+}
+
+interface TextPart extends ContentPart {
+  type: "text";
+  text: string;
+}
+
+interface FilePart extends ContentPart {
+  type: "file";
+  data: string;
+  mimeType: string;
+}
+
+// Type for content array
+type ContentArray = (TextPart | FilePart)[];
+
 /**
  * Handles an HTTP POST request for chat interactions.
  *
@@ -39,6 +59,8 @@ export async function POST(request: Request) {
     // We keep this parameter but don't use it anymore since we always want to broadcast AI responses
     // const skipMessageBroadcast = body.skipMessageBroadcast || false;
     const optimisticChatId = body.optimisticChatId || null;
+    // Extract experimental_attachments if available
+    const attachments = body.experimental_attachments || null;
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -66,7 +88,11 @@ export async function POST(request: Request) {
 
         // Get the last user message for the chat title
         const lastMessage = messages[messages.length - 1];
-        const messageTitle = formatChatTitle(lastMessage.content);
+        const messageTitle = formatChatTitle(
+          typeof lastMessage.content === "string"
+            ? lastMessage.content
+            : lastMessage.content[0]?.text || "New Chat"
+        );
 
         // Send an immediate event with the user's message
         const immediateMessageData = {
@@ -131,11 +157,60 @@ export async function POST(request: Request) {
       }
     }
 
+    // Process messages for content extraction and format adjustment
+    const processedMessages = messages.map((message: Message) => {
+      // For all messages, just return as is - we'll handle content type differences when needed
+      return message;
+    });
+
+    // Handle attachments in the last user message if it exists
+    if (attachments && processedMessages.length > 0) {
+      const lastMessageIndex = processedMessages.length - 1;
+      const lastMessage = processedMessages[lastMessageIndex];
+
+      // Only process if it's a user message
+      if (lastMessage.role === "user") {
+        const content =
+          typeof lastMessage.content === "string"
+            ? [{ type: "text", text: lastMessage.content }]
+            : lastMessage.content;
+
+        // Add file attachments to the content array
+        const updatedContent = [...content];
+
+        // Process each attachment
+        for (let i = 0; i < attachments.length; i++) {
+          const file = attachments[i];
+          const arrayBuffer = await file.arrayBuffer();
+          const base64Data = Buffer.from(arrayBuffer).toString("base64");
+
+          updatedContent.push({
+            type: "file",
+            data: base64Data,
+            mimeType: file.type,
+          });
+        }
+
+        processedMessages[lastMessageIndex].content = updatedContent;
+      }
+    }
+
     // Get the last message from the user for potential search needs
-    const lastUserMessage = messages[messages.length - 1].content;
+    const lastUserMessage = processedMessages[processedMessages.length - 1];
+    let lastUserContent = "";
+
+    if (typeof lastUserMessage.content === "string") {
+      lastUserContent = lastUserMessage.content;
+    } else if (Array.isArray(lastUserMessage.content)) {
+      const contentArray = lastUserMessage.content as ContentArray;
+      const textPart = contentArray.find((c) => c.type === "text") as
+        | TextPart
+        | undefined;
+      lastUserContent = textPart?.text || "";
+    }
 
     // Simple check if the message suggests a need for search
-    const shouldSearch = needsSearch(lastUserMessage);
+    const shouldSearch = needsSearch(lastUserContent);
 
     let systemMessage = "";
 
@@ -149,7 +224,7 @@ export async function POST(request: Request) {
     if (shouldSearch) {
       try {
         // Perform search with Perplexity API
-        const resultsText = await searchWithPerplexity(lastUserMessage);
+        const resultsText = await searchWithPerplexity(lastUserContent);
         // Create a single search result with the entire text response
         searchResults = [
           {
@@ -182,13 +257,28 @@ export async function POST(request: Request) {
     // Format messages for the model including the system message
     const formattedMessages: Message[] = [
       { id: "system", role: "system", content: systemMessage },
-      ...messages,
+      ...processedMessages,
     ];
 
     // Create chat title from first user message
-    const firstUserMessage =
-      messages.find((m: Message) => m.role === "user")?.content || "";
-    chatTitle = formatChatTitle(firstUserMessage);
+    const firstUserMessage = processedMessages.find(
+      (m: Message) => m.role === "user"
+    );
+    let titleText = "New Chat";
+
+    if (firstUserMessage) {
+      if (typeof firstUserMessage.content === "string") {
+        titleText = firstUserMessage.content;
+      } else if (Array.isArray(firstUserMessage.content)) {
+        const contentArray = firstUserMessage.content as ContentArray;
+        const textPart = contentArray.find((c) => c.type === "text") as
+          | TextPart
+          | undefined;
+        titleText = textPart?.text || titleText;
+      }
+    }
+
+    chatTitle = formatChatTitle(titleText);
 
     try {
       // Use the streamText function from the AI SDK
@@ -200,6 +290,38 @@ export async function POST(request: Request) {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
             try {
+              // For saving to database, simplify messages to string content
+              const simplifiedMessages = processedMessages.map(
+                (message: Message) => {
+                  if (typeof message.content === "string") {
+                    return { role: message.role, content: message.content };
+                  }
+
+                  // For multi-part content, extract text and create a simple note about attachments
+                  let textContent = "";
+                  let hasAttachments = false;
+
+                  if (Array.isArray(message.content)) {
+                    // Safe to use as ContentArray since we validate the array
+                    const contentArray = message.content as ContentArray;
+                    const textPart = contentArray.find(
+                      (c) => c.type === "text"
+                    ) as TextPart | undefined;
+                    textContent = textPart?.text || "";
+                    hasAttachments = contentArray.some(
+                      (c) => c.type === "file"
+                    );
+                  }
+
+                  return {
+                    role: message.role,
+                    content: hasAttachments
+                      ? `${textContent}\n[This message included file attachments]`
+                      : textContent,
+                  };
+                }
+              );
+
               // Prepare data for creation
               const chatData: {
                 id: string;
@@ -214,7 +336,7 @@ export async function POST(request: Request) {
                 id: requestedChatId,
                 title: chatTitle,
                 moduleId: moduleId,
-                messages: messages.concat([
+                messages: simplifiedMessages.concat([
                   { role: "assistant", content: text },
                 ]),
                 createdAt: new Date(),
@@ -239,7 +361,7 @@ export async function POST(request: Request) {
               const savedChat = await prisma.chat.upsert({
                 where: { id: requestedChatId },
                 update: {
-                  messages: messages.concat([
+                  messages: simplifiedMessages.concat([
                     { role: "assistant", content: text },
                   ]),
                   updatedAt: new Date(),

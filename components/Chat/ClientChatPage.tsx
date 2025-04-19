@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Loader2 } from "lucide-react";
-import { Message, useChat } from "@ai-sdk/react";
+import { Message } from "@ai-sdk/react";
 import { toast } from "sonner";
 import { ModuleWithResources } from "@/lib/actions";
 import { useRouter } from "next/navigation";
@@ -10,17 +10,15 @@ import { encodeModuleSlug } from "@/lib/utils";
 import Header from "../Main/Header";
 import dynamic from "next/dynamic";
 
+// Import the useFileChat hook for PDF support
+import { useFileChat } from "@/hooks/useFileChat";
+
 // Import the components that don't need to be loaded dynamically
 import ChatInput from "./ChatInput";
 import ChatModuleHeader from "./ChatModuleHeader";
 
 // Dynamically import components that are not needed immediately
 const ChatMessages = dynamic(() => import("./ChatMessages"), {
-  loading: () => (
-    <div className="flex-1 overflow-y-auto p-4">
-      <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-    </div>
-  ),
   ssr: false,
 });
 
@@ -28,7 +26,7 @@ const WelcomeScreen = dynamic(() => import("./WelcomeScreen"), {
   loading: () => (
     <div className="text-center flex items-center justify-center h-96"></div>
   ),
-  ssr: false,
+  ssr: true,
 });
 
 /**
@@ -257,22 +255,26 @@ export default function ClientChatPage({
       initialMessages,
       activeModule,
       isAuthenticated,
-      moduleDetails,
       sessionId,
-      router,
       initialTitle,
       forceOldest,
       optimisticChatId,
+      router,
+      moduleDetails,
     ]
   );
 
+  // Replace useChat with useFileChat to add PDF support
   const {
     messages,
     input,
     handleInputChange,
     handleSubmit,
-    isLoading: chatLoading,
-  } = useChat(chatOptions);
+    isLoading,
+    stop,
+    files,
+    setFiles,
+  } = useFileChat(chatOptions);
 
   // Keep track if we've already updated the title for first message
   const hasUpdatedTitle = React.useRef(false);
@@ -314,57 +316,52 @@ export default function ClientChatPage({
     }
   }, [moduleDetails, router]);
 
-  // Handle form submission with optimized event handler
+  // Function to handle form submission (includes optimistic UI updates)
   const handleFormSubmit = React.useCallback(
-    (e: React.FormEvent) => {
+    (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      if (input.trim() && !chatLoading) {
+      if (input.trim() && !isLoading) {
         // ONLY add optimistic entry for truly new chats with no messages
         // and only on the root chat path
         if (
-          isNewChat &&
+          isFirstMessage &&
           messages.length === 0 &&
-          sidebarChatUpdater.current &&
-          (chatId === "new" || !chatId.includes("-"))
+          sidebarChatUpdater.current
         ) {
-          // Create a first message-based title
-          const title =
-            input.trim().substring(0, 50) + (input.length > 50 ? "..." : "");
+          // First, store the optimistic chat ID locally to avoid re-renders
+          const generatedChatId = sidebarChatUpdater.current(
+            input,
+            activeModule,
+            undefined,
+            window.location.pathname
+          );
+          console.log("Generated optimistic chat ID:", generatedChatId);
 
-          // Save the current path to help with maintaining the active state
-          const currentPath = window.location.pathname;
+          // Update optimistic chat ID state for API calls
+          setOptimisticChatId(generatedChatId);
+          setIsFirstMessage(false);
 
-          // Only add optimistic chat if we're on a root chat path AND this is a new chat
-          if (
-            (currentPath === "/chat" || currentPath.endsWith("/chat")) &&
-            !optimisticChatId
-          ) {
-            // Add the chat optimistically to the sidebar and store the ID
-            const newOptimisticId = sidebarChatUpdater.current(
-              title,
-              activeModule,
-              false,
-              currentPath
-            );
-            if (newOptimisticId) {
-              setOptimisticChatId(newOptimisticId);
-            }
+          // Update display title based on user's first message
+          if (input.length > 70) {
+            setDisplayTitle(input.substring(0, 67) + "...");
+          } else {
+            setDisplayTitle(input);
           }
         }
 
+        // Submit using the hook's handleSubmit function
         handleSubmit(e);
       }
     },
     [
       input,
-      chatLoading,
+      isLoading,
       handleSubmit,
       isNewChat,
+      isFirstMessage,
       messages.length,
-      sidebarChatUpdater,
+      setIsFirstMessage,
       activeModule,
-      chatId,
-      optimisticChatId,
     ]
   );
 
@@ -373,14 +370,19 @@ export default function ClientChatPage({
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        if (input.trim() && !chatLoading) {
+        if (input.trim() && !isLoading) {
           const form = e.currentTarget.form;
           if (form) form.requestSubmit();
         }
       }
     },
-    [input, chatLoading]
+    [input, isLoading]
   );
+
+  // Create a type assertion for the handleFormSubmit to match the ChatInput props
+  const typedHandleFormSubmit = handleFormSubmit as (
+    e: React.FormEvent
+  ) => void;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -411,14 +413,15 @@ export default function ClientChatPage({
               {messages.length === 0 ? (
                 <WelcomeScreen showLogo={showLogo} />
               ) : (
-                <div className="flex flex-col space-y-8 pt-14 px-4 pb-8">
-                  <ChatMessages
-                    messages={messages}
-                    modelName={modelName}
-                  />
-                </div>
+                <ChatMessages
+                  messages={messages}
+                  scrollContainerRef={
+                    scrollContainerRef as React.RefObject<HTMLDivElement>
+                  }
+                  modelName={modelName}
+                />
               )}
-              {chatLoading && (
+              {isLoading && (
                 <div className="pl-8 pr-6 mt-4">
                   <Loader2 className="h-5 w-5 animate-spin" />
                 </div>
@@ -426,16 +429,18 @@ export default function ClientChatPage({
             </div>
           </div>
         </div>
-
-        {/* Input form - Now using the ChatInput component */}
-        <ChatInput
-          input={input}
-          handleInputChange={handleInputChange}
-          handleFormSubmit={handleFormSubmit}
-          chatLoading={chatLoading}
-          handleKeyDown={handleKeyDown}
-        />
       </div>
+
+      {/* Input form at the bottom */}
+      <ChatInput
+        input={input}
+        handleInputChange={handleInputChange}
+        handleFormSubmit={typedHandleFormSubmit}
+        chatLoading={isLoading}
+        handleKeyDown={handleKeyDown}
+        files={files}
+        setFiles={setFiles}
+      />
     </div>
   );
 }
