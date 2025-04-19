@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import CodeBlock from "./CodeBlock";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Book } from "lucide-react";
 import type { Message } from "@ai-sdk/react";
 import { getOSModifierKey } from "@/lib/utils";
 import { toast } from "sonner";
@@ -98,6 +98,17 @@ const AssistantMessage: React.FC<{
     };
   }, [message.content, copyToClipboard]);
 
+  // Extract source citations from message
+  const hasCitations = message.content.includes("[Source:");
+
+  // Function to highlight source citations in the message
+  const formatMessageWithCitations = (content: string) => {
+    return content.replace(
+      /\[Source: (.*?)\]/g,
+      '📚 <span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary rounded-md my-1"><Book className="h-3 w-3" /> $1</span>'
+    );
+  };
+
   return (
     <div
       ref={messageRef}
@@ -131,12 +142,28 @@ const AssistantMessage: React.FC<{
                 {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
               />
             ),
-            p: (props) => (
-              <p
-                className="my-3"
-                {...(props as React.HTMLAttributes<HTMLParagraphElement>)}
-              />
-            ),
+            p: (props) => {
+              // Check if this paragraph contains source citations
+              const content = props.children?.toString() || "";
+              if (content.includes("[Source:")) {
+                // Parse and format content with citations highlighted
+                return (
+                  <p
+                    className="my-3"
+                    dangerouslySetInnerHTML={{
+                      __html: formatMessageWithCitations(content),
+                    }}
+                  />
+                );
+              }
+              // Regular paragraph without citations
+              return (
+                <p
+                  className="my-3"
+                  {...(props as React.HTMLAttributes<HTMLParagraphElement>)}
+                />
+              );
+            },
             // @ts-expect-error - ReactMarkdown types don't include inline
             code: ({ inline, className, children, ...props }) => {
               return (
@@ -170,8 +197,13 @@ const AssistantMessage: React.FC<{
             <Copy className="h-4 w-4" />
           )}
         </button>
-        <div className="text-xs text-muted-foreground">
-          Generated with {modelName}
+        <div className="text-xs text-muted-foreground flex items-center gap-2">
+          {hasCitations && (
+            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-md flex items-center gap-1">
+              <Book className="h-3 w-3" /> Document sources used
+            </span>
+          )}
+          <span>Generated with {modelName}</span>
         </div>
       </div>
     </div>
@@ -189,7 +221,8 @@ export default function ChatMessages({
   >(null);
 
   const handleCopyToClipboard = (text: string, messageId: string) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard
+      .writeText(text)
       .then(() => {
         setLocalCopiedMessageId(messageId);
         toast.success("Copied to clipboard");

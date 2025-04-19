@@ -1,169 +1,228 @@
-# RAG Implementation Strategy for Study Chat App
+# RAG Implementation Strategy using Vercel AI SDK and Google Gemini
 
 ## Overview
 
-This document outlines the strategy for implementing Retrieval-Augmented Generation (RAG) for the uploaded resources in the Study Chat App. The goal is to enable the app to semantically understand uploaded documents, retrieve relevant information based on user queries, and generate more accurate, contextually relevant responses.
+This document outlines the strategy for implementing a Retrieval Augmented Generation (RAG) system using Vercel AI SDK with Google Gemini 2.0 Flash as the AI model. The system will enable the Study Chat application to understand uploaded documents and provide more relevant and accurate responses based on document content.
 
-## Current System Architecture
+## Current Architecture
 
-The existing system allows users to:
+The Study Chat app currently has:
 
-- Create modules for organizing study materials
-- Upload resources (files) to these modules
-- Chat about these resources
+1. **Resource Management**: Users can upload files to modules, stored in Supabase
+2. **Chat Interface**: Using Vercel AI SDK with Google Gemini 2.0 Flash
+3. **Database**: PostgreSQL with Prisma ORM
 
-Resources are currently:
+## RAG Implementation Plan
 
-- Uploaded to Supabase storage
-- Referenced in the database via the `Resource` model
-- Not processed for semantic understanding or retrieval
+### 1. Database Schema Changes
 
-## Implementation Plan
+We'll extend the existing database schema to support vector embeddings:
 
-### 1. Resource Processing Pipeline
+```sql
+-- Create extension for vector operations
+CREATE EXTENSION IF NOT EXISTS vector;
 
-1. **File Upload Interceptor**
+-- Add embedding column to Resource table
+ALTER TABLE "Resource" ADD COLUMN IF NOT EXISTS "embedding" vector(768);
 
-   - Extend the current upload process in `app/api/resources/upload/route.ts`
-   - After successful upload to Supabase, trigger document processing
+-- Add chunks table for document splitting
+CREATE TABLE "ResourceChunk" (
+  "id" TEXT NOT NULL,
+  "resourceId" TEXT NOT NULL,
+  "content" TEXT NOT NULL,
+  "embedding" vector(768),
+  "metadata" JSONB,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
 
-2. **Document Processing Service**
+  CONSTRAINT "ResourceChunk_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "ResourceChunk_resourceId_fkey" FOREIGN KEY ("resourceId") REFERENCES "Resource"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
 
-   - Extract text from various file formats (PDF, DOCX, TXT, etc.)
-   - Clean and preprocess the text
-   - Create chunks of appropriate size for embedding
+-- Create index for similarity search
+CREATE INDEX "ResourceChunk_embedding_idx" ON "ResourceChunk" USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+```
 
-3. **Embedding Generation**
-   - Generate embeddings for each chunk using a suitable embedding model
-   - Store embeddings in a vector database for efficient similarity search
+### 2. Document Processing Pipeline
 
-### 2. Vector Database Integration
+1. **Document Upload**: Enhance the existing upload route to trigger document processing
+2. **Document Loading**: Parse uploaded documents based on type (PDF, DOCX, TXT, etc.)
+3. **Text Chunking**: Split documents into manageable chunks (~1000 tokens each)
+4. **Embedding Generation**: Generate vector embeddings for each chunk using Google's text-embedding-004 model
+5. **Storage**: Store chunks and embeddings in the database
 
-1. **Vector Store Selection**
+### 3. Tool Calling Implementation
 
-   - Implement PostgreSQL with pgvector extension (works well with the existing Supabase setup)
-   - Benefits: No additional service, integrated with existing database
+We'll implement tool calling with the Vercel AI SDK to allow the model to:
 
-2. **Schema Extension**
+1. **Search Documents**: Query the vector database for relevant chunks
+2. **Fetch Document Metadata**: Get document titles, types, and other metadata
+3. **Citation**: Generate proper citations for information retrieved from documents
 
-   - Add new models to the Prisma schema:
+### 4. User Interface Enhancements
 
-   ```prisma
-   model ResourceChunk {
-     id          String   @id @default(uuid())
-     resourceId  String
-     content     String   @db.Text
-     metadata    Json
-     embedding   Unsupported("vector(1536)")
-     resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+1. **Source Citations**: Display source information for responses
+2. **Filtering**: Allow users to specify which documents to query
+3. **Relevance Indicators**: Show relevance scores for retrieved information
 
-     @@index([resourceId])
-   }
-   ```
+## Technical Implementation Details
 
-3. **Migration Path**
-   - Create and run migrations to add the pgvector extension
-   - Add the new tables for vector storage
+### 1. Document Processing Service
 
-### 3. RAG Query Pipeline
+```typescript
+// lib/rag/documentProcessor.ts
+export async function processDocument(resource: Resource) {
+  // 1. Load document content based on type
+  const content = await loadDocumentContent(resource);
 
-1. **Query Understanding**
+  // 2. Split into chunks
+  const chunks = splitIntoChunks(content);
 
-   - Process user queries to understand intent and context
-   - Generate embeddings for the query
+  // 3. Generate embeddings
+  const embeddedChunks = await generateEmbeddings(chunks);
 
-2. **Retrieval System**
+  // 4. Store in database
+  await storeChunks(resource.id, embeddedChunks);
+}
+```
 
-   - Perform similarity search against the vector database
-   - Retrieve the most relevant document chunks
-   - Implement filtering based on module context
+### 2. Embedding Generation
 
-3. **Response Generation**
-   - Augment the prompt with retrieved document chunks
-   - Generate responses using the LLM with provided context
-   - Format and present responses with source attribution
+```typescript
+// lib/rag/embeddings.ts
+import { google } from "@ai-sdk/google";
 
-### 4. User Interface Integration
+export async function generateEmbeddings(texts: string[]) {
+  const embedder = google.textEmbeddingModel("text-embedding-004");
 
-1. **Resource Context Awareness**
+  const embeddings = await Promise.all(
+    texts.map(async (text) => {
+      const embedding = await embedder.embed(text);
+      return {
+        text,
+        embedding: embedding.embedding,
+      };
+    })
+  );
 
-   - Update the chat interface to show which resources are being used
-   - Allow users to explicitly select which resources to include
+  return embeddings;
+}
+```
 
-2. **Citation and References**
+### 3. RAG Chat API
 
-   - Show citations to source documents in responses
-   - Provide links to the original resources
+```typescript
+// app/api/chat/rag/route.ts
+import { streamText } from "ai";
+import { google } from "@ai-sdk/google";
 
-3. **Feedback Mechanism**
-   - Implement user feedback on response quality
-   - Use feedback to improve retrieval and generation
+export async function POST(request: Request) {
+  // Extract messages, chat context
+  const { messages, moduleId } = await request.json();
 
-## Technical Requirements
+  // Set up tool definitions
+  const tools = [
+    {
+      name: "search_documents",
+      description: "Search documents for relevant information",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query",
+          },
+          moduleId: {
+            type: "string",
+            description: "Optional: The module ID to search within",
+          },
+          limit: {
+            type: "number",
+            description: "Maximum number of results to return",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  ];
 
-### Dependencies
+  // Stream response with tool calling
+  const stream = streamText({
+    model: google("gemini-2.0-flash"),
+    messages,
+    tools,
+    temperature: 0.2,
+    toolCallBehavior: "auto",
+  });
 
-- **Text Processing**: `langchain` document loaders and text splitters
-- **Embeddings**: `@langchain/openai` or `@langchain/google-genai` (already in dependencies)
-- **Vector Database**: PostgreSQL with pgvector extension
-- **RAG Pipeline**: `@langchain/core` retrieval and generation components
+  return stream.toDataStreamResponse();
+}
+```
 
-### New API Endpoints
+### 4. Tool Implementation
 
-1. **Process Resource**
+```typescript
+// lib/rag/tools.ts
+export async function searchDocuments(
+  query: string,
+  moduleId?: string,
+  limit: number = 5
+) {
+  // Generate embedding for query
+  const embedding = await generateQueryEmbedding(query);
 
-   - `/api/resources/process`: Process an uploaded resource and generate embeddings
+  // Perform vector similarity search
+  const results = await prisma.$queryRaw`
+    SELECT 
+      rc."id", 
+      rc."content", 
+      rc."resourceId",
+      r."title" as "resourceTitle",
+      r."type" as "resourceType",
+      1 - (rc."embedding" <=> ${embedding}::vector) as "similarity"
+    FROM "ResourceChunk" rc
+    JOIN "Resource" r ON rc."resourceId" = r."id"
+    WHERE ${
+      moduleId ? Prisma.sql`r."moduleId" = ${moduleId} AND` : Prisma.sql``
+    }
+      1 - (rc."embedding" <=> ${embedding}::vector) > 0.7
+    ORDER BY similarity DESC
+    LIMIT ${limit};
+  `;
 
-2. **RAG Chat**
-   - `/api/chat/rag`: Chat endpoint that uses the RAG pipeline
+  return results;
+}
+```
 
-## Implementation Phases
+## Integration with Existing UI
 
-### Phase 1: Infrastructure Setup
+We'll integrate the RAG functionality with minimal changes to the existing UI:
 
-- Set up pgvector in PostgreSQL
-- Create schema modifications and migrations
-- Implement text extraction service
+1. Add "Search Your Documents" option in chat interface
+2. Display source citations in chat responses
+3. Add a toggle for enabling/disabling RAG in chat settings
 
-### Phase 2: Embedding Generation
+## User Experience
 
-- Implement the document processing pipeline
-- Create embeddings for uploaded documents
-- Store in vector database
+1. **Upload Flow**: No changes to the existing upload UI
+2. **Chat Interface**: Same interface with added source citations
+3. **Module Context**: RAG automatically uses documents from the current module
 
-### Phase 3: RAG Query System
+## Deployment Plan
 
-- Implement retrieval system
-- Connect to existing chat functionality
-- Create initial user interface updates
+1. **Database Migration**: Add the vector extension and new tables
+2. **Document Processing**: Implement processing pipeline for new uploads
+3. **Backfill**: Process existing documents
+4. **API Updates**: Implement RAG-enabled chat API
+5. **UI Enhancements**: Add citation display in chat UI
 
-### Phase 4: Refinement
+## Next Steps & Considerations
 
-- Optimize chunk sizes and embedding parameters
-- Implement feedback loop
-- Add advanced filtering and relevance tuning
+1. **Performance**: Monitor vector search performance and optimize as needed
+2. **Large Documents**: Implement chunking strategies for very large documents
+3. **Cross-Module Search**: Allow searching across all modules when needed
+4. **Model Fine-tuning**: Consider fine-tuning Gemini on specific domains
 
-## Considerations
+## Conclusion
 
-### Performance
-
-- Optimize chunk size for balance between context and relevance
-- Implement caching for frequent queries
-- Consider batched processing for large documents
-
-### Security
-
-- Ensure embeddings don't leak sensitive information
-- Maintain proper access controls to resources and their embeddings
-
-### Scalability
-
-- Design for growing vector databases
-- Consider horizontal scaling options for processing pipeline
-
-## Next Steps
-
-1. Create a proof-of-concept implementation
-2. Benchmark retrieval quality with test documents
-3. Iterate based on retrieval performance
-4. Integrate with the production system
+This RAG implementation leverages the existing architecture of the Study Chat application while adding powerful document understanding capabilities. By using Vercel AI SDK with Google Gemini and tool calling, we can create a seamless experience that provides more accurate and context-aware responses based on uploaded study materials.

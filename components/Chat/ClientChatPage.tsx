@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 // Import the components that don't need to be loaded dynamically
 import ChatInput from "./ChatInput";
 import ChatModuleHeader from "./ChatModuleHeader";
+import { RAGToggle } from "./RAGToggle";
 
 // Dynamically import components that are not needed immediately
 const ChatMessages = dynamic(() => import("./ChatMessages"), {
@@ -66,6 +67,8 @@ export default function ClientChatPage({
   isNewChat?: boolean;
 }) {
   const [showLogo, setShowLogo] = React.useState(false);
+  const [isSessionInitialized, setIsSessionInitialized] =
+    React.useState(isAuthenticated);
 
   // Store the optimistic chat ID
   const [optimisticChatId, setOptimisticChatId] = React.useState<string | null>(
@@ -146,6 +149,7 @@ export default function ClientChatPage({
         const storedSessionId = getOrCreateSessionIdClient();
         if (storedSessionId) {
           setSessionId(storedSessionId);
+          setIsSessionInitialized(true);
         }
       });
     }
@@ -186,6 +190,9 @@ export default function ClientChatPage({
     null
   );
 
+  // Track if RAG is enabled
+  const [ragEnabled, setRagEnabled] = React.useState<boolean>(true);
+
   const copyToClipboard = React.useCallback(
     (text: string, messageId: string) => {
       navigator.clipboard.writeText(text).then(() => {
@@ -210,6 +217,7 @@ export default function ClientChatPage({
         title: initialTitle,
         forceOldest: forceOldest,
         optimisticChatId: optimisticChatId,
+        useRAG: ragEnabled,
       },
       onResponse: (response: Response) => {
         // Try to extract model information from headers if available
@@ -263,6 +271,7 @@ export default function ClientChatPage({
       initialTitle,
       forceOldest,
       optimisticChatId,
+      ragEnabled,
     ]
   );
 
@@ -318,6 +327,10 @@ export default function ClientChatPage({
   const handleFormSubmit = React.useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
+      if (!isSessionInitialized) {
+        toast.error("Please wait for session initialization");
+        return;
+      }
       if (input.trim() && !chatLoading) {
         // ONLY add optimistic entry for truly new chats with no messages
         // and only on the root chat path
@@ -365,6 +378,7 @@ export default function ClientChatPage({
       activeModule,
       chatId,
       optimisticChatId,
+      isSessionInitialized,
     ]
   );
 
@@ -373,14 +387,30 @@ export default function ClientChatPage({
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        if (!isSessionInitialized) {
+          toast.error("Please wait for session initialization");
+          return;
+        }
         if (input.trim() && !chatLoading) {
           const form = e.currentTarget.form;
           if (form) form.requestSubmit();
         }
       }
     },
-    [input, chatLoading]
+    [input, chatLoading, isSessionInitialized]
   );
+
+  // Handle RAG toggle
+  const handleRagToggle = (enabled: boolean) => {
+    setRagEnabled(enabled);
+
+    // Show toast to indicate mode change
+    if (enabled) {
+      toast.success("Document search enabled");
+    } else {
+      toast.info("Document search disabled");
+    }
+  };
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -412,10 +442,7 @@ export default function ClientChatPage({
                 <WelcomeScreen showLogo={showLogo} />
               ) : (
                 <div className="flex flex-col space-y-8 pt-14 px-4 pb-8">
-                  <ChatMessages
-                    messages={messages}
-                    modelName={modelName}
-                  />
+                  <ChatMessages messages={messages} modelName={modelName} />
                 </div>
               )}
               {chatLoading && (
@@ -428,13 +455,18 @@ export default function ClientChatPage({
         </div>
 
         {/* Input form - Now using the ChatInput component */}
-        <ChatInput
-          input={input}
-          handleInputChange={handleInputChange}
-          handleFormSubmit={handleFormSubmit}
-          chatLoading={chatLoading}
-          handleKeyDown={handleKeyDown}
-        />
+        <div className="border-t">
+          <div className="flex items-center justify-end px-4 py-2">
+            <RAGToggle isEnabled={ragEnabled} onChange={handleRagToggle} />
+          </div>
+          <ChatInput
+            input={input}
+            handleInputChange={handleInputChange}
+            handleFormSubmit={handleFormSubmit}
+            chatLoading={chatLoading}
+            handleKeyDown={handleKeyDown}
+          />
+        </div>
       </div>
     </div>
   );

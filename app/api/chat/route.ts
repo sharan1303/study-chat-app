@@ -1,6 +1,7 @@
 import { Message, streamText } from "ai";
 import { google } from "@ai-sdk/google";
 import { searchWithPerplexity } from "@/lib/search";
+import { searchDocuments } from "@/lib/rag/tools";
 
 import { getModuleContext } from "@/lib/modules";
 
@@ -36,9 +37,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { messages, chatId, moduleId } = body;
     const sessionId = body.sessionId || null;
-    // We keep this parameter but don't use it anymore since we always want to broadcast AI responses
-    // const skipMessageBroadcast = body.skipMessageBroadcast || false;
     const optimisticChatId = body.optimisticChatId || null;
+    const useRAG = body.useRAG !== false; // Default to using RAG unless explicitly disabled
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -52,9 +52,38 @@ export async function POST(request: Request) {
 
     // Both userId and sessionId can't be null if we want to save history
     if (shouldSaveHistory && !userId && !sessionId) {
+      console.error("No userId or sessionId provided for chat history");
       return Response.json(
-        { error: "Session ID or authentication required to save chat history" },
+        {
+          error: "Session ID or authentication required to save chat history",
+          details:
+            "Please ensure you are either logged in or have a valid session ID",
+        },
         { status: 401 }
+      );
+    }
+
+    // Validate session ID format if provided
+    if (sessionId && typeof sessionId !== "string") {
+      console.error("Invalid session ID format:", sessionId);
+      return Response.json(
+        {
+          error: "Invalid session ID format",
+          details: "Session ID must be a string",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate messages array
+    if (!Array.isArray(messages) || messages.length === 0) {
+      console.error("Invalid or empty messages array");
+      return Response.json(
+        {
+          error: "Invalid messages format",
+          details: "Messages must be a non-empty array",
+        },
+        { status: 400 }
       );
     }
 
@@ -170,13 +199,97 @@ export async function POST(request: Request) {
             .join("\n\n")
         : "";
 
+    // Define tools for document search if RAG is enabled
+    const tools = useRAG
+      ? {
+          search_documents: {
+            description:
+              "Search for information in the user's uploaded documents",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description:
+                    "The search query to find relevant document chunks",
+                },
+                moduleId: {
+                  type: "string",
+                  description:
+                    "Optional module ID to search within a specific module",
+                },
+                limit: {
+                  type: "integer",
+                  description:
+                    "Maximum number of results to return (default: 5)",
+                },
+              },
+              required: ["query"],
+            },
+            execute: async (args: {
+              query: string;
+              moduleId?: string;
+              limit?: number;
+            }) => {
+              console.log(`Tool called: search_documents`, args);
+
+              const { query, moduleId: searchModuleId, limit } = args;
+              // Use provided moduleId or fall back to the chat's moduleId
+              const targetModuleId = searchModuleId || moduleId;
+              const results = await searchDocuments(
+                query,
+                targetModuleId,
+                limit ?? 5
+              );
+
+              // Format the results for the AI
+              return {
+                results: results.map((result) => ({
+                  content: result.content,
+                  metadata: {
+                    resourceId: result.resourceId,
+                    resourceTitle: result.resourceTitle,
+                    similarity: result.similarity,
+                  },
+                })),
+                count: results.length,
+                query,
+              };
+            },
+          },
+        }
+      : undefined;
+
     if (isModuleMode && shouldSaveHistory) {
       // Module-specific mode: Get module context and build specialized prompt
       const moduleContext = await getModuleContext(moduleId);
-      systemMessage = createModuleSystemPrompt(moduleContext, searchContext);
+
+      // Enhance system message with RAG capabilities if enabled
+      if (useRAG) {
+        systemMessage = `${createModuleSystemPrompt(
+          moduleContext,
+          searchContext
+        )}
+        
+You also have access to document search capabilities. You can search and reference documents that the user has uploaded by using the search_documents tool. 
+When answering questions about study materials, always search for relevant information in the documents first.
+Always include citations to the sources you use in your responses using the format: [Source: Title].
+If you don't find relevant information in the documents, clearly state that you couldn't find information about the topic in the available documents, and provide a general response based on your training.`;
+      } else {
+        systemMessage = createModuleSystemPrompt(moduleContext, searchContext);
+      }
     } else {
       // Basic mode: General study assistant
-      systemMessage = createGeneralSystemPrompt(searchContext);
+      if (useRAG) {
+        systemMessage = `${createGeneralSystemPrompt(searchContext)}
+        
+You also have access to document search capabilities. You can search and reference documents that the user has uploaded by using the search_documents tool. 
+When answering questions about study materials, always search for relevant information in the documents first.
+Always include citations to the sources you use in your responses using the format: [Source: Title].
+If you don't find relevant information in the documents, clearly state that you couldn't find information about the topic in the available documents, and provide a general response based on your training.`;
+      } else {
+        systemMessage = createGeneralSystemPrompt(searchContext);
+      }
     }
 
     // Format messages for the model including the system message
@@ -196,6 +309,66 @@ export async function POST(request: Request) {
         model: google("gemini-2.0-flash"),
         messages: formattedMessages,
         temperature: 0.1,
+        tools: useRAG
+          ? {
+              search_documents: {
+                description:
+                  "Search for information in the user's uploaded documents",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    query: {
+                      type: "string",
+                      description:
+                        "The search query to find relevant document chunks",
+                    },
+                    moduleId: {
+                      type: "string",
+                      description:
+                        "Optional module ID to search within a specific module",
+                    },
+                    limit: {
+                      type: "integer",
+                      description:
+                        "Maximum number of results to return (default: 5)",
+                    },
+                  },
+                  required: ["query"],
+                },
+                execute: async (args: {
+                  query: string;
+                  moduleId?: string;
+                  limit?: number;
+                }) => {
+                  console.log(`Tool called: search_documents`, args);
+
+                  const { query, moduleId: searchModuleId, limit } = args;
+                  // Use provided moduleId or fall back to the chat's moduleId
+                  const targetModuleId = searchModuleId || moduleId;
+                  const results = await searchDocuments(
+                    query,
+                    targetModuleId,
+                    limit ?? 5
+                  );
+
+                  // Format the results for the AI
+                  return {
+                    results: results.map((result) => ({
+                      content: result.content,
+                      metadata: {
+                        resourceId: result.resourceId,
+                        resourceTitle: result.resourceTitle,
+                        similarity: result.similarity,
+                      },
+                    })),
+                    count: results.length,
+                    query,
+                  };
+                },
+              },
+            }
+          : undefined,
+        toolChoice: useRAG ? "auto" : undefined,
         onFinish: async ({ text }) => {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
@@ -419,31 +592,27 @@ export async function POST(request: Request) {
       const headers = new Headers(response.headers);
       headers.set("x-model-used", "Gemini 2.0 Flash");
 
+      // Add RAG status to headers
+      if (useRAG) {
+        headers.set("x-rag-enabled", "true");
+      }
+
       // Return a new response with our custom headers
       return new Response(response.body, {
         headers: headers,
         status: 200,
       });
-    } catch (aiError) {
-      console.error("Error with AI model:", aiError);
-
-      // Fallback to a basic error message
+    } catch (error) {
+      console.error("Error generating response:", error);
       return Response.json(
-        {
-          error:
-            "Unable to generate a response. The AI service may be temporarily unavailable.",
-          details: aiError instanceof Error ? aiError.message : String(aiError),
-        },
+        { error: "Failed to generate response" },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error("Error in chat route:", error);
+    console.error("Error processing request:", error);
     return Response.json(
-      {
-        error: "Error processing your request",
-        details: error instanceof Error ? error.message : String(error),
-      },
+      { error: "Failed to process request" },
       { status: 500 }
     );
   }

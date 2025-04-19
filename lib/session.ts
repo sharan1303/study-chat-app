@@ -38,25 +38,50 @@ export function getOrCreateSessionIdClient(): string {
           Cookies.set(SESSION_COOKIE_NAME, sessionId, COOKIE_OPTIONS);
         }
       } catch (error) {
-        // Ignore localStorage errors
+        console.error("Error checking localStorage:", error);
       }
     }
 
     // If no session ID exists anywhere, create one
     if (!sessionId) {
-      sessionId = uuid();
+      // Try to use crypto.randomUUID first, fall back to uuid
+      sessionId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : uuid();
+
       // Set in cookie with proper security options
-      Cookies.set(SESSION_COOKIE_NAME, sessionId, COOKIE_OPTIONS);
+      try {
+        Cookies.set(SESSION_COOKIE_NAME, sessionId, COOKIE_OPTIONS);
+      } catch (error) {
+        console.error("Error setting cookie:", error);
+      }
 
       // Also store in localStorage as fallback
       try {
         localStorage.setItem(SESSION_ID_KEY, sessionId);
       } catch (error) {
-        // Ignore localStorage errors, we have cookies as primary storage
+        console.error("Error setting localStorage:", error);
       }
     }
 
-    return sessionId;
+    // Verify the session was stored correctly
+    const verifiedCookieId = Cookies.get(SESSION_COOKIE_NAME);
+    if (!verifiedCookieId) {
+      console.error("Failed to verify session cookie");
+      // Try to restore from localStorage
+      try {
+        const storedId = localStorage.getItem(SESSION_ID_KEY);
+        if (storedId) {
+          Cookies.set(SESSION_COOKIE_NAME, storedId, COOKIE_OPTIONS);
+          return storedId;
+        }
+      } catch (error) {
+        console.error("Error restoring from localStorage:", error);
+      }
+    }
+
+    return sessionId || "";
   } catch (error) {
     console.error("Error in getOrCreateSessionIdClient:", error);
     return "";
