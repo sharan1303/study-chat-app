@@ -29,6 +29,19 @@ Using Vercel AI SDK to power conversations with AI models, it provides a good se
 **Profile Management**: Integrated Clerk user profile management\
 **Responsive Design**: Optimized for both desktop and mobile devices
 
+## Chat with PDF Support
+
+This application now supports chatting with PDFs! Users can upload PDF documents and ask questions about them. The application uses Google Gemini 2.0 Flash to analyze the PDF content and provide responses based on the document.
+
+## How to Use PDF Chat
+
+1. Click the paperclip icon next to the chat input
+2. Select a PDF file to upload
+3. Ask questions about the PDF content
+4. The AI will analyze the document and provide relevant answers
+
+PDF support is integrated directly into the chat interface, allowing seamless interaction with documents while maintaining conversation context.
+
 ## Getting Started
 
 To run the application locally, follow these steps:
