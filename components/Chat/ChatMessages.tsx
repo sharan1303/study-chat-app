@@ -15,6 +15,20 @@ export interface ChatMessagesProps {
   modelName: string;
 }
 
+interface TextContent {
+  type: "text";
+  text: string;
+}
+
+interface FileContent {
+  type: "file";
+  data: string;
+  mimeType: string;
+  name?: string;
+}
+
+type MessageContent = TextContent | FileContent;
+
 const UserMessage: React.FC<{
   message: Message;
   copyToClipboard: (text: string) => void;
@@ -54,14 +68,14 @@ const UserMessage: React.FC<{
         {typeof message.content === "string" ? (
           <div>{message.content}</div>
         ) : Array.isArray(message.content) ? (
-          message.content.map((part, i) => {
+          (message.content as MessageContent[]).map((part, i) => {
             if (part.type === "text") {
               return <div key={i}>{part.text}</div>;
             } else if (part.type === "file") {
               return (
                 <FileAttachment
                   key={i}
-                  file={part}
+                  file={part as FileContent}
                   index={i}
                   messageId={message.id}
                 />
@@ -148,17 +162,19 @@ const AssistantMessage: React.FC<{
         {typeof message.content === "string" ? (
           <ReactMarkdown
             components={{
-              code({ node, inline, className, children, ...props }) {
+              code(props: any) {
+                const { inline, className, children, ...rest } = props;
                 const match = /language-(\w+)/.exec(className || "");
                 return !inline && match ? (
                   <CodeBlock
                     key={Math.random()}
-                    language={match[1]}
-                    value={String(children).replace(/\n$/, "")}
-                    {...props}
-                  />
+                    className={className}
+                    {...rest}
+                  >
+                    {children}
+                  </CodeBlock>
                 ) : (
-                  <code className={className} {...props}>
+                  <code className={className} {...rest}>
                     {children}
                   </code>
                 );
@@ -168,23 +184,25 @@ const AssistantMessage: React.FC<{
             {message.content}
           </ReactMarkdown>
         ) : Array.isArray(message.content) ? (
-          message.content.map((part, i) => {
+          (message.content as MessageContent[]).map((part, i) => {
             if (part.type === "text") {
               return (
                 <ReactMarkdown
                   key={i}
                   components={{
-                    code({ node, inline, className, children, ...props }) {
+                    code(props: any) {
+                      const { inline, className, children, ...rest } = props;
                       const match = /language-(\w+)/.exec(className || "");
                       return !inline && match ? (
                         <CodeBlock
                           key={Math.random()}
-                          language={match[1]}
-                          value={String(children).replace(/\n$/, "")}
-                          {...props}
-                        />
+                          className={className}
+                          {...rest}
+                        >
+                          {children}
+                        </CodeBlock>
                       ) : (
-                        <code className={className} {...props}>
+                        <code className={className} {...rest}>
                           {children}
                         </code>
                       );
@@ -198,7 +216,7 @@ const AssistantMessage: React.FC<{
               return (
                 <FileAttachment
                   key={i}
-                  file={part}
+                  file={part as FileContent}
                   index={i}
                   messageId={message.id}
                 />
