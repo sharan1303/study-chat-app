@@ -130,6 +130,84 @@ const AssistantMessage: React.FC<{
 }> = ({ message, modelName, copyToClipboard, isCopied }) => {
   const messageRef = useRef<HTMLDivElement>(null);
 
+  // Extract and format message content to handle sources section specially
+  const formatMessageContent = (content: string) => {
+    // Check if the message has a sources section (marked by "---" and "**Sources:**")
+    const sourcesSectionRegex = /---\s*\n\s*\*\*Sources:\*\*/;
+    if (sourcesSectionRegex.test(content)) {
+      const [mainContent, sourcesSection] = content.split(/---\s*\n/);
+
+      return (
+        <>
+          <ReactMarkdown
+            components={{
+              code(props: any) {
+                const { inline, className, children, ...rest } = props;
+                const match = /language-(\w+)/.exec(className || "");
+                return !inline && match ? (
+                  <CodeBlock
+                    key={Math.random()}
+                    className={className}
+                    {...rest}
+                  >
+                    {children}
+                  </CodeBlock>
+                ) : (
+                  <code className={className} {...rest}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {mainContent}
+          </ReactMarkdown>
+
+          {/* Sources section with custom styling */}
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <ReactMarkdown
+              components={{
+                a: ({ node, ...props }) => (
+                  <a
+                    {...props}
+                    className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                ),
+              }}
+            >
+              {sourcesSection}
+            </ReactMarkdown>
+          </div>
+        </>
+      );
+    }
+
+    // If no sources section, render normally
+    return (
+      <ReactMarkdown
+        components={{
+          code(props: any) {
+            const { inline, className, children, ...rest } = props;
+            const match = /language-(\w+)/.exec(className || "");
+            return !inline && match ? (
+              <CodeBlock key={Math.random()} className={className} {...rest}>
+                {children}
+              </CodeBlock>
+            ) : (
+              <code className={className} {...rest}>
+                {children}
+              </code>
+            );
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    );
+  };
+
   // Add keyboard shortcut listener
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -160,58 +238,11 @@ const AssistantMessage: React.FC<{
     >
       <div className="prose prose-xs dark:prose-invert max-w-none w-full break-words prose-spacing text-sm">
         {typeof message.content === "string" ? (
-          <ReactMarkdown
-            components={{
-              code(props: any) {
-                const { inline, className, children, ...rest } = props;
-                const match = /language-(\w+)/.exec(className || "");
-                return !inline && match ? (
-                  <CodeBlock
-                    key={Math.random()}
-                    className={className}
-                    {...rest}
-                  >
-                    {children}
-                  </CodeBlock>
-                ) : (
-                  <code className={className} {...rest}>
-                    {children}
-                  </code>
-                );
-              },
-            }}
-          >
-            {message.content}
-          </ReactMarkdown>
+          formatMessageContent(message.content)
         ) : Array.isArray(message.content) ? (
           (message.content as MessageContent[]).map((part, i) => {
             if (part.type === "text") {
-              return (
-                <ReactMarkdown
-                  key={i}
-                  components={{
-                    code(props: any) {
-                      const { inline, className, children, ...rest } = props;
-                      const match = /language-(\w+)/.exec(className || "");
-                      return !inline && match ? (
-                        <CodeBlock
-                          key={Math.random()}
-                          className={className}
-                          {...rest}
-                        >
-                          {children}
-                        </CodeBlock>
-                      ) : (
-                        <code className={className} {...rest}>
-                          {children}
-                        </code>
-                      );
-                    },
-                  }}
-                >
-                  {part.text}
-                </ReactMarkdown>
-              );
+              return <div key={i}>{formatMessageContent(part.text)}</div>;
             } else if (part.type === "file") {
               return (
                 <FileAttachment

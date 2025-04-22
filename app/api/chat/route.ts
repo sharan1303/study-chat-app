@@ -1,7 +1,5 @@
 import { Message, streamText } from "ai";
 import { google } from "@ai-sdk/google";
-import { searchWithPerplexity } from "@/lib/search";
-
 import { getModuleContext } from "@/lib/modules";
 
 import { currentUser } from "@clerk/nextjs/server";
@@ -15,8 +13,8 @@ import {
 import {
   createGeneralSystemPrompt,
   createModuleSystemPrompt,
-  SEARCH_INDICATORS,
 } from "@/lib/prompts";
+import { use } from "react";
 
 // Define types for message content structures
 interface ContentPart {
@@ -37,6 +35,18 @@ interface FilePart extends ContentPart {
 
 // Type for content array
 type ContentArray = (TextPart | FilePart)[];
+
+// Define citation types for search results
+interface CitationSource {
+  uri: string;
+  title?: string;
+}
+
+interface Citation {
+  source?: CitationSource;
+  startIndex?: number;
+  endIndex?: number;
+}
 
 /**
  * Handles an HTTP POST request for chat interactions.
@@ -195,64 +205,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get the last message from the user for potential search needs
-    const lastUserMessage = processedMessages[processedMessages.length - 1];
-    let lastUserContent = "";
-
-    if (typeof lastUserMessage.content === "string") {
-      lastUserContent = lastUserMessage.content;
-    } else if (Array.isArray(lastUserMessage.content)) {
-      const contentArray = lastUserMessage.content as ContentArray;
-      const textPart = contentArray.find((c) => c.type === "text") as
-        | TextPart
-        | undefined;
-      lastUserContent = textPart?.text || "";
-    }
-
-    // Simple check if the message suggests a need for search
-    const shouldSearch = needsSearch(lastUserContent);
-
     let systemMessage = "";
 
-    // Define a type for search results
-    interface SearchResult {
-      title: string;
-      content: string;
-    }
-
-    let searchResults: SearchResult[] = [];
-    if (shouldSearch) {
-      try {
-        // Perform search with Perplexity API
-        const resultsText = await searchWithPerplexity(lastUserContent);
-        // Create a single search result with the entire text response
-        searchResults = [
-          {
-            title: "Search Results",
-            content: resultsText,
-          },
-        ];
-      } catch (searchError) {
-        console.error("Error performing search:", searchError);
-      }
-    }
-
-    // Format search results for inclusion in the prompt if available
-    const searchContext =
-      searchResults.length > 0
-        ? searchResults
-            .map((result) => `[${result.title}]: ${result.content}`)
-            .join("\n\n")
-        : "";
-
+    // Get system prompt without search context as search is now handled by AI SDK
     if (isModuleMode && shouldSaveHistory) {
       // Module-specific mode: Get module context and build specialized prompt
       const moduleContext = await getModuleContext(moduleId);
-      systemMessage = createModuleSystemPrompt(moduleContext, searchContext);
+      systemMessage = createModuleSystemPrompt(moduleContext, "");
     } else {
       // Basic mode: General study assistant
-      systemMessage = createGeneralSystemPrompt(searchContext);
+      systemMessage = createGeneralSystemPrompt("");
     }
+
+    // Add citation instructions to the system message
+    systemMessage +=
+      "\n\nImportant: When drawing from web content, you MUST include sources. Format your response as follows:\n1. Provide your regular answer\n2. Add a divider using three hyphens: '---'\n3. Add a '**Sources:**' heading\n4. List each source as a numbered markdown link\n\nExample format:\n[Your answer here]\n\n---\n\n**Sources:**\n1. [Source Title](https://example.com)\n2. [Another Source](https://example2.com)";
 
     // Format messages for the model including the system message
     const formattedMessages: Message[] = [
@@ -281,12 +248,98 @@ export async function POST(request: Request) {
     chatTitle = formatChatTitle(titleText);
 
     try {
+      const mainModel = google("gemini-2.0-flash", {
+        useSearchGrounding: true,
+      });
+
       // Use the streamText function from the AI SDK
       const result = streamText({
-        model: google("gemini-2.0-flash"),
+        model: mainModel,
         messages: formattedMessages,
         temperature: 0.1,
-        onFinish: async ({ text }) => {
+        onFinish: async (completion) => {
+          // Get the generated text
+          const text = completion.text;
+
+          // Get citations if available from the Google model's metadata
+          let finalText = text;
+
+          // Access citations - try multiple possible locations
+          const citations: Citation[] = [];
+
+          // Method 1: Direct citations property
+          if ((completion as any).citations) {
+            const directCitations = (completion as any).citations;
+            if (Array.isArray(directCitations)) {
+              for (const cite of directCitations) {
+                if (cite.source?.uri) {
+                  citations.push(cite as Citation);
+                }
+              }
+            }
+          }
+
+          // Method 2: Google metadata
+          const googleMetadata = (completion as any)._internal?.metadata
+            ?.googleMetadata;
+          if (googleMetadata?.citations) {
+            // Extract citations from Google metadata
+            for (const cite of googleMetadata.citations) {
+              if (cite.uri) {
+                citations.push({
+                  source: {
+                    uri: cite.uri,
+                    title: cite.title || "Source",
+                  },
+                  startIndex: cite.startIndex,
+                  endIndex: cite.endIndex,
+                });
+              }
+            }
+          }
+
+          // Method 3: From completion metadata
+          const completionMetadata = (completion as any).metadata;
+          if (completionMetadata?.citations) {
+            for (const cite of completionMetadata.citations) {
+              if (cite.source?.uri || cite.uri) {
+                citations.push({
+                  source: {
+                    uri: cite.source?.uri || cite.uri,
+                    title: cite.source?.title || cite.title || "Source",
+                  },
+                  startIndex: cite.startIndex,
+                  endIndex: cite.endIndex,
+                });
+              }
+            }
+          }
+
+          // Format citations if we found any
+          if (citations.length > 0) {
+            // Add a separator and sources section
+            finalText += "\n\n---\n\n**Sources:**\n";
+
+            // Deduplicate sources by URL
+            const uniqueSources = new Map<string, Citation>();
+            citations.forEach((citation: Citation) => {
+              if (citation.source && citation.source.uri) {
+                uniqueSources.set(citation.source.uri, citation);
+              }
+            });
+
+            // Format each source
+            [...uniqueSources.values()].forEach(
+              (citation: Citation, index: number) => {
+                if (citation.source) {
+                  finalText += `\n${index + 1}. [${
+                    citation.source.title || "Source"
+                  }](${citation.source.uri})`;
+                }
+              }
+            );
+          }
+
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
             try {
@@ -337,7 +390,7 @@ export async function POST(request: Request) {
                 title: chatTitle,
                 moduleId: moduleId,
                 messages: simplifiedMessages.concat([
-                  { role: "assistant", content: text },
+                  { role: "assistant", content: finalText },
                 ]),
                 createdAt: new Date(),
                 updatedAt: new Date(),
@@ -362,7 +415,7 @@ export async function POST(request: Request) {
                 where: { id: requestedChatId },
                 update: {
                   messages: simplifiedMessages.concat([
-                    { role: "assistant", content: text },
+                    { role: "assistant", content: finalText },
                   ]),
                   updatedAt: new Date(),
                 },
@@ -410,9 +463,6 @@ export async function POST(request: Request) {
 
                     if (moduleData) {
                       chatEventData.module = moduleData;
-                      console.log(
-                        "Retrieved module info for chat.created event"
-                      );
                     }
                   } catch (err) {
                     console.error(
@@ -426,13 +476,6 @@ export async function POST(request: Request) {
                 const targetId = userId || sessionId;
 
                 if (targetId) {
-                  console.log(
-                    "Broadcasting chat.created event for new chat:",
-                    savedChat.id,
-                    "with module info:",
-                    chatEventData.module
-                  );
-                  console.log("Target ID for broadcast:", targetId);
                   broadcastChatCreated(chatEventData, [targetId]);
                 } else {
                   console.warn(
@@ -472,7 +515,6 @@ export async function POST(request: Request) {
 
                     if (moduleData) {
                       chatEventData.module = moduleData;
-                      console.log("Retrieved module info for existing chat");
                     }
                   } catch (err) {
                     console.error(
@@ -484,12 +526,6 @@ export async function POST(request: Request) {
 
                 const targetId = userId || sessionId;
                 if (targetId) {
-                  console.log(
-                    "TEMPORARY DEBUG: Broadcasting chat.created for existing chat:",
-                    savedChat.id,
-                    "with module info:",
-                    chatEventData.module
-                  );
                   broadcastChatCreated(chatEventData, [targetId]);
                 }
 
@@ -569,17 +605,6 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
-
-// Simple function to determine if a message likely needs external search
-function needsSearch(message: string): boolean {
-  message = message.toLowerCase();
-
-  // If the message contains any search indicators and is of sufficient length
-  return (
-    message.length > 15 &&
-    SEARCH_INDICATORS.some((term) => message.includes(term.toLowerCase()))
-  );
 }
 
 async function getModuleMeta(moduleId: string) {
