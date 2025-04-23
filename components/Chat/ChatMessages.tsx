@@ -5,9 +5,10 @@ import ReactMarkdown from "react-markdown";
 import CodeBlock from "./CodeBlock";
 import { Check, Copy } from "lucide-react";
 import type { Message } from "@ai-sdk/react";
-import { getOSModifierKey } from "@/lib/utils";
+import { getOSModifierKey, extractSourcesFromContent } from "@/lib/utils";
 import { toast } from "sonner";
 import FileAttachment from "@/components/Chat/FileAttachment";
+import SourcesCarousel, { Source } from "@/components/Chat/SourcesCarousel";
 
 export interface ChatMessagesProps {
   messages: Message[];
@@ -132,10 +133,13 @@ const AssistantMessage: React.FC<{
 
   // Extract and format message content to handle sources section specially
   const formatMessageContent = (content: string) => {
+    // Extract sources for the carousel
+    const sources = extractSourcesFromContent(content);
+
     // Check if the message has a sources section (marked by "---" and "**Sources:**")
     const sourcesSectionRegex = /---\s*\n\s*\*\*Sources:\*\*/;
     if (sourcesSectionRegex.test(content)) {
-      const [mainContent, sourcesSection] = content.split(/---\s*\n/);
+      const [mainContent] = content.split(/---\s*\n/);
 
       return (
         <>
@@ -163,23 +167,8 @@ const AssistantMessage: React.FC<{
             {mainContent}
           </ReactMarkdown>
 
-          {/* Sources section with custom styling */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <ReactMarkdown
-              components={{
-                a: ({ node, ...props }) => (
-                  <a
-                    {...props}
-                    className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                ),
-              }}
-            >
-              {sourcesSection}
-            </ReactMarkdown>
-          </div>
+          {/* Sources carousel for visual display of sources */}
+          {sources.length > 0 && <SourcesCarousel sources={sources} />}
         </>
       );
     }

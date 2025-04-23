@@ -209,3 +209,40 @@ export const api = {
     return response.json();
   },
 };
+
+/**
+ * Fetch metadata for a URL to generate a link preview
+ */
+export async function fetchLinkPreview(url: string) {
+  try {
+    // Add a timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const response = await fetch(
+      `/api/link-preview?url=${encodeURIComponent(url)}`,
+      { signal: controller.signal }
+    ).finally(() => clearTimeout(timeoutId));
+
+    if (!response.ok) {
+      // Return a default preview instead of throwing
+      return {
+        success: false,
+        url,
+        title: new URL(url).hostname,
+        favicon: `https://www.google.com/s2/favicons?domain=${url}&sz=64`,
+      };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching link preview:", error);
+    // Return a default object with basic information
+    return {
+      success: false,
+      url,
+      title: new URL(url).hostname,
+      favicon: `https://www.google.com/s2/favicons?domain=${url}&sz=64`,
+    };
+  }
+}
