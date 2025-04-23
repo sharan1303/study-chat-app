@@ -71,6 +71,8 @@ export async function POST(request: Request) {
     const optimisticChatId = body.optimisticChatId || null;
     // Extract experimental_attachments if available
     const attachments = body.experimental_attachments || null;
+    // Extract webSearch flag if available
+    const useWebSearch = body.webSearch === true;
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -217,9 +219,11 @@ export async function POST(request: Request) {
       systemMessage = createGeneralSystemPrompt("");
     }
 
-    // Add citation instructions to the system message
-    systemMessage +=
-      "\n\nImportant: When drawing from web content, you MUST include sources. Format your response as follows:\n1. Provide your regular answer\n2. Add a divider using three hyphens: '---'\n3. Add a '**Sources:**' heading\n4. List each source as a numbered markdown link\n\nExample format:\n[Your answer here]\n\n---\n\n**Sources:**\n1. [Source Title](https://example.com)\n2. [Another Source](https://example2.com)";
+    // Add citation instructions to the system message if web search is enabled
+    if (useWebSearch) {
+      systemMessage +=
+        "\n\nImportant: When drawing from web content, you MUST include sources. Format your response as follows:\n1. Provide your regular answer\n2. Add a divider using three hyphens: '---'\n3. Add a '**Sources:**' heading\n4. List each source as a numbered markdown link\n\nExample format:\n[Your answer here]\n\n---\n\n**Sources:**\n1. [Source Title](https://example.com)\n2. [Another Source](https://example2.com)";
+    }
 
     // Format messages for the model including the system message
     const formattedMessages: Message[] = [
@@ -249,7 +253,7 @@ export async function POST(request: Request) {
 
     try {
       const mainModel = google("gemini-2.0-flash", {
-        useSearchGrounding: true,
+        useSearchGrounding: useWebSearch,
       });
 
       // Use the streamText function from the AI SDK
@@ -576,6 +580,7 @@ export async function POST(request: Request) {
       const response = result.toDataStreamResponse();
       const headers = new Headers(response.headers);
       headers.set("x-model-used", "Gemini 2.0 Flash");
+      headers.set("x-web-search-used", useWebSearch ? "true" : "false");
 
       // Return a new response with our custom headers
       return new Response(response.body, {

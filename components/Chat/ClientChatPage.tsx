@@ -11,7 +11,7 @@ import Header from "../Main/Header";
 import dynamic from "next/dynamic";
 
 // Import the useFileChat hook for PDF support
-import { useFileChat } from "@/hooks/useFileChat";
+import { useFileChat } from "@/hooks/useOptionsChat";
 
 // Import the components that don't need to be loaded dynamically
 import ChatInput from "./ChatInput";
@@ -274,6 +274,8 @@ export default function ClientChatPage({
     stop,
     files,
     setFiles,
+    webSearchEnabled,
+    setWebSearchEnabled,
   } = useFileChat(chatOptions);
 
   // Keep track if we've already updated the title for first message
@@ -440,6 +442,8 @@ export default function ClientChatPage({
         handleKeyDown={handleKeyDown}
         files={files}
         setFiles={setFiles}
+        webSearchEnabled={webSearchEnabled}
+        setWebSearchEnabled={setWebSearchEnabled}
       />
     </div>
   );
