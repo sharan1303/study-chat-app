@@ -24,7 +24,6 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
 
   // Function to regenerate the URL
   const regenerateUrl = useCallback(async (): Promise<string | null> => {
-
     if (!resourceId) {
       console.log("⚠️ Cannot regenerate URL: No resource ID provided");
       return null;
@@ -34,11 +33,10 @@ export function useResourceUrl(resourceId: string, initialUrl: string) {
     setError(null);
 
     try {
-
       // Add timeout to fetch request
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        controller.abort();
+        controller.abort("Request timeout");
       }, 15000); // 15 second timeout
 
       const response = await fetch("/api/resources/regenerateUrl", {

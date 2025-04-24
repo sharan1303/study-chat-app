@@ -25,12 +25,17 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { encodeModuleSlug, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
+import { Edit, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { EVENT_TYPES } from "@/lib/events";
 import { getOrCreateSessionIdClient } from "@/lib/session";
 import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { Separator } from "@radix-ui/react-separator";
+import { DialogTrigger } from "@radix-ui/react-dialog";
+import { DialogContent } from "@radix-ui/react-dialog";
+import { DialogTitle } from "@radix-ui/react-dialog";
+import { ModuleForm } from "../dialogs/ModuleForm";
+import { Dialog } from "@radix-ui/react-dialog";
 
 // Define module type
 export interface Module {
@@ -1394,18 +1399,18 @@ function ClientSidebarContent({
           <Link
             href="/chat"
             className={cn(
-              "text-xl font-bold",
+              "text-xl font-medium",
               state === "expanded" || isMobile ? "block" : "hidden"
             )}
           >
-            Study Chat
+            study chat
           </Link>
           <div
             className={cn(
               "flex items-center gap-1",
               state === "collapsed" &&
                 !isMobile &&
-                "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
+                "fixed left-[0.5rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
             )}
           >
             <SidebarTrigger />
@@ -1423,6 +1428,28 @@ function ClientSidebarContent({
             >
               <Edit className="h-4 w-4" />
             </Button>
+            {state === "collapsed" && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-accent h-9 w-9"
+                  title={`Create New Module (${getOSModifierKey()}+${
+                    SHORTCUTS.NEW_MODULE
+                  })`}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogTitle className="text-xl font-bold">
+                  Create New Module
+                </DialogTitle>
+                <ModuleForm successEventName="module.created" />
+              </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
       </SidebarHeader>

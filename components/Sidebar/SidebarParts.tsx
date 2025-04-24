@@ -6,7 +6,10 @@ import { useRouter, usePathname } from "next/navigation";
 
 // For mobile we'll need a sliding sheet component
 import { Sheet, SheetTitle, SheetContent } from "../ui/sheet";
-import { PanelLeft, Edit } from "lucide-react";
+import { PanelLeft, Edit, Plus } from "lucide-react";
+import { ModuleForm } from "../dialogs/ModuleForm";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Button } from "../ui/button";
 
 // Create a custom navigation provider that closes sidebar on navigation
 export function useNavigation() {
@@ -92,7 +95,7 @@ export const Sidebar = React.forwardRef<
           {/* Fixed mobile trigger that's always visible when sheet is closed */}
           {!openMobile && (
             <div
-              className="fixed left-[0.75rem] top-3 z-[100] flex items-center bg-[hsl(var(--sidebar-background))] rounded-md gap-1 shadow-md"
+              className="fixed left-[0.5rem] top-3 z-50 flex items-center bg-[hsl(var(--sidebar-background))] rounded-md gap-1 shadow-md"
               data-sidebar="mobile-trigger-fixed"
               style={{ pointerEvents: "auto" }}
             >
@@ -113,6 +116,26 @@ export const Sidebar = React.forwardRef<
               >
                 <Edit className="h-4 w-4" />
               </button>
+              <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-muted h-9 w-9"
+                      title={`Create New Module (${getOSModifierKey()}+${
+                        SHORTCUTS.NEW_MODULE
+                      })`}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                <DialogContent>
+                  <DialogTitle className="text-xl font-bold">
+                    Create New Module
+                  </DialogTitle>
+                <ModuleForm successEventName="module.created" />
+                </DialogContent>
+              </Dialog>
             </div>
           )}
 
@@ -295,7 +318,7 @@ export const SidebarContent = React.forwardRef<
       ref={ref}
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto p-2 group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2 group-data-[collapsible=icon]:overflow-hidden",
         className
       )}
       {...props}

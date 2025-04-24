@@ -9,6 +9,12 @@ import { getOSModifierKey, extractSourcesFromContent } from "@/lib/utils";
 import { toast } from "sonner";
 import FileAttachment from "@/components/Chat/FileAttachment";
 import SourcesCarousel, { Source } from "@/components/Chat/SourcesCarousel";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface ChatMessagesProps {
   messages: Message[];
@@ -89,35 +95,43 @@ const UserMessage: React.FC<{
         )}
       </div>
       <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              copyToClipboard(
-                typeof message.content === "string"
-                  ? message.content
-                  : "Content contains attachments"
-              );
-            }
-          }}
-          type="button"
-          onClick={() =>
-            copyToClipboard(
-              typeof message.content === "string"
-                ? message.content
-                : "Content contains attachments"
-            )
-          }
-          className="flex items-center gap-2 px-3 py-1.5 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-          aria-label="Copy message"
-          title={`Copy message (${getOSModifierKey()}+C)`}
-        >
-          {isCopied ? (
-            <Check className="h-4 w-4 text-green-500" />
-          ) : (
-            <Copy className="h-4 w-4 hover:cursor-pointer" />
-          )}
-        </button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    copyToClipboard(
+                      typeof message.content === "string"
+                        ? message.content
+                        : "Content contains attachments"
+                    );
+                  }
+                }}
+                type="button"
+                onClick={() =>
+                  copyToClipboard(
+                    typeof message.content === "string"
+                      ? message.content
+                      : "Content contains attachments"
+                  )
+                }
+                className="flex items-center p-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                aria-label="Copy message"
+              >
+                {isCopied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4 hover:cursor-pointer" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Copy message ({getOSModifierKey()}+C)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
@@ -147,19 +161,16 @@ const AssistantMessage: React.FC<{
             components={{
               code(props: any) {
                 const { inline, className, children, ...rest } = props;
-                const match = /language-(\w+)/.exec(className || "");
-                return !inline && match ? (
+                // Always use CodeBlock, pass inline prop
+                return (
                   <CodeBlock
-                    key={Math.random()}
+                    key={Math.random()} // Consider a more stable key if possible
+                    inline={inline}
                     className={className}
                     {...rest}
                   >
                     {children}
                   </CodeBlock>
-                ) : (
-                  <code className={className} {...rest}>
-                    {children}
-                  </code>
                 );
               },
             }}
@@ -179,15 +190,16 @@ const AssistantMessage: React.FC<{
         components={{
           code(props: any) {
             const { inline, className, children, ...rest } = props;
-            const match = /language-(\w+)/.exec(className || "");
-            return !inline && match ? (
-              <CodeBlock key={Math.random()} className={className} {...rest}>
+            // Always use CodeBlock, pass inline prop
+            return (
+              <CodeBlock
+                key={Math.random()} // Consider a more stable key if possible
+                inline={inline}
+                className={className}
+                {...rest}
+              >
                 {children}
               </CodeBlock>
-            ) : (
-              <code className={className} {...rest}>
-                {children}
-              </code>
             );
           },
         }}
@@ -248,36 +260,44 @@ const AssistantMessage: React.FC<{
           <div>Unsupported content format</div>
         )}
       </div>
-      <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
-        <button
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              copyToClipboard(
-                typeof message.content === "string"
-                  ? message.content
-                  : "Content contains attachments"
-              );
-            }
-          }}
-          type="button"
-          onClick={() =>
-            copyToClipboard(
-              typeof message.content === "string"
-                ? message.content
-                : "Content contains attachments"
-            )
-          }
-          className="flex items-center gap-2 px-3 py-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-          aria-label="Copy message"
-          title={`Copy message (${getOSModifierKey()}+C)`}
-        >
-          {isCopied ? (
-            <Check className="h-4 w-4 text-green-500" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
-        </button>
+      <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-5">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    copyToClipboard(
+                      typeof message.content === "string"
+                        ? message.content
+                        : "Content contains attachments"
+                    );
+                  }
+                }}
+                type="button"
+                onClick={() =>
+                  copyToClipboard(
+                    typeof message.content === "string"
+                      ? message.content
+                      : "Content contains attachments"
+                  )
+                }
+                className="flex items-center p-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+                aria-label="Copy message"
+              >
+                {isCopied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Copy message ({getOSModifierKey()}+C)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <div className="text-xs text-muted-foreground">
           Generated with {modelName}
         </div>
@@ -307,7 +327,7 @@ export default function ChatMessages({
       .catch(() => toast.error("Failed to copy"));
   };
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-8">
+    <div className="flex-1 overflow-y-auto pl-4 pr-2 py-8">
       <div className="space-y-8 w-full max-w-full">
         {messages.map((message, index) => {
           return (

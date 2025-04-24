@@ -46,7 +46,7 @@ const WelcomeScreen = dynamic(() => import("./WelcomeScreen"), {
  *
  * @returns The rendered chat interface as a React element.
  */
-export default function ClientChatPage({
+export default function ChatPage({
   initialModuleDetails,
   chatId,
   initialMessages = [],
@@ -404,7 +404,7 @@ export default function ClientChatPage({
         ref={scrollContainerRef}
         className={`flex-1 flex flex-col ${
           messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
-        } pr-0 scroll-smooth scrollbar-smooth custom-scrollbar`}
+        } pr-0 pt-5 scroll-smooth scrollbar-smooth custom-scrollbar`}
       >
         {/* Chat content centered container */}
         <div className="flex-1">

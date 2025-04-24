@@ -4,10 +4,10 @@
 
 @layer base {
   :root {
-    --background: 210 40% 92%;
+    --background: 210 20% 95%;
     --foreground: 222.2 84% 4.9%;
 
-    --card: 210 40% 85%;
+    --card: 210 40% 90%;
     --card-foreground: 222.2 84% 4.9%;
 
     --popover: 210 40% 92%;
@@ -22,13 +22,13 @@
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 92%;
+    --accent: 210 40% 98%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 210 45% 86%;
+    --border: 210 25% 80%;
     --input: 210 40% 88%;
     --ring: 221.2 83.2% 53.3%;
 
@@ -38,7 +38,7 @@
     --sidebar-width: 16rem;
     --sidebar-width-icon: 3rem;
     --sidebar-width-mobile: 18rem;
-    --sidebar-background: 210 45% 85%;
+    --sidebar-background: 210 45% 90%;
   }
 
   .dark {
@@ -66,7 +66,7 @@
     --destructive: 0 62.8% 40.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 230 20% 17%;
+    --border: 230 10% 17%;
     --input: 230 25% 18%;
     --ring: 224.3 76.3% 48%;
 
@@ -244,7 +244,7 @@ div[contenteditable="true"] {
 
 /* Add margin to main heading when sidebar is collapsed - Desktop */
 .peer[data-state="collapsed"] ~ * .add-margin-for-headers {
-  margin-left: 5rem;
+  margin-left: 8rem;
   transition: margin-left 0.2s ease-in-out;
 }
 
@@ -256,7 +256,7 @@ div[contenteditable="true"] {
 /* Add margin to main content when sidebar is closed - Mobile */
 @media (max-width: 768px) {
   [data-sidebar="mobile-trigger-fixed"] ~ * .add-margin-for-headers {
-    margin-left: 5rem;
+    margin-left: 7rem;
     transition: margin-left 0.2s ease-in-out;
   }
 }

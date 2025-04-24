@@ -96,7 +96,7 @@ NEXT_PRIVATE_STANDALONE=1
   - `chat/` - General chat interface
   - `modules/` - Module management UI
   - `settings/` - User settings and preferences
-  - `ClientChatPage` - Client-side chat page interface
+  - `ChatPage` - Client-side chat page interface
 - `components/` - Reusable UI components
   - `ui/` - Shadcn UI components
   - User interface elements (Sidebar, Chat, etc.)
