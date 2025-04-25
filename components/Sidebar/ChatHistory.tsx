@@ -198,7 +198,7 @@ export default function ChatHistory({
 
     return (
       <div className="mb-3">
-        <h3 className="text-xs text-muted-foreground font-medium px-4 mb-1 pb-1 border-b border-border/40">
+        <h3 className="text-xs text-muted-foreground font-medium px-4 mb-1 pb-1">
           {title}
         </h3>
         {chats.map((chat) => (

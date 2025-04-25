@@ -54,7 +54,7 @@ export function GlobalModuleDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent>
-        <DialogTitle className="text-xl font-bold ml-4">
+        <DialogTitle className="text-xl font-normal ml-4">
           Create New Module
         </DialogTitle>
         <ModuleForm

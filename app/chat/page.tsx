@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
-import ClientChatPage from "@/components/Chat/ClientChatPage";
+import ChatPage from "@/components/Chat/ChatPage";
 import { ChatPageLoading } from "@/components/Chat/ChatPageLoading";
 import { generateId } from "@/lib/utils";
 
@@ -14,7 +14,7 @@ export default async function NewChat() {
 
   return (
     <Suspense fallback={<ChatPageLoading />}>
-      <ClientChatPage
+      <ChatPage
         initialModuleDetails={null}
         chatId={chatId}
         initialMessages={[]}
