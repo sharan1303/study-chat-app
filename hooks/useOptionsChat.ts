@@ -2,8 +2,8 @@
 
 import { UseChatOptions } from "ai/react";
 import { useChat } from "@ai-sdk/react";
-import { useState } from "react";
-import { ModelId, getDefaultModelId } from "@/lib/models";
+import { useState, useEffect } from "react";
+import { ModelId, getDefaultModelId, SUPPORTED_MODELS } from "@/lib/models";
 
 // Extend the original ChatRequestOptions to include webSearch and model selection
 interface ExtendedChatRequestOptions {
@@ -12,12 +12,50 @@ interface ExtendedChatRequestOptions {
   model?: ModelId;
 }
 
+// Create a chat state storage key based on chat ID
+const getModelStorageKey = (chatId: string) => `chat_model_${chatId}`;
+
 export function useFileChat(options: UseChatOptions = {}) {
+  const chatId = options.body?.chatId as string;
+
+  // Initialize with stored model if available, otherwise use default
+  const getInitialModel = (): ModelId => {
+    if (typeof window !== "undefined" && chatId) {
+      const storedModel = localStorage.getItem(getModelStorageKey(chatId));
+      // Check if stored model is a valid ModelId
+      if (storedModel && storedModel in SUPPORTED_MODELS) {
+        return storedModel as ModelId;
+      }
+    }
+    return getDefaultModelId();
+  };
+
   const [files, setFiles] = useState<FileList | null>(null);
   const [webSearchEnabled, setWebSearchEnabled] = useState<boolean>(false);
   const [selectedModel, setSelectedModel] = useState<ModelId>(
-    getDefaultModelId()
+    getInitialModel()
   );
+
+  // Save model selection whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && chatId && selectedModel) {
+      localStorage.setItem(getModelStorageKey(chatId), selectedModel);
+    }
+  }, [selectedModel, chatId]);
+
+  // Wrapper for setSelectedModel that also updates localStorage
+  const updateSelectedModel = (newModel: ModelId) => {
+    console.log(`Changing model to: ${newModel}`);
+    setSelectedModel(newModel);
+    if (typeof window !== "undefined" && chatId) {
+      localStorage.setItem(getModelStorageKey(chatId), newModel);
+    }
+  };
+
+  // Always log the current model when initializing or changing
+  useEffect(() => {
+    console.log(`Current model for chat ${chatId}: ${selectedModel}`);
+  }, [selectedModel, chatId]);
 
   const chatHelpers = useChat({
     ...options,
@@ -26,6 +64,18 @@ export function useFileChat(options: UseChatOptions = {}) {
       ...(files ? { experimental_attachments: files } : {}),
       webSearch: webSearchEnabled,
       model: selectedModel,
+    },
+    // Ensure model selection persists even if API resets it
+    onFinish: (message) => {
+      // Run the original onFinish if it exists
+      if (options.onFinish) {
+        options.onFinish(message);
+      }
+
+      // Ensure we keep the model selection by updating localStorage again
+      if (typeof window !== "undefined" && chatId && selectedModel) {
+        localStorage.setItem(getModelStorageKey(chatId), selectedModel);
+      }
     },
   });
 
@@ -48,7 +98,7 @@ export function useFileChat(options: UseChatOptions = {}) {
     webSearchEnabled,
     setWebSearchEnabled,
     selectedModel,
-    setSelectedModel,
+    setSelectedModel: updateSelectedModel,
     handleSubmit,
   };
 }

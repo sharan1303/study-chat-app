@@ -17,7 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AVAILABLE_MODELS, ModelId, getDefaultModelId } from "@/lib/models";
+import {
+  AVAILABLE_MODELS,
+  ModelId,
+  getDefaultModelId,
+  MODEL_TO_PROVIDER,
+  SUPPORTED_MODELS,
+} from "@/lib/models";
+import { toast } from "sonner";
 
 interface ChatInputProps {
   input: string;
@@ -51,6 +58,17 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [fileNames, setFileNames] = useState<string[]>([]);
+
+  // Check if current model is Perplexity (which has built-in search)
+  const isPerplexityModel = MODEL_TO_PROVIDER[selectedModel] === "perplexity";
+
+  // Effect to automatically enable search for Perplexity models
+  useEffect(() => {
+    if (isPerplexityModel && setWebSearchEnabled) {
+      // Perplexity has built-in search, so we set this to true
+      setWebSearchEnabled(true);
+    }
+  }, [isPerplexityModel, setWebSearchEnabled]);
 
   // Function to adjust textarea height based on content
   const adjustTextareaHeight = () => {
@@ -195,10 +213,18 @@ export default function ChatInput({
               <Select
                 value={selectedModel}
                 onValueChange={(value) => {
-                  onModelChange(value as ModelId);
+                  const newModel = value as ModelId;
+                  console.log(
+                    `ChatInput: Selected model changed to ${newModel}`
+                  );
+                  onModelChange(newModel);
+                  // Notify the user of the model change
+                  toast?.success(
+                    `Model changed to ${SUPPORTED_MODELS[newModel]}`
+                  );
                 }}
               >
-                <SelectTrigger className="w-[160px] h-8 focus:ring-0">
+                <SelectTrigger className="max-w-[210px] h-8 focus:ring-0">
                   <SelectValue
                     placeholder={
                       availableModels.find(
@@ -215,33 +241,45 @@ export default function ChatInput({
                   ))}
                 </SelectContent>
               </Select>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant={webSearchEnabled ? "default" : "ghost"}
-                      className="h-8 w-24 rounded-lg"
-                      onClick={toggleWebSearch}
-                      disabled={chatLoading}
-                      aria-label={
-                        webSearchEnabled
-                          ? "Disable web search"
-                          : "Enable web search"
-                      }
-                    >
-                      <Globe className="h-4 w-4 pb-0.5" />
-                      Search
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {webSearchEnabled
-                      ? "Disable web search"
-                      : "Enable web search"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+
+              {/* Only show search button for non-Perplexity models */}
+              {!isPerplexityModel && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant={webSearchEnabled ? "default" : "ghost"}
+                        className="h-8 w-32 rounded-lg"
+                        onClick={toggleWebSearch}
+                        disabled={chatLoading}
+                        aria-label={
+                          webSearchEnabled
+                            ? "Disable web search"
+                            : "Enable web search"
+                        }
+                      >
+                        <Globe className="h-4 w-4 pb-0.5" />
+                        Search
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {webSearchEnabled
+                        ? "Disable web search"
+                        : "Enable web search"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* For Perplexity models, show search indicator */}
+              {isPerplexityModel && (
+                <div className="text-xs text-muted-foreground flex items-center h-8 w-32 ">
+                  <Globe className="h-4 w-4 pb-0.5 mr-2 text-green-500" />
+                  <span className="text-xs w-24">Search enabled</span>
+                </div>
+              )}
             </div>
           </div>
         </form>

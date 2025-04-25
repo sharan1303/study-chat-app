@@ -5,6 +5,7 @@ import {
   SUPPORTED_MODELS,
   getDefaultModelId,
   ModelId,
+  MODEL_TO_PROVIDER,
 } from "@/lib/models";
 
 import { currentUser } from "@clerk/nextjs/server";
@@ -19,8 +20,6 @@ import {
   createGeneralSystemPrompt,
   createModuleSystemPrompt,
 } from "@/lib/prompts";
-
-import { azure } from "@ai-sdk/azure";
 
 // Define types for message content structures
 interface ContentPart {
@@ -77,13 +76,22 @@ export async function POST(request: Request) {
     const optimisticChatId = body.optimisticChatId || null;
     // Extract experimental_attachments if available
     const attachments = body.experimental_attachments || null;
-    // Extract webSearch flag if available
-    const useWebSearch = body.webSearch === true;
     // Extract model selection with fallback to default
     const modelId =
       body.model && body.model in SUPPORTED_MODELS
         ? (body.model as ModelId)
         : getDefaultModelId();
+
+    // Extract webSearch flag if available
+    let useWebSearch = body.webSearch === true;
+
+    // Always enable search for Perplexity models
+    if (MODEL_TO_PROVIDER[modelId as ModelId] === "perplexity") {
+      useWebSearch = true;
+      console.log(
+        "Perplexity model detected - web search automatically enabled"
+      );
+    }
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -94,6 +102,10 @@ export async function POST(request: Request) {
 
     // Ensure we have a valid chatId - generate one if not provided
     const requestedChatId = chatId || generateId();
+
+    console.log(
+      `Chat ID: ${requestedChatId} using model: ${modelId} (Selected by client)`
+    );
 
     // Both userId and sessionId can't be null if we want to save history
     if (shouldSaveHistory && !userId && !sessionId) {
@@ -273,6 +285,16 @@ export async function POST(request: Request) {
         messages: formattedMessages,
         temperature: 0.1,
 
+        // For Perplexity: ensure we get providerMetadata including sources
+        providerOptions:
+          MODEL_TO_PROVIDER[modelId as ModelId] === "perplexity"
+            ? {
+                perplexity: {
+                  // Ensure we get comprehensive metadata
+                },
+              }
+            : undefined,
+
         // tools: {
         //   web_search_preview: azure.tools.webSearchPreview({
         //     // optional configuration:
@@ -281,9 +303,50 @@ export async function POST(request: Request) {
         // },
         // Force web search tool:
         // toolChoice: { type: 'tool', toolName: 'web_search_preview' },
+
         onFinish: async (completion) => {
           // Get the generated text
           const text = completion.text;
+
+          // Special handling for Perplexity model
+          if (MODEL_TO_PROVIDER[modelId as ModelId] === "perplexity") {
+            console.log(
+              "Perplexity completion object keys:",
+              Object.keys(completion).filter((k) => !k.startsWith("_"))
+            );
+
+            // Directly access sources from completion object
+            const sources = completion.sources || [];
+
+            // Fallback to providerMetadata if direct access failed
+            if (!sources.length && completion.providerMetadata?.perplexity) {
+              console.log(
+                "Perplexity provider metadata keys:",
+                Object.keys(completion.providerMetadata.perplexity)
+              );
+            }
+
+            // Store all available sources from any accessible property
+            const allSources = [
+              ...(Array.isArray(completion.sources) ? completion.sources : []),
+              ...(Array.isArray(
+                completion.providerMetadata?.perplexity?.sources
+              )
+                ? completion.providerMetadata?.perplexity?.sources
+                : []),
+            ];
+
+            console.log("Perplexity sources found:", allSources.length);
+
+            if (allSources.length > 0) {
+              // Store this on the result so we can access it later
+              (result as any)._perplexitySources = allSources;
+              console.log(
+                "Stored Perplexity sources for headers:",
+                JSON.stringify((result as any)._perplexitySources.slice(0, 2))
+              );
+            }
+          }
 
           // Get citations if available from the Google model's metadata
           let finalText = text;
@@ -334,6 +397,38 @@ export async function POST(request: Request) {
                   },
                   startIndex: cite.startIndex,
                   endIndex: cite.endIndex,
+                });
+              }
+            }
+          }
+
+          // Method 4: Perplexity sources
+          const perplexitySources = (completion as any).sources;
+          if (perplexitySources && Array.isArray(perplexitySources)) {
+            for (const source of perplexitySources) {
+              if (source.url) {
+                citations.push({
+                  source: {
+                    uri: source.url,
+                    title: source.title || source.name || "Source",
+                  },
+                });
+              }
+            }
+          }
+
+          // Method 5: Provider metadata for Perplexity
+          const providerMetadata = (completion as any).providerMetadata
+            ?.perplexity;
+          if (providerMetadata?.images) {
+            // Handle image sources if available
+            for (const image of providerMetadata.images) {
+              if (image.originUrl) {
+                citations.push({
+                  source: {
+                    uri: image.originUrl,
+                    title: "Image Source",
+                  },
                 });
               }
             }
@@ -601,6 +696,111 @@ export async function POST(request: Request) {
       const headers = new Headers(response.headers);
       headers.set("x-model-used", modelDisplayName);
       headers.set("x-web-search-used", useWebSearch ? "true" : "false");
+
+      // Add sources to the header if they exist - directly from the streamText result
+      try {
+        console.log(
+          `Using model: ${modelId}, provider: ${
+            MODEL_TO_PROVIDER[modelId as ModelId]
+          }`
+        );
+
+        // Try different ways to access Perplexity sources
+        const sources = (result as any).sources;
+        const sourcesMeta = (result as any).metadata?.sources;
+        const providerSources = (result as any).providerMetadata?.perplexity
+          ?.sources;
+
+        // For Perplexity, combine all possible sources to ensure we catch everything
+        let sourcesToUse = [];
+        if (MODEL_TO_PROVIDER[modelId as ModelId] === "perplexity") {
+          sourcesToUse = [
+            ...(Array.isArray(sources) ? sources : []),
+            ...(Array.isArray(sourcesMeta) ? sourcesMeta : []),
+            ...(Array.isArray(providerSources) ? providerSources : []),
+            ...(Array.isArray((result as any)._perplexitySources)
+              ? (result as any)._perplexitySources
+              : []),
+          ];
+
+          // Remove duplicates by URL
+          const uniqueUrls = new Set();
+          sourcesToUse = sourcesToUse.filter((source) => {
+            // Normalize the source object format
+            if (source) {
+              // Extract URL from different possible formats
+              const url =
+                source.url ||
+                source.uri ||
+                (source.source && (source.source.url || source.source.uri));
+              if (!url || uniqueUrls.has(url)) return false;
+
+              // Standardize format if needed
+              if (
+                !source.url &&
+                (source.uri ||
+                  (source.source && (source.source.url || source.source.uri)))
+              ) {
+                source.url = url;
+              }
+
+              // Ensure there's always a title
+              if (!source.title) {
+                source.title =
+                  source.name ||
+                  (source.source && source.source.title) ||
+                  "Source";
+                // Try to extract hostname if possible
+                try {
+                  if (url.startsWith("http")) {
+                    source.title = new URL(url).hostname || source.title;
+                  }
+                } catch (e) {
+                  // If URL parsing fails, keep the generic title
+                }
+              }
+
+              uniqueUrls.add(url);
+              return true;
+            }
+            return false;
+          });
+
+          console.log(`Found ${sourcesToUse.length} unique Perplexity sources`);
+        } else {
+          // Other models (Google, Azure) - try to extract sources as before
+          sourcesToUse = sources;
+        }
+
+        if (
+          sourcesToUse &&
+          Array.isArray(sourcesToUse) &&
+          sourcesToUse.length > 0
+        ) {
+          // Don't limit sources to just 10 - let the frontend decide how many to display
+          headers.set("x-sources", JSON.stringify(sourcesToUse));
+          console.log(
+            `Included ${sourcesToUse.length} sources in response header`
+          );
+
+          // Log sample sources for debugging
+          if (sourcesToUse.length > 0) {
+            console.log(
+              "Sample source structure:",
+              JSON.stringify(sourcesToUse[0])
+            );
+            console.log(
+              "Source URLs:",
+              sourcesToUse
+                .slice(0, 5)
+                .map((s) => s.url || s.uri)
+                .join(", ")
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error adding sources to header:", error);
+      }
 
       // Return a new response with our custom headers
       return new Response(response.body, {

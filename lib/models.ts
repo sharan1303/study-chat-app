@@ -1,6 +1,6 @@
 import { google } from "@ai-sdk/google";
 import { createAzure } from "@ai-sdk/azure";
-
+import { perplexity } from "@ai-sdk/perplexity";
 /**
  * Map of supported AI model IDs to their display names
  */
@@ -8,6 +8,8 @@ export const SUPPORTED_MODELS = {
   "gemini-2.0-flash": "Gemini 2.0 Flash",
   "gemini-2.5-flash-preview-04-17": "Gemini 2.5 Flash Preview",
   "gpt-4o-mini": "GPT-4o-mini",
+  "gemini-2.0-flash-lite": "Gemini 2.0 Flash Lite",
+  "sonar-pro": "Perplexity Sonar Pro",
 } as const;
 
 /**
@@ -18,7 +20,7 @@ export type ModelId = keyof typeof SUPPORTED_MODELS;
 /**
  * Type for provider names
  */
-export type Provider = "google" | "azure";
+export type Provider = "google" | "azure" | "perplexity";
 
 /**
  * Lookup for which provider supports which model ID
@@ -27,6 +29,8 @@ export const MODEL_TO_PROVIDER: Record<ModelId, Provider> = {
   "gemini-2.0-flash": "google",
   "gemini-2.5-flash-preview-04-17": "google",
   "gpt-4o-mini": "azure",
+  "gemini-2.0-flash-lite": "google",
+  "sonar-pro": "perplexity",
 };
 
 /**
@@ -104,6 +108,11 @@ export function getInitializedModel(
           apiVersion: "2023-03-15-preview",
         });
         mainModel = azure(actualModelId);
+        break;
+
+      case "perplexity":
+        mainModel = perplexity(actualModelId);
+        console.log("Perplexity model initialized");
         break;
 
       default:

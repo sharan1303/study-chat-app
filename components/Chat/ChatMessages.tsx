@@ -148,16 +148,101 @@ const AssistantMessage: React.FC<{
   isCopied: boolean;
 }> = ({ message, modelName, copyToClipboard, isCopied }) => {
   const messageRef = useRef<HTMLDivElement>(null);
+  const [sourcesFromHeader, setSourcesFromHeader] = useState<Source[]>([]);
+
+  // Check for sources in response headers on message load
+  React.useEffect(() => {
+    const checkResponseHeaders = () => {
+      console.log(
+        "Checking response headers for sources in message:",
+        message.id
+      );
+      console.log(
+        "Message response object exists:",
+        (message as any)._response ? "Yes" : "No"
+      );
+
+      // This works because responseHeaders are attached to the message object by the AI SDK
+      const sourcesHeader = (message as any)._response?.headers?.get(
+        "x-sources"
+      );
+
+      console.log("x-sources header:", sourcesHeader ? "Found" : "Not found");
+
+      if (sourcesHeader) {
+        try {
+          console.log("Parsing sources header:", sourcesHeader);
+          const parsedSources = JSON.parse(sourcesHeader);
+          console.log("Parsed sources:", parsedSources);
+
+          // Process sources to match our Source interface
+          const formattedSources = parsedSources
+            .map((source: any) => {
+              // Check for different source format patterns
+              const url = source.url || source.uri || source.link || "";
+              let title = source.title || source.name || "Source";
+
+              // Try to extract hostname from URL as fallback title
+              if (!title && url) {
+                try {
+                  title = new URL(url).hostname;
+                } catch (e) {
+                  console.error("Error parsing URL for title:", e);
+                  title = "Source";
+                }
+              }
+
+              return {
+                title,
+                url,
+                favicon: source.favicon || undefined,
+              };
+            })
+            .filter((source: Source) => !!source.url);
+
+          console.log("Formatted sources for carousel:", formattedSources);
+          setSourcesFromHeader(formattedSources);
+        } catch (error) {
+          console.error("Error parsing sources from header:", error);
+        }
+      } else {
+        // Check for any other headers that might contain sources
+        const allHeaders = (message as any)._response?.headers;
+        if (allHeaders) {
+          console.log("All available headers:");
+          allHeaders.forEach((value: string, key: string) => {
+            console.log(
+              `- ${key}: ${value.substring(0, 50)}${
+                value.length > 50 ? "..." : ""
+              }`
+            );
+          });
+        }
+
+        // Check if the message has any other relevant properties
+        console.log("Message properties:", Object.keys(message));
+      }
+    };
+
+    checkResponseHeaders();
+  }, [message]);
 
   // Extract and format message content to handle sources section specially
   const formatMessageContent = (content: string) => {
     // Extract sources for the carousel
     const sources = extractSourcesFromContent(content);
 
+    // If we have sources from the header, prioritize those
+    const displaySources =
+      sourcesFromHeader.length > 0 ? sourcesFromHeader : sources;
+
     // Check if the message has a sources section (marked by "---" and "**Sources:**")
     const sourcesSectionRegex = /---\s*\n\s*\*\*Sources:\*\*/;
-    if (sourcesSectionRegex.test(content)) {
-      const [mainContent] = content.split(/---\s*\n/);
+    if (sourcesSectionRegex.test(content) || sourcesFromHeader.length > 0) {
+      // Split content and only display the main part if we have sources section
+      const [mainContent] = sourcesSectionRegex.test(content)
+        ? content.split(/---\s*\n/)
+        : [content];
 
       return (
         <>
@@ -183,7 +268,9 @@ const AssistantMessage: React.FC<{
           </ReactMarkdown>
 
           {/* Sources carousel for visual display of sources */}
-          {sources.length > 0 && <SourcesCarousel sources={sources} />}
+          {displaySources.length > 0 && (
+            <SourcesCarousel sources={displaySources} />
+          )}
         </>
       );
     }
