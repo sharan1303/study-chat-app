@@ -1,9 +1,23 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, Paperclip, X } from "lucide-react";
+import { Send, Loader2, Paperclip, X, Globe, ChevronDown } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AVAILABLE_MODELS, ModelId, getDefaultModelId } from "@/lib/models";
 
 interface ChatInputProps {
   input: string;
@@ -13,6 +27,11 @@ interface ChatInputProps {
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   files?: FileList | null;
   setFiles?: (files: FileList | null) => void;
+  webSearchEnabled?: boolean;
+  setWebSearchEnabled?: (enabled: boolean) => void;
+  selectedModel: ModelId;
+  onModelChange: (model: ModelId) => void;
+  availableModels?: typeof AVAILABLE_MODELS;
 }
 
 export default function ChatInput({
@@ -23,9 +42,34 @@ export default function ChatInput({
   handleKeyDown,
   files,
   setFiles,
+  webSearchEnabled = false,
+  setWebSearchEnabled,
+  selectedModel = getDefaultModelId(),
+  onModelChange,
+  availableModels = AVAILABLE_MODELS,
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [fileNames, setFileNames] = useState<string[]>([]);
+
+  // Function to adjust textarea height based on content
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto so we can determine the scroll height
+      textarea.style.height = "auto";
+
+      // Calculate the scroll height and set the new height
+      // Respect the min/max heights set in the CSS
+      const scrollHeight = textarea.scrollHeight;
+      textarea.style.height = `${scrollHeight}px`;
+    }
+  };
+
+  // Call the adjust function whenever input changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [input]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -41,6 +85,17 @@ export default function ChatInput({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  const toggleWebSearch = () => {
+    if (setWebSearchEnabled) {
+      setWebSearchEnabled(!webSearchEnabled);
+    }
+  };
+
+  // Custom handler for input changes to accommodate both auto-resize and external handler
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleInputChange(e);
   };
 
   return (
@@ -70,13 +125,15 @@ export default function ChatInput({
           )}
           <div className="relative">
             <Textarea
+              ref={textareaRef}
               placeholder="Type your message here..."
               value={input}
-              onChange={handleInputChange}
-              className={`flex-1 min-h-[120px] max-h-[400px] border-5 ${
+              onChange={handleTextareaChange}
+              className={`flex-1 min-h-[120px] max-h-[300px] border-5 ${
                 fileNames.length > 0 ? "rounded-t-none" : "rounded-t-2xl"
-              } rounded-b-none resize-none w-full border-b-0 p-4`}
-              rows={4}
+              } rounded-b-none resize-y w-full p-4 pr-36 bg-input
+              }`}
+              rows={1}
               autoFocus
               onKeyDown={handleKeyDown}
             />
@@ -85,36 +142,109 @@ export default function ChatInput({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
-              accept=".pdf,.doc,.docx,.txt"
+              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.tiff,.ico,.webp"
               multiple
               aria-label="Upload attachments"
             />
             <div className="absolute right-3 top-3 flex gap-2">
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-10 w-10 rounded-lg"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={chatLoading}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-10 w-10 rounded-lg"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={chatLoading}
+                      aria-label="Upload attachments"
+                    >
+                      <Paperclip className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    Upload attachments
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="h-10 w-10 rounded-lg"
+                      disabled={
+                        chatLoading ||
+                        (!input.trim() && (!files || files.length === 0))
+                      }
+                      aria-label="Send message"
+                    >
+                      {chatLoading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Send message</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="absolute flex justify-between bottom-1 left-1 gap-1">
+              <Select
+                value={selectedModel}
+                onValueChange={(value) => {
+                  onModelChange(value as ModelId);
+                }}
               >
-                <Paperclip className="h-5 w-5" />
-              </Button>
-              <Button
-                type="submit"
-                size="icon"
-                className="h-10 w-10 rounded-lg"
-                disabled={
-                  chatLoading ||
-                  (!input.trim() && (!files || files.length === 0))
-                }
-              >
-                {chatLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Send className="h-5 w-5" />
-                )}
-              </Button>
+                <SelectTrigger className="min-w-[135px] h-8 focus:ring-0">
+                  <SelectValue
+                    placeholder={
+                      availableModels.find(
+                        (model) => model.id === selectedModel
+                      )?.name || "Select Model"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {selectedModel !== "gpt-4o-mini" && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant={webSearchEnabled ? "default" : "ghost"}
+                      className="h-8 w-28 rounded-lg"
+                      onClick={toggleWebSearch}
+                      disabled={chatLoading}
+                      aria-label={
+                        webSearchEnabled
+                          ? "Disable web search"
+                          : "Enable web search"
+                      }
+                    >
+                      <Globe className="h-4 w-4 pb-0.5" />
+                      Search
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {webSearchEnabled
+                      ? "Disable web search"
+                      : "Enable web search"}
+                  </TooltipContent>
+                </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </form>

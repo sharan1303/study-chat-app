@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
-import ClientChatPage from "@/components/Chat/ClientChatPage";
+import ChatPage from "@/components/Chat/ChatPage";
 import { ChatPageLoading } from "@/components/Chat/ChatPageLoading";
 import prisma from "@/lib/prisma";
 import { decodeModuleSlug } from "@/lib/utils";
@@ -30,7 +30,7 @@ export default async function ModuleChatPage(props: {
   if (!isAuthenticated) {
     return (
       <Suspense fallback={<ChatPageLoading />}>
-        <ClientChatPage
+        <ChatPage
           initialModuleDetails={null}
           chatId={params.id}
           initialMessages={[]}
@@ -101,7 +101,7 @@ export default async function ModuleChatPage(props: {
 
   return (
     <Suspense fallback={<ChatPageLoading />}>
-      <ClientChatPage
+      <ChatPage
         initialModuleDetails={moduleWithStringDates}
         chatId={params.id}
         initialMessages={initialMessages}

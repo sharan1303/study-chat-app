@@ -43,6 +43,7 @@ import React, { useRef } from "react";
 import CustomUserProfile from "@/components/Settings/CustomUserProfile";
 import EditableProfileImage from "@/components/Settings/EditableProfileImage";
 import { getOSModifierKey } from "@/lib/utils";
+import { SUPPORTED_MODELS } from "@/lib/models";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -117,7 +118,7 @@ function SettingsContent() {
   // AI models available in the application
   const aiModels = [
     {
-      name: "Gemini 2.0 Flash",
+      name: SUPPORTED_MODELS["gemini-2.0-flash"],
       provider: "Google",
       features: ["Fast responses", "Used as default model"],
       status: "Active",
@@ -163,19 +164,17 @@ function SettingsContent() {
   const email = user?.primaryEmailAddress?.emailAddress || "";
 
   return (
-    <div className="h-full flex flex-col py-3">
+    <div className="h-full flex flex-col py-3.5">
       {/* Top navigation bar */}
       <div className="flex justify-between items-center ml-5 pr-6">
         <Button
           variant="ghost"
           size="sm"
-          asChild
-          className="flex add-margin-for-headers items-center p-2"
+          onClick={() => router.push("/chat")}
+          className="add-margin-for-headers items-center p-2"
         >
-          <Link href="/">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Chat
-          </Link>
+          <ArrowLeft className="h-4 w-4 mb-0.5 mr-2" />
+          Back to Chat
         </Button>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -333,14 +332,17 @@ function SettingsContent() {
                           className="hidden"
                           aria-label="Import modules JSON file"
                         />
-                        <Button onClick={handleImportClick} className="w-full bg-muted-foreground hover:bg-muted-foreground">
+                        <Button
+                          onClick={handleImportClick}
+                          className="w-full bg-card-foreground hover:bg-muted-foreground"
+                        >
                           Coming Soon
                         </Button>
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <div className="border rounded-lg">
+                      <div className="rounded-lg">
                         <div className="flex justify-between items-start">
                           <div>
                             <div className="flex items-center gap-2">
@@ -367,8 +369,6 @@ function SettingsContent() {
                         </div>
                       </div>
                     </div>
-
-                    <Separator className="my-6" />
 
                     <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6">
                       <h3 className="text-2xl font-bold mb-2">Danger Zone</h3>
@@ -438,10 +438,11 @@ function SettingsContent() {
                         <Switch defaultChecked />
                       </div>
 
-                      <Separator />
+                      {/* <Separator />
 
-                      {/* TODO: Add sync across devices */}
-                      {/* <div className="flex items-center justify-between">
+                      TODO: Add sync across devices
+                      
+                      <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
                           <h3 className="font-medium">Sync Across Devices</h3>
                           <p className="text-sm text-muted-foreground">
@@ -450,8 +451,6 @@ function SettingsContent() {
                         </div>
                         <Switch defaultChecked />
                       </div> */}
-
-                      <Separator className="my-6" />
 
                       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6">
                         <h3 className="text-2xl font-bold mb-2">Danger Zone</h3>

@@ -1,44 +1,30 @@
-import React from "react";
-import Image from "next/image";
-import { useTheme } from "next-themes";
+import { ModuleWithResources } from "@/lib/actions";
 
 interface WelcomeScreenProps {
-  showLogo: boolean;
+  moduleDetails?: ModuleWithResources | null;
+  chatId?: string;
+  modelName?: string;
 }
 
-export default function WelcomeScreen({ showLogo }: WelcomeScreenProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
+export default function WelcomeScreen({
+  moduleDetails,
+  chatId,
+  modelName = "Gemini 2.0 Flash",
+}: WelcomeScreenProps) {
   return (
-    <div className="text-center flex items-center justify-center h-screen z-20">
-      <div className="flex flex-col items-center space-y-2">
-        <div className="w-[200px] h-[175px] relative">
-          {!showLogo ? (
-            ""
-          ) : (
-            <Image
-              src={
-                mounted && resolvedTheme === "dark"
-                  ? "/Study Chat Icon Dark mode.svg"
-                  : "/Study Chat Icon Light mode.svg"
-              }
-              alt="Study Chat Logo"
-              width={200}
-              height={200}
-              priority
-              loading="eager"
-            />
-          )}
-        </div>
-        <h3 className="text-lg font-medium">Welcome to Study Chat!</h3>
+    <div className="text-center flex items-center justify-center h-screen pb-20 space-y-2">
+      <div className="flex-col space-y-3">
+        <h3 className="text-3xl font-normal">Welcome to Study Chat</h3>
         <p className="text-muted-foreground">
-          Create individual modules and provide context to your chat threads
+          {moduleDetails
+            ? `Using ${moduleDetails.name} module for context`
+            : "Create a module to add context to your chats"}
         </p>
+        {modelName && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Powered by {modelName}
+          </p>
+        )}
       </div>
     </div>
   );
