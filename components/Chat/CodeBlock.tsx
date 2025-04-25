@@ -53,9 +53,10 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
     return (
       <code
         className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 font-mono px-1.5 py-0.5 border border-gray-200 dark:border-gray-700 rounded text-xs"
+        style={{ wordBreak: "break-all", whiteSpace: "normal" }}
         {...props}
       >
-        {isShellLanguage && <span className="text-gray-400 mr-1">$</span>}
+        {isShellLanguage && <span className="text-gray-400">$</span>}
         {content}
       </code>
     );
@@ -96,7 +97,7 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
             {
               margin: 0,
               padding: "1rem",
-              backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "#e7ecf2",
+              backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "ffffff",
               borderRadius: "0 0 0.375rem 0.375rem",
               fontSize: "0.875rem",
               lineHeight: "1.5",
@@ -112,6 +113,7 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
                 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
               wordBreak: "break-word",
               whiteSpace: "pre-wrap",
+              overflowWrap: "break-word",
             },
           }}
           PreTag="div"
@@ -126,7 +128,8 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
   // Default case for plain code
   return (
     <code
-      className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 font-mono px-1.5 py-0.5 border border-gray-200 dark:border-gray-700 rounded text-xs"
+      className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 font-mono px-1.5 py-0.5 border border-gray-200 dark:border-gray-700 rounded text-xs w-full max-w-full"
+      style={{ wordBreak: "break-all", whiteSpace: "normal" }}
       {...props}
     >
       {content}

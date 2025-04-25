@@ -77,8 +77,8 @@ export default function ModuleContextEditor({
           <Textarea
             value={editContext}
             onChange={(e) => setEditContext(e.target.value)}
-            className="min-h-[158px] mr-6 p-4"
-            placeholder="Enter your context here..."
+            className="min-h-[158px] mr-6 p-4 rounded-lg bg-accent"
+            placeholder="Write your context here..."
             tabIndex={0}
             autoFocus
             onKeyDown={(e) => {
@@ -105,7 +105,7 @@ export default function ModuleContextEditor({
         </div>
       ) : (
         <p
-          className="text-muted-foreground cursor-pointer hover:bg-muted/50 p-4 mb-12 text-sm rounded min-h-[158px]"
+          className="text-muted-foreground bg-accent/50 cursor-pointer hover:bg-accent p-4 mb-12 text-sm rounded-lg min-h-[158px]"
           onClick={() => setIsEditingContext(true)}
           tabIndex={0}
           onKeyDown={(e) => {
@@ -114,7 +114,7 @@ export default function ModuleContextEditor({
             }
           }}
         >
-          {module.context || "Enter your context here..."}
+          {module.context || "Write your context here..."}
         </p>
       )}
     </>

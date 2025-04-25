@@ -18,19 +18,33 @@ import {
   SidebarRail,
 } from "@/components/Sidebar/SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
+
 import ModuleList from "./ModuleList";
 import ChatHistory from "./ChatHistory";
 import UserSection from "./UserSection";
+
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { encodeModuleSlug, cn } from "@/lib/utils";
+import { encodeModuleSlug, cn, getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
+import { Edit, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { EVENT_TYPES } from "@/lib/events";
 import { getOrCreateSessionIdClient } from "@/lib/session";
-import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { Separator } from "@radix-ui/react-separator";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@radix-ui/react-dialog";
+import { ModuleForm } from "../dialogs/ModuleForm";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Define module type
 export interface Module {
@@ -1394,35 +1408,86 @@ function ClientSidebarContent({
           <Link
             href="/chat"
             className={cn(
-              "text-xl font-bold",
+              "text-xl font-medium",
               state === "expanded" || isMobile ? "block" : "hidden"
             )}
           >
-            Study Chat
+            study chat
           </Link>
           <div
             className={cn(
               "flex items-center gap-1",
               state === "collapsed" &&
                 !isMobile &&
-                "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
+                "fixed left-[0.5rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md shadow-md"
             )}
           >
-            <SidebarTrigger />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNewChat}
-              title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
-              className={cn(
-                "h-9 w-9",
-                state === "collapsed" &&
-                  !isMobile &&
-                  "bg-[hsl(var(--sidebar-background))]"
-              )}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarTrigger />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>
+                    Collapse sidebar (
+                    {`${modifierKey}+${SHORTCUTS.TOGGLE_SIDEBAR}`})
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleNewChat}
+                    className={cn(
+                      "h-9 w-9",
+                      state === "collapsed" &&
+                        !isMobile &&
+                        "bg-[hsl(var(--sidebar-background))]"
+                    )}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>New chat ({`${modifierKey}+${SHORTCUTS.NEW_CHAT}`})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {state === "collapsed" && (
+              <Dialog>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-accent h-9 w-9"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>
+                        Create New Module (
+                        {`${modifierKey}+${SHORTCUTS.NEW_MODULE}`})
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DialogContent>
+                  <DialogTitle className="text-xl font-bold">
+                    Create New Module
+                  </DialogTitle>
+                  <ModuleForm successEventName="module.created" />
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
       </SidebarHeader>

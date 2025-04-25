@@ -8,11 +8,11 @@ export default function SettingsLoading() {
   return (
     <div className="h-full flex flex-col py-3">
       {/* Top navigation bar */}
-      <div className="flex justify-between items-center ml-5 pr-6">
+      <div className="flex justify-between items-center ml-5 pt-0.5 pr-6">
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center add-margin-for-headers p-2"
+          className="flex items-center add-margin-for-headers px-2"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Chat
@@ -24,7 +24,7 @@ export default function SettingsLoading() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 overflow-auto pt-2 px-6">
+      <div className="flex-1 overflow-auto pt-1.5 px-6">
         <div className="flex flex-col py-5 md:flex-row gap-8 max-w-6xl mx-auto">
           {/* Left sidebar with user info */}
           <div className="w-full md:w-1/3">
@@ -42,7 +42,7 @@ export default function SettingsLoading() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {[1, 2, 3, 4, 5].map((i) => (
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div key={i} className="flex justify-between items-center">
                     <Skeleton className="h-4 w-20" />
                     <div className="flex gap-1">
