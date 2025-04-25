@@ -69,24 +69,39 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Environment Variables
 
-Create a `.env` file with the following variables:
+The app uses the following environment variables:
 
-```bash
-# Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
+- `CLERK_SECRET_KEY`: For authentication with Clerk
+- `CLERK_PUBLISHABLE_KEY`: For authentication with Clerk
+- `DATABASE_URL`: Your PostgreSQL connection string
+- `DIRECT_URL`: Direct URL to your PostgreSQL database (required for Prisma)
+- `GOOGLE_AI_API_KEY`: Google AI API key for Gemini models
+- `OPENAI_API_KEY`: OpenAI API key for GPT models
 
-# Database
-DATABASE_URL=your_database_url
+### Setting Up API Keys
 
-# AI Models
-GOOGLE_API_KEY=your_google_api_key
-PERPLEXITY_API_KEY=your_perplexity_api_key
+#### Google AI API Key (Required for default operation)
 
-# Dynamic Rendering
-NEXT_PUBLIC_FORCE_DYNAMIC=true
-NEXT_PRIVATE_STANDALONE=1
+1. Visit the [Google AI Studio](https://aistudio.google.com/) and sign up for an account
+2. Create an API key from the settings page
+3. Add it to your .env.local file:
+
 ```
+GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+```
+
+#### OpenAI API Key (Optional)
+
+The application supports OpenAI models (GPT-4o and GPT-3.5 Turbo). To use them:
+
+1. Create an account at [OpenAI](https://platform.openai.com/)
+2. Create an API key and add it to your .env.local file:
+
+```
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+For more details, see the [OpenAI Setup Documentation](docs/openai-setup.md).
 
 ## Project Structure
 

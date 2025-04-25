@@ -97,14 +97,13 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
             {
               margin: 0,
               padding: "1rem",
-              backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "aaaaaa",
+              backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "ffffff",
               borderRadius: "0 0 0.375rem 0.375rem",
               fontSize: "0.875rem",
               lineHeight: "1.5",
               width: "100%",
               maxWidth: "100%",
               overflowX: "auto",
-              overflowWrap: "break-word",
             } as ExtendedCSSProperties
           }
           wrapLongLines={true}

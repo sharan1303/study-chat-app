@@ -43,6 +43,7 @@ import React, { useRef } from "react";
 import CustomUserProfile from "@/components/Settings/CustomUserProfile";
 import EditableProfileImage from "@/components/Settings/EditableProfileImage";
 import { getOSModifierKey } from "@/lib/utils";
+import { SUPPORTED_MODELS } from "@/lib/models";
 
 // Create a wrapper component for the settings content
 function SettingsContent() {
@@ -117,7 +118,7 @@ function SettingsContent() {
   // AI models available in the application
   const aiModels = [
     {
-      name: "Gemini 2.0 Flash",
+      name: SUPPORTED_MODELS["gemini-2.0-flash"],
       provider: "Google",
       features: ["Fast responses", "Used as default model"],
       status: "Active",
@@ -331,7 +332,10 @@ function SettingsContent() {
                           className="hidden"
                           aria-label="Import modules JSON file"
                         />
-                        <Button onClick={handleImportClick} className="w-full bg-card-foreground hover:bg-muted-foreground">
+                        <Button
+                          onClick={handleImportClick}
+                          className="w-full bg-card-foreground hover:bg-muted-foreground"
+                        >
                           Coming Soon
                         </Button>
                       </div>

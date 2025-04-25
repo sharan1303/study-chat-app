@@ -29,7 +29,7 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 210 25% 80%;
-    --input: 210 40% 88%;
+    --input: 210 30% 88%;
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 0.5rem;
@@ -92,10 +92,9 @@
 /* Input styling */
 input[type="text"],
 input[type="search"],
-textarea,
 .input-container,
 div[contenteditable="true"] {
-  background-color: hsl(var(--input)) !important;
+  background-color: hsl(var(--secondary));
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
 }

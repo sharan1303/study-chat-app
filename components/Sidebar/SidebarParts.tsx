@@ -102,8 +102,8 @@ export const Sidebar = React.forwardRef<
               <button
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-muted hover:text-accent-foreground"
                 onClick={() => setOpenMobile(true)}
-                aria-label="Open Sidebar"
-                title="Open Sidebar"
+                aria-label="Expand Sidebar"
+                title={`Expand Sidebar (${getOSModifierKey()}+${SHORTCUTS.TOGGLE_SIDEBAR})`}
               >
                 <PanelLeft className="h-4 w-4" />
               </button>
@@ -112,7 +112,7 @@ export const Sidebar = React.forwardRef<
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-muted hover:text-accent-foreground"
                 onClick={() => navigate("/chat")}
                 aria-label="New Chat"
-                title="New Chat"
+                title={`New Chat (${getOSModifierKey()}+${SHORTCUTS.NEW_CHAT})`}
               >
                 <Edit className="h-4 w-4" />
               </button>

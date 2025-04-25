@@ -1,6 +1,11 @@
 import { Message, streamText } from "ai";
-import { google } from "@ai-sdk/google";
 import { getModuleContext } from "@/lib/modules";
+import {
+  getInitializedModel,
+  SUPPORTED_MODELS,
+  getDefaultModelId,
+  ModelId,
+} from "@/lib/models";
 
 import { currentUser } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
@@ -14,7 +19,8 @@ import {
   createGeneralSystemPrompt,
   createModuleSystemPrompt,
 } from "@/lib/prompts";
-import { use } from "react";
+
+import { azure } from "@ai-sdk/azure";
 
 // Define types for message content structures
 interface ContentPart {
@@ -73,6 +79,11 @@ export async function POST(request: Request) {
     const attachments = body.experimental_attachments || null;
     // Extract webSearch flag if available
     const useWebSearch = body.webSearch === true;
+    // Extract model selection with fallback to default
+    const modelId =
+      body.model && body.model in SUPPORTED_MODELS
+        ? (body.model as ModelId)
+        : getDefaultModelId();
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -252,15 +263,24 @@ export async function POST(request: Request) {
     chatTitle = formatChatTitle(titleText);
 
     try {
-      const mainModel = google("gemini-2.0-flash", {
-        useSearchGrounding: useWebSearch,
-      });
+      // Initialize the AI model using our utility function
+      const { model: mainModel, displayName: modelDisplayName } =
+        getInitializedModel(modelId, useWebSearch);
 
       // Use the streamText function from the AI SDK
       const result = streamText({
         model: mainModel,
         messages: formattedMessages,
         temperature: 0.1,
+
+        // tools: {
+        //   web_search_preview: azure.tools.webSearchPreview({
+        //     // optional configuration:
+        //     searchContextSize: "high",
+        //   }),
+        // },
+        // Force web search tool:
+        // toolChoice: { type: 'tool', toolName: 'web_search_preview' },
         onFinish: async (completion) => {
           // Get the generated text
           const text = completion.text;
@@ -579,7 +599,7 @@ export async function POST(request: Request) {
       // Get a data stream response and add model information in the header
       const response = result.toDataStreamResponse();
       const headers = new Headers(response.headers);
-      headers.set("x-model-used", "Gemini 2.0 Flash");
+      headers.set("x-model-used", modelDisplayName);
       headers.set("x-web-search-used", useWebSearch ? "true" : "false");
 
       // Return a new response with our custom headers

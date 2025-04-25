@@ -3,13 +3,21 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, Paperclip, X, Globe } from "lucide-react";
+import { Send, Loader2, Paperclip, X, Globe, ChevronDown } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AVAILABLE_MODELS, ModelId, getDefaultModelId } from "@/lib/models";
 
 interface ChatInputProps {
   input: string;
@@ -21,6 +29,9 @@ interface ChatInputProps {
   setFiles?: (files: FileList | null) => void;
   webSearchEnabled?: boolean;
   setWebSearchEnabled?: (enabled: boolean) => void;
+  selectedModel: ModelId;
+  onModelChange: (model: ModelId) => void;
+  availableModels?: typeof AVAILABLE_MODELS;
 }
 
 export default function ChatInput({
@@ -33,6 +44,9 @@ export default function ChatInput({
   setFiles,
   webSearchEnabled = false,
   setWebSearchEnabled,
+  selectedModel = getDefaultModelId(),
+  onModelChange,
+  availableModels = AVAILABLE_MODELS,
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -117,20 +131,12 @@ export default function ChatInput({
               onChange={handleTextareaChange}
               className={`flex-1 min-h-[120px] max-h-[300px] border-5 ${
                 fileNames.length > 0 ? "rounded-t-none" : "rounded-t-2xl"
-              } rounded-b-none resize-y w-full p-4 pr-28
+              } rounded-b-none resize-y w-full p-4 pr-36 bg-input
               }`}
               rows={1}
               autoFocus
               onKeyDown={handleKeyDown}
             />
-            {webSearchEnabled && (
-              <div
-                className="absolute bottom-0 left-0 right-0 bg-blue-50 dark:bg-blue-900/20 text-blue-600 
-            dark:text-blue-300 text-xs p-1 rounded-b-none border-t border-blue-100 dark:border-blue-800"
-              >
-                Web search is enabled. The AI will search the web for results.
-              </div>
-            )}
             <input
               type="file"
               ref={fileInputRef}
@@ -147,32 +153,6 @@ export default function ChatInput({
                     <Button
                       type="button"
                       size="icon"
-                      variant={webSearchEnabled ? "default" : "ghost"}
-                      className="h-10 w-10 rounded-lg"
-                      onClick={toggleWebSearch}
-                      disabled={chatLoading}
-                      aria-label={
-                        webSearchEnabled
-                          ? "Disable web search"
-                          : "Enable web search"
-                      }
-                    >
-                      <Globe className="h-5 w-5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {webSearchEnabled
-                      ? "Disable web search"
-                      : "Enable web search"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
                       variant="ghost"
                       className="h-10 w-10 rounded-lg"
                       onClick={() => fileInputRef.current?.click()}
@@ -182,7 +162,9 @@ export default function ChatInput({
                       <Paperclip className="h-5 w-5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Upload attachments</TooltipContent>
+                  <TooltipContent side="bottom">
+                    Upload attachments
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <TooltipProvider>
@@ -206,6 +188,58 @@ export default function ChatInput({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Send message</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="absolute flex justify-between bottom-1 left-1 gap-1">
+              <Select
+                value={selectedModel}
+                onValueChange={(value) => {
+                  onModelChange(value as ModelId);
+                }}
+              >
+                <SelectTrigger className="w-[160px] h-8 focus:ring-0">
+                  <SelectValue
+                    placeholder={
+                      availableModels.find(
+                        (model) => model.id === selectedModel
+                      )?.name || "Select Model"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      {model.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant={webSearchEnabled ? "default" : "ghost"}
+                      className="h-8 w-24 rounded-lg"
+                      onClick={toggleWebSearch}
+                      disabled={chatLoading}
+                      aria-label={
+                        webSearchEnabled
+                          ? "Disable web search"
+                          : "Enable web search"
+                      }
+                    >
+                      <Globe className="h-4 w-4 pb-0.5" />
+                      Search
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {webSearchEnabled
+                      ? "Disable web search"
+                      : "Enable web search"}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>

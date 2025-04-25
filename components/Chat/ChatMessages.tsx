@@ -20,6 +20,10 @@ export interface ChatMessagesProps {
   messages: Message[];
   scrollContainerRef?: React.RefObject<HTMLDivElement>;
   modelName: string;
+  isLoading?: boolean;
+  copyToClipboard?: (text: string, messageId: string) => void;
+  copiedMessageId?: string | null;
+  stop?: () => void;
 }
 
 interface TextContent {
@@ -71,7 +75,7 @@ const UserMessage: React.FC<{
       key={`user-${message.id}`}
       className="flex flex-col items-end group relative"
     >
-      <div className="rounded-xl p-4 bg-primary text-primary-foreground break-words">
+      <div className="rounded-xl p-4 bg-card text-card-foreground break-words">
         {typeof message.content === "string" ? (
           <div>{message.content}</div>
         ) : Array.isArray(message.content) ? (
@@ -260,7 +264,7 @@ const AssistantMessage: React.FC<{
           <div>Unsupported content format</div>
         )}
       </div>
-      <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-5">
+      <div className="mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-5">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -310,6 +314,10 @@ export default function ChatMessages({
   messages,
   scrollContainerRef,
   modelName,
+  isLoading,
+  copyToClipboard,
+  copiedMessageId,
+  stop,
 }: ChatMessagesProps) {
   // Local state for copied message if not provided
   const [localCopiedMessageId, setLocalCopiedMessageId] = useState<
@@ -328,7 +336,7 @@ export default function ChatMessages({
   };
   return (
     <div className="flex-1 overflow-y-auto pl-4 pr-2 py-8">
-      <div className="space-y-8 w-full max-w-full">
+      <div className="space-y-8 w-full max-w-3xl mx-auto">
         {messages.map((message, index) => {
           return (
             <React.Fragment key={message.id || index}>
