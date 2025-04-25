@@ -198,7 +198,7 @@ export default function ChatInput({
                   onModelChange(value as ModelId);
                 }}
               >
-                <SelectTrigger className="w-[160px] h-8 focus:ring-0">
+                <SelectTrigger className="min-w-[135px] h-8 focus:ring-0">
                   <SelectValue
                     placeholder={
                       availableModels.find(
@@ -215,14 +215,16 @@ export default function ChatInput({
                   ))}
                 </SelectContent>
               </Select>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
+              
+              {selectedModel !== "gpt-4o-mini" && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                     <Button
                       type="button"
                       size="icon"
                       variant={webSearchEnabled ? "default" : "ghost"}
-                      className="h-8 w-24 rounded-lg"
+                      className="h-8 w-28 rounded-lg"
                       onClick={toggleWebSearch}
                       disabled={chatLoading}
                       aria-label={
@@ -241,7 +243,8 @@ export default function ChatInput({
                       : "Enable web search"}
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </form>
