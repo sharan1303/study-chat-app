@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import CodeBlock from "./CodeBlock";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Book } from "lucide-react";
 import type { Message } from "@ai-sdk/react";
 import { getOSModifierKey, extractSourcesFromContent } from "@/lib/utils";
 import { toast } from "sonner";
@@ -235,6 +235,17 @@ const AssistantMessage: React.FC<{
     };
   }, [message.content, copyToClipboard]);
 
+  // Extract source citations from message
+  const hasCitations = message.content.includes("[Source:");
+
+  // Function to highlight source citations in the message
+  const formatMessageWithCitations = (content: string) => {
+    return content.replace(
+      /\[Source: (.*?)\]/g,
+      '📚 <span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary rounded-md my-1"><Book className="h-3 w-3" /> $1</span>'
+    );
+  };
+
   return (
     <div
       ref={messageRef}
@@ -242,13 +253,40 @@ const AssistantMessage: React.FC<{
       className="text-gray-800 dark:text-gray-200 group relative"
     >
       <div className="prose prose-xs dark:prose-invert max-w-none w-full break-words prose-spacing text-sm">
-        {typeof message.content === "string" ? (
-          formatMessageContent(message.content)
-        ) : Array.isArray(message.content) ? (
-          (message.content as MessageContent[]).map((part, i) => {
-            if (part.type === "text") {
-              return <div key={i}>{formatMessageContent(part.text)}</div>;
-            } else if (part.type === "file") {
+        <ReactMarkdown
+          components={{
+            h1: (props) => (
+              <h1
+                className="text-xl font-bold my-5"
+                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
+              />
+            ),
+            h2: (props) => (
+              <h2
+                className="text-lg font-semibold my-4"
+                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
+              />
+            ),
+            h3: (props) => (
+              <h3
+                className="text-lg font-medium my-4"
+                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
+              />
+            ),
+            h4: (props) => (
+              <h4
+                className="text-lg font-medium my-3"
+                {...(props as React.HTMLAttributes<HTMLHeadingElement>)}
+              />
+            ),
+            p: (props) => (
+              <p
+                className="my-3"
+                {...(props as React.HTMLAttributes<HTMLParagraphElement>)}
+              />
+            ),
+            // @ts-expect-error - ReactMarkdown types don't include inline
+            code: ({ inline, className, children, ...props }) => {
               return (
                 <FileAttachment
                   key={i}
@@ -264,44 +302,26 @@ const AssistantMessage: React.FC<{
           <div>Unsupported content format</div>
         )}
       </div>
-      <div className="mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-5">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    copyToClipboard(
-                      typeof message.content === "string"
-                        ? message.content
-                        : "Content contains attachments"
-                    );
-                  }
-                }}
-                type="button"
-                onClick={() =>
-                  copyToClipboard(
-                    typeof message.content === "string"
-                      ? message.content
-                      : "Content contains attachments"
-                  )
-                }
-                className="flex items-center p-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
-                aria-label="Copy message"
-              >
-                {isCopied ? (
-                  <Check className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Copy message ({getOSModifierKey()}+C)</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div className="mt-2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-4">
+        <button
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              copyToClipboard(message.content);
+            }
+          }}
+          type="button"
+          onClick={() => copyToClipboard(message.content)}
+          className="flex items-center gap-2 px-3 py-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+          aria-label="Copy message"
+          title={`Copy message (${getOSModifierKey()}+C)`}
+        >
+          {isCopied ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </button>
         <div className="text-xs text-muted-foreground">
           Generated with {modelName}
         </div>

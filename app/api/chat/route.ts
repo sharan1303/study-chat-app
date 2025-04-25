@@ -1,4 +1,7 @@
 import { Message, streamText } from "ai";
+import { google } from "@ai-sdk/google";
+import { searchWithPerplexity } from "@/lib/search";
+
 import { getModuleContext } from "@/lib/modules";
 import {
   getInitializedModel,
@@ -72,18 +75,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { messages, chatId, moduleId } = body;
     const sessionId = body.sessionId || null;
-    // We keep this parameter but don't use it anymore since we always want to broadcast AI responses
-    // const skipMessageBroadcast = body.skipMessageBroadcast || false;
     const optimisticChatId = body.optimisticChatId || null;
-    // Extract experimental_attachments if available
-    const attachments = body.experimental_attachments || null;
-    // Extract webSearch flag if available
-    const useWebSearch = body.webSearch === true;
-    // Extract model selection with fallback to default
-    const modelId =
-      body.model && body.model in SUPPORTED_MODELS
-        ? (body.model as ModelId)
-        : getDefaultModelId();
 
     const isModuleMode = !!moduleId;
     let chatTitle = body.title || "New Chat";
@@ -97,9 +89,38 @@ export async function POST(request: Request) {
 
     // Both userId and sessionId can't be null if we want to save history
     if (shouldSaveHistory && !userId && !sessionId) {
+      console.error("No userId or sessionId provided for chat history");
       return Response.json(
-        { error: "Session ID or authentication required to save chat history" },
+        {
+          error: "Session ID or authentication required to save chat history",
+          details:
+            "Please ensure you are either logged in or have a valid session ID",
+        },
         { status: 401 }
+      );
+    }
+
+    // Validate session ID format if provided
+    if (sessionId && typeof sessionId !== "string") {
+      console.error("Invalid session ID format:", sessionId);
+      return Response.json(
+        {
+          error: "Invalid session ID format",
+          details: "Session ID must be a string",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate messages array
+    if (!Array.isArray(messages) || messages.length === 0) {
+      console.error("Invalid or empty messages array");
+      return Response.json(
+        {
+          error: "Invalid messages format",
+          details: "Messages must be a non-empty array",
+        },
+        { status: 400 }
       );
     }
 
@@ -186,54 +207,44 @@ export async function POST(request: Request) {
       return message;
     });
 
-    // Handle attachments in the last user message if it exists
-    if (attachments && processedMessages.length > 0) {
-      const lastMessageIndex = processedMessages.length - 1;
-      const lastMessage = processedMessages[lastMessageIndex];
+    // Define a type for search results
+    interface SearchResult {
+      title: string;
+      content: string;
+    }
 
-      // Only process if it's a user message
-      if (lastMessage.role === "user") {
-        const content =
-          typeof lastMessage.content === "string"
-            ? [{ type: "text", text: lastMessage.content }]
-            : lastMessage.content;
-
-        // Add file attachments to the content array
-        const updatedContent = [...content];
-
-        // Process each attachment
-        for (let i = 0; i < attachments.length; i++) {
-          const file = attachments[i];
-          const arrayBuffer = await file.arrayBuffer();
-          const base64Data = Buffer.from(arrayBuffer).toString("base64");
-
-          updatedContent.push({
-            type: "file",
-            data: base64Data,
-            mimeType: file.type,
-          });
-        }
-
-        processedMessages[lastMessageIndex].content = updatedContent;
+    let searchResults: SearchResult[] = [];
+    if (shouldSearch) {
+      try {
+        // Perform search with Perplexity API
+        const resultsText = await searchWithPerplexity(lastUserMessage);
+        // Create a single search result with the entire text response
+        searchResults = [
+          {
+            title: "Search Results",
+            content: resultsText,
+          },
+        ];
+      } catch (searchError) {
+        console.error("Error performing search:", searchError);
       }
     }
 
-    let systemMessage = "";
+    // Format search results for inclusion in the prompt if available
+    const searchContext =
+      searchResults.length > 0
+        ? searchResults
+            .map((result) => `[${result.title}]: ${result.content}`)
+            .join("\n\n")
+        : "";
 
-    // Get system prompt without search context as search is now handled by AI SDK
     if (isModuleMode && shouldSaveHistory) {
       // Module-specific mode: Get module context and build specialized prompt
       const moduleContext = await getModuleContext(moduleId);
-      systemMessage = createModuleSystemPrompt(moduleContext, "");
+      systemMessage = createModuleSystemPrompt(moduleContext, searchContext);
     } else {
       // Basic mode: General study assistant
-      systemMessage = createGeneralSystemPrompt("");
-    }
-
-    // Add citation instructions to the system message if web search is enabled
-    if (useWebSearch) {
-      systemMessage +=
-        "\n\nImportant: When drawing from web content, you MUST include sources. Format your response as follows:\n1. Provide your regular answer\n2. Add a divider using three hyphens: '---'\n3. Add a '**Sources:**' heading\n4. List each source as a numbered markdown link\n\nExample format:\n[Your answer here]\n\n---\n\n**Sources:**\n1. [Source Title](https://example.com)\n2. [Another Source](https://example2.com)";
+      systemMessage = createGeneralSystemPrompt(searchContext);
     }
 
     // Format messages for the model including the system message
@@ -272,98 +283,7 @@ export async function POST(request: Request) {
         model: mainModel,
         messages: formattedMessages,
         temperature: 0.1,
-
-        // tools: {
-        //   web_search_preview: azure.tools.webSearchPreview({
-        //     // optional configuration:
-        //     searchContextSize: "high",
-        //   }),
-        // },
-        // Force web search tool:
-        // toolChoice: { type: 'tool', toolName: 'web_search_preview' },
-        onFinish: async (completion) => {
-          // Get the generated text
-          const text = completion.text;
-
-          // Get citations if available from the Google model's metadata
-          let finalText = text;
-
-          // Access citations - try multiple possible locations
-          const citations: Citation[] = [];
-
-          // Method 1: Direct citations property
-          if ((completion as any).citations) {
-            const directCitations = (completion as any).citations;
-            if (Array.isArray(directCitations)) {
-              for (const cite of directCitations) {
-                if (cite.source?.uri) {
-                  citations.push(cite as Citation);
-                }
-              }
-            }
-          }
-
-          // Method 2: Google metadata
-          const googleMetadata = (completion as any)._internal?.metadata
-            ?.googleMetadata;
-          if (googleMetadata?.citations) {
-            // Extract citations from Google metadata
-            for (const cite of googleMetadata.citations) {
-              if (cite.uri) {
-                citations.push({
-                  source: {
-                    uri: cite.uri,
-                    title: cite.title || "Source",
-                  },
-                  startIndex: cite.startIndex,
-                  endIndex: cite.endIndex,
-                });
-              }
-            }
-          }
-
-          // Method 3: From completion metadata
-          const completionMetadata = (completion as any).metadata;
-          if (completionMetadata?.citations) {
-            for (const cite of completionMetadata.citations) {
-              if (cite.source?.uri || cite.uri) {
-                citations.push({
-                  source: {
-                    uri: cite.source?.uri || cite.uri,
-                    title: cite.source?.title || cite.title || "Source",
-                  },
-                  startIndex: cite.startIndex,
-                  endIndex: cite.endIndex,
-                });
-              }
-            }
-          }
-
-          // Format citations if we found any
-          if (citations.length > 0) {
-            // Add a separator and sources section
-            finalText += "\n\n---\n\n**Sources:**\n";
-
-            // Deduplicate sources by URL
-            const uniqueSources = new Map<string, Citation>();
-            citations.forEach((citation: Citation) => {
-              if (citation.source && citation.source.uri) {
-                uniqueSources.set(citation.source.uri, citation);
-              }
-            });
-
-            // Format each source
-            [...uniqueSources.values()].forEach(
-              (citation: Citation, index: number) => {
-                if (citation.source) {
-                  finalText += `\n${index + 1}. [${
-                    citation.source.title || "Source"
-                  }](${citation.source.uri})`;
-                }
-              }
-            );
-          }
-
+        onFinish: async ({ text }) => {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
             try {
@@ -599,34 +519,24 @@ export async function POST(request: Request) {
       // Get a data stream response and add model information in the header
       const response = result.toDataStreamResponse();
       const headers = new Headers(response.headers);
-      headers.set("x-model-used", modelDisplayName);
-      headers.set("x-web-search-used", useWebSearch ? "true" : "false");
+      headers.set("x-model-used", "Gemini 2.0 Flash");
 
       // Return a new response with our custom headers
       return new Response(response.body, {
         headers: headers,
         status: 200,
       });
-    } catch (aiError) {
-      console.error("Error with AI model:", aiError);
-
-      // Fallback to a basic error message
+    } catch (error) {
+      console.error("Error generating response:", error);
       return Response.json(
-        {
-          error:
-            "Unable to generate a response. The AI service may be temporarily unavailable.",
-          details: aiError instanceof Error ? aiError.message : String(aiError),
-        },
+        { error: "Failed to generate response" },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error("Error in chat route:", error);
+    console.error("Error processing request:", error);
     return Response.json(
-      {
-        error: "Error processing your request",
-        details: error instanceof Error ? error.message : String(error),
-      },
+      { error: "Failed to process request" },
       { status: 500 }
     );
   }

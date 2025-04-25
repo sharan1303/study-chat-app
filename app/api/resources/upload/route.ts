@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { broadcastResourceCreated } from "@/lib/events";
 import { Prisma } from "@prisma/client";
+import { handleResourceUploaded } from "@/lib/rag/webhooks";
 
 // Configure Next.js to handle larger uploads
 export const config = {
@@ -170,6 +171,13 @@ export async function POST(request: NextRequest) {
     broadcastResourceCreated({
       id: resource.id,
       moduleId: resource.moduleId,
+    });
+
+    // Process the document asynchronously
+    // We don't await this to keep the upload response fast
+    // The document will be processed in the background
+    handleResourceUploaded(resource.id).catch((error) => {
+      console.error(`Error processing resource ${resource.id}:`, error);
     });
 
     return NextResponse.json({
