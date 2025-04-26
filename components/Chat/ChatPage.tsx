@@ -379,14 +379,8 @@ export default function ChatPage({
     <div className="flex flex-col h-screen">
       {/* Chat header */}
       <Header />
-      {moduleDetails && (
-        <ChatModuleHeader
-          moduleDetails={moduleDetails}
-          navigateToModuleDetails={navigateToModuleDetails}
-        />
-      )}
 
-      <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
+      <div className="flex-1 overflow-y-auto custom-scrollbar" ref={scrollContainerRef}>
         {messages.length === 0 ? (
           <WelcomeScreen
             moduleDetails={moduleDetails}
