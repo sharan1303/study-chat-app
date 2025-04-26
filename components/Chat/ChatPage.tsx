@@ -184,20 +184,18 @@ export default function ChatPage({
     []
   );
 
-  // Memoize the chat options to prevent unnecessary re-initialization
-  const chatOptions = React.useMemo(
+  // Create stable base options that won't change across renders
+  const baseOptions = React.useMemo(
     () => ({
       api: "/api/chat",
       id: chatId,
       initialMessages,
+      // Include essential fields that are needed for initialization
+      // but are unlikely to change during the component's lifecycle
       body: {
-        moduleId: activeModule,
+        // Keep minimal stable body properties here
         chatId: chatId,
         isAuthenticated: isAuthenticated,
-        sessionId: !isAuthenticated ? sessionId : undefined,
-        title: initialTitle,
-        forceOldest: forceOldest,
-        optimisticChatId: optimisticChatId,
       },
       onResponse: (response: Response) => {
         // Try to extract model information from headers if available
@@ -243,18 +241,14 @@ export default function ChatPage({
     [
       chatId,
       initialMessages,
-      activeModule,
       isAuthenticated,
-      sessionId,
-      initialTitle,
-      forceOldest,
-      optimisticChatId,
       router,
       moduleDetails,
+      activeModule,
     ]
   );
 
-  // Replace useChat with useFileChat to add PDF support
+  // Initialize chat with stable options only
   const {
     messages,
     input,
@@ -268,7 +262,7 @@ export default function ChatPage({
     setWebSearchEnabled,
     selectedModel,
     setSelectedModel,
-  } = useFileChat(chatOptions);
+  } = useFileChat(baseOptions);
 
   // Keep track if we've already updated the title for first message
   const hasUpdatedTitle = React.useRef(false);
@@ -352,8 +346,16 @@ export default function ChatPage({
       setIsFirstMessage(false);
     }
 
-    // Call the actual submit function from the hook with correct type
-    handleSubmit(e as React.FormEvent<HTMLFormElement>);
+    // Pass dynamic body parameters with this specific submission
+    handleSubmit(e as React.FormEvent<HTMLFormElement>, {
+      body: {
+        moduleId: activeModule,
+        sessionId: !isAuthenticated ? sessionId : undefined,
+        title: initialTitle,
+        forceOldest: forceOldest,
+        optimisticChatId: optimisticChatId,
+      },
+    });
   };
 
   // Handle keyboard event
@@ -380,7 +382,10 @@ export default function ChatPage({
       {/* Chat header */}
       <Header />
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar" ref={scrollContainerRef}>
+      <div
+        className="flex-1 overflow-y-auto custom-scrollbar"
+        ref={scrollContainerRef}
+      >
         {messages.length === 0 ? (
           <WelcomeScreen
             moduleDetails={moduleDetails}

@@ -202,17 +202,13 @@ export async function POST(request: Request) {
         const updatedContent = [...content];
 
         // Process each attachment
-        for (let i = 0; i < attachments.length; i++) {
-          const file = attachments[i];
-          const arrayBuffer = await file.arrayBuffer();
-          const base64Data = Buffer.from(arrayBuffer).toString("base64");
-
+        attachments.forEach((att: { data: string; mimeType: string }) => {
           updatedContent.push({
             type: "file",
-            data: base64Data,
-            mimeType: file.type,
+            data: att.data,
+            mimeType: att.mimeType,
           });
-        }
+        });
 
         processedMessages[lastMessageIndex].content = updatedContent;
       }

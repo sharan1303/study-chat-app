@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, Paperclip, X, Globe, ChevronDown } from "lucide-react";
+import { Send, Loader2, Paperclip, X, Globe, ChevronDown, Square, Fullscreen, SquareActivity, SquareIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -191,7 +191,7 @@ export default function ChatInput({
                       aria-label="Send message"
                     >
                       {chatLoading ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Square className="h-5 w-5" />
                       ) : (
                         <Send className="h-5 w-5" />
                       )}
@@ -201,14 +201,14 @@ export default function ChatInput({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="flex bg-input bottom-1 left-1 gap-2">
+            <div className="flex bg-input pl-1 gap-2">
               <Select
                 value={selectedModel}
                 onValueChange={(value) => {
                   onModelChange(value as ModelId);
                 }}
               >
-                <SelectTrigger className="max-w-[210px] h-8 focus:ring-0">
+                <SelectTrigger className="max-w-[200px] h-8 focus:ring-0">
                   <SelectValue
                     placeholder={
                       availableModels.find(
