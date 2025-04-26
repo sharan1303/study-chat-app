@@ -8,7 +8,10 @@ import type { Message } from "@ai-sdk/react";
 import { getOSModifierKey, extractSourcesFromContent } from "@/lib/utils";
 import { toast } from "sonner";
 import FileAttachment from "@/components/Chat/FileAttachment";
-import SourcesCarousel, { Source } from "@/components/Chat/SourcesCarousel";
+import SourcesDialog, {
+  Source,
+  FileAttachment as FileAttachmentType,
+} from "@/components/Chat/SourcesDialog";
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +43,153 @@ interface FileContent {
 
 type MessageContent = TextContent | FileContent;
 
+// Helper function to extract text from message content for clipboard
+const getClipboardText = (content: string | MessageContent[]) => {
+  return typeof content === "string"
+    ? content
+    : content
+        .filter((p): p is TextContent => p.type === "text")
+        .map((p) => p.text)
+        .join("\n") || "[non‑text content]";
+};
+
+// Shared component to render message content based on its type
+const renderMessageContent = (
+  content: string | MessageContent[],
+  messageId: string,
+  isAssistant: boolean
+) => {
+  // Collect file attachments for the SourcesDialog
+  const files: FileAttachmentType[] = [];
+
+  if (typeof content === "string") {
+    if (isAssistant) {
+      // Format assistant message with markdown and handle sources
+      return formatAssistantContent(content);
+    }
+    // Simple text rendering for user messages
+    return <div>{content}</div>;
+  }
+
+  if (Array.isArray(content)) {
+    // Extract file attachments
+    content.forEach((part) => {
+      if (part.type === "file") {
+        const fileContent = part as FileContent;
+        files.push({
+          name: fileContent.name || `File${files.length + 1}`,
+          type: fileContent.mimeType,
+          url: `data:${fileContent.mimeType};base64,${fileContent.data}`,
+          size: fileContent.data
+            ? Math.ceil(fileContent.data.length * 0.75)
+            : undefined, // Estimate size from base64
+        });
+      }
+    });
+
+    const textContent = content.filter((part) => part.type === "text");
+
+    return (
+      <div className="w-full">
+        {files.length > 0 && (
+          <div className="mb-4">
+            <SourcesDialog files={files} />
+          </div>
+        )}
+
+        {/* Render text parts */}
+        {textContent.map((part, i) => {
+          if (part.type === "text") {
+            return isAssistant ? (
+              <div key={i}>{formatAssistantContent(part.text)}</div>
+            ) : (
+              <div key={i}>{part.text}</div>
+            );
+          }
+          return null;
+        })}
+
+        {/* Render file parts with FileAttachment component */}
+        {content.map((part, i) => {
+          if (part.type === "file") {
+            return (
+              <FileAttachment
+                key={i}
+                file={part as FileContent}
+                index={i}
+                messageId={messageId}
+              />
+            );
+          }
+          return null;
+        })}
+      </div>
+    );
+  }
+
+  return <div>Unsupported content format</div>;
+};
+
+// Function to format assistant message content with markdown and handle sources
+const formatAssistantContent = (content: string) => {
+  // Extract sources for the dialog
+  const sources = extractSourcesFromContent(content);
+
+  // Check if the message has a sources section
+  const sourcesSectionRegex = /---\s*\n\s*\*\*Sources:\*\*/;
+  if (sourcesSectionRegex.test(content)) {
+    const [mainContent] = content.split(/---\s*\n/);
+
+    return (
+      <>
+        {sources.length > 0 && <SourcesDialog sources={sources} />}
+        <ReactMarkdown
+          components={{
+            code(props: any) {
+              const { inline, className, children, ...rest } = props;
+              return (
+                <CodeBlock
+                  key={Math.random()}
+                  inline={inline}
+                  className={className}
+                  {...rest}
+                >
+                  {children}
+                </CodeBlock>
+              );
+            },
+          }}
+        >
+          {mainContent}
+        </ReactMarkdown>
+      </>
+    );
+  }
+
+  // If no sources section, render normally
+  return (
+    <ReactMarkdown
+      components={{
+        code(props: any) {
+          const { inline, className, children, ...rest } = props;
+          return (
+            <CodeBlock
+              key={Math.random()}
+              inline={inline}
+              className={className}
+              {...rest}
+            >
+              {children}
+            </CodeBlock>
+          );
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+};
+
 const UserMessage: React.FC<{
   message: Message;
   copyToClipboard: (text: string) => void;
@@ -54,11 +204,7 @@ const UserMessage: React.FC<{
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         if (messageRef.current?.matches(":hover")) {
           e.preventDefault();
-          copyToClipboard(
-            typeof message.content === "string"
-              ? message.content
-              : "Content contains attachments"
-          );
+          copyToClipboard(getClipboardText(message.content));
         }
       }
     };
@@ -76,27 +222,7 @@ const UserMessage: React.FC<{
       className="flex flex-col items-end group relative"
     >
       <div className="rounded-xl p-4 bg-card text-card-foreground break-words">
-        {typeof message.content === "string" ? (
-          <div>{message.content}</div>
-        ) : Array.isArray(message.content) ? (
-          (message.content as MessageContent[]).map((part, i) => {
-            if (part.type === "text") {
-              return <div key={i}>{part.text}</div>;
-            } else if (part.type === "file") {
-              return (
-                <FileAttachment
-                  key={i}
-                  file={part as FileContent}
-                  index={i}
-                  messageId={message.id}
-                />
-              );
-            }
-            return null;
-          })
-        ) : (
-          <div>Unsupported content format</div>
-        )}
+        {renderMessageContent(message.content, message.id, false)}
       </div>
       <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <TooltipProvider>
@@ -106,20 +232,12 @@ const UserMessage: React.FC<{
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
-                    copyToClipboard(
-                      typeof message.content === "string"
-                        ? message.content
-                        : "Content contains attachments"
-                    );
+                    copyToClipboard(getClipboardText(message.content));
                   }
                 }}
                 type="button"
                 onClick={() =>
-                  copyToClipboard(
-                    typeof message.content === "string"
-                      ? message.content
-                      : "Content contains attachments"
-                  )
+                  copyToClipboard(getClipboardText(message.content))
                 }
                 className="flex items-center p-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
                 aria-label="Copy message"
@@ -149,70 +267,6 @@ const AssistantMessage: React.FC<{
 }> = ({ message, modelName, copyToClipboard, isCopied }) => {
   const messageRef = useRef<HTMLDivElement>(null);
 
-  // Extract and format message content to handle sources section specially
-  const formatMessageContent = (content: string) => {
-    // Extract sources for the carousel
-    const sources = extractSourcesFromContent(content);
-
-    // Check if the message has a sources section (marked by "---" and "**Sources:**")
-    const sourcesSectionRegex = /---\s*\n\s*\*\*Sources:\*\*/;
-    if (sourcesSectionRegex.test(content)) {
-      const [mainContent] = content.split(/---\s*\n/);
-
-      return (
-        <>
-          <ReactMarkdown
-            components={{
-              code(props: any) {
-                const { inline, className, children, ...rest } = props;
-                // Always use CodeBlock, pass inline prop
-                return (
-                  <CodeBlock
-                    key={Math.random()} // Consider a more stable key if possible
-                    inline={inline}
-                    className={className}
-                    {...rest}
-                  >
-                    {children}
-                  </CodeBlock>
-                );
-              },
-            }}
-          >
-            {mainContent}
-          </ReactMarkdown>
-
-          {/* Sources carousel for visual display of sources */}
-          {sources.length > 0 && <SourcesCarousel sources={sources} />}
-        </>
-      );
-    }
-
-    // If no sources section, render normally
-    return (
-      <ReactMarkdown
-        components={{
-          code(props: any) {
-            const { inline, className, children, ...rest } = props;
-            // Always use CodeBlock, pass inline prop
-            return (
-              <CodeBlock
-                key={Math.random()} // Consider a more stable key if possible
-                inline={inline}
-                className={className}
-                {...rest}
-              >
-                {children}
-              </CodeBlock>
-            );
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    );
-  };
-
   // Add keyboard shortcut listener
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -220,11 +274,7 @@ const AssistantMessage: React.FC<{
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         if (messageRef.current?.matches(":hover")) {
           e.preventDefault();
-          copyToClipboard(
-            typeof message.content === "string"
-              ? message.content
-              : "Content contains attachments"
-          );
+          copyToClipboard(getClipboardText(message.content));
         }
       }
     };
@@ -242,27 +292,7 @@ const AssistantMessage: React.FC<{
       className="text-gray-800 dark:text-gray-200 group relative"
     >
       <div className="prose prose-xs dark:prose-invert max-w-none w-full break-words prose-spacing text-sm">
-        {typeof message.content === "string" ? (
-          formatMessageContent(message.content)
-        ) : Array.isArray(message.content) ? (
-          (message.content as MessageContent[]).map((part, i) => {
-            if (part.type === "text") {
-              return <div key={i}>{formatMessageContent(part.text)}</div>;
-            } else if (part.type === "file") {
-              return (
-                <FileAttachment
-                  key={i}
-                  file={part as FileContent}
-                  index={i}
-                  messageId={message.id}
-                />
-              );
-            }
-            return null;
-          })
-        ) : (
-          <div>Unsupported content format</div>
-        )}
+        {renderMessageContent(message.content, message.id, true)}
       </div>
       <div className="mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-5">
         <TooltipProvider>
@@ -272,20 +302,12 @@ const AssistantMessage: React.FC<{
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
-                    copyToClipboard(
-                      typeof message.content === "string"
-                        ? message.content
-                        : "Content contains attachments"
-                    );
+                    copyToClipboard(getClipboardText(message.content));
                   }
                 }}
                 type="button"
                 onClick={() =>
-                  copyToClipboard(
-                    typeof message.content === "string"
-                      ? message.content
-                      : "Content contains attachments"
-                  )
+                  copyToClipboard(getClipboardText(message.content))
                 }
                 className="flex items-center p-2 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
                 aria-label="Copy message"
@@ -335,8 +357,8 @@ export default function ChatMessages({
       .catch(() => toast.error("Failed to copy"));
   };
   return (
-    <div className="flex-1 overflow-y-auto pl-4 pr-2 py-8">
-      <div className="space-y-8 w-full max-w-3xl mx-auto">
+    <div className="flex-1 overflow-y-auto pt-14">
+      <div className=" max-w-3xl mx-auto px-3">
         {messages.map((message, index) => {
           return (
             <React.Fragment key={message.id || index}>
