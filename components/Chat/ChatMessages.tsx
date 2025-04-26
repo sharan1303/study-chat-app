@@ -149,7 +149,7 @@ const formatAssistantContent = (content: string) => {
               const { inline, className, children, ...rest } = props;
               return (
                 <CodeBlock
-                  key={Math.random()}
+                  key={`code-${inline ? 'inline' : 'block'}-${children}`}
                   inline={inline}
                   className={className}
                   {...rest}
@@ -358,7 +358,7 @@ export default function ChatMessages({
   };
   return (
     <div className="flex-1 overflow-y-auto pt-14">
-      <div className=" max-w-3xl mx-auto px-3">
+      <div className="max-w-3xl mx-auto px-4">
         {messages.map((message, index) => {
           return (
             <React.Fragment key={message.id || index}>

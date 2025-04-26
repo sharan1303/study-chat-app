@@ -100,12 +100,14 @@ export function getInitializedModel(
         break;
 
       case "azure":
-        const azure = createAzure({
-          baseURL: process.env.AZURE_BASE_URL,
-          apiKey: process.env.AZURE_API_KEY,
-          apiVersion: "2023-03-15-preview",
-        });
+        {
+          const azure = createAzure({
+            baseURL: process.env.AZURE_BASE_URL,
+            apiKey: process.env.AZURE_API_KEY,
+            apiVersion: "2023-03-15-preview",
+          });
         mainModel = azure(actualModelId);
+        }
         break;
 
       default:
@@ -128,12 +130,14 @@ export function getInitializedModel(
         });
         break;
       case "azure":
-        const azure = createAzure({
-          baseURL: process.env.AZURE_BASE_URL,
-          apiKey: process.env.AZURE_API_KEY,
-          apiVersion: "2023-03-15-preview",
-        });
+        {
+          const azure = createAzure({
+            baseURL: process.env.AZURE_BASE_URL,
+            apiKey: process.env.AZURE_API_KEY,
+            apiVersion: "2023-03-15-preview",
+          });
         mainModel = azure(defaultModelId);
+        }
         break;
       default:
         // Fallback failed, hard error
