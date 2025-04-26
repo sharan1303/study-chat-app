@@ -97,7 +97,7 @@ function CodeBlock({ inline, className, children, ...props }: CodeBlockProps) {
             {
               margin: 0,
               padding: "1rem",
-              backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "ffffff",
+              backgroundColor: resolvedTheme === "dark" ? "#1e293b" : "#e7ecf2",
               borderRadius: "0 0 0.375rem 0.375rem",
               fontSize: "0.875rem",
               lineHeight: "1.5",

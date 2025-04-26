@@ -71,6 +71,16 @@ export default function ChatInput({
     adjustTextareaHeight();
   }, [input]);
 
+  // Update fileNames when files prop changes (e.g., when navigating back to a chat)
+  useEffect(() => {
+    if (files && files.length > 0) {
+      const names = Array.from(files).map((file) => file.name);
+      setFileNames(names);
+    }
+    // Only clear filenames if files is explicitly null/undefined, not on every render without files
+    // This prevents the banner from disappearing when the component rerenders
+  }, [files]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFiles?.(e.target.files);
@@ -99,7 +109,7 @@ export default function ChatInput({
   };
 
   return (
-    <div className="sticky bottom-0 bg-transparent">
+    <div className="sticky bottom-0 bg-none">
       <div className="max-w-3xl mx-auto">
         <form onSubmit={handleFormSubmit}>
           {fileNames.length > 0 && (
@@ -123,16 +133,16 @@ export default function ChatInput({
               ))}
             </div>
           )}
-          <div className="relative">
+          <div className="relative custom-scrollbar">
             <Textarea
               ref={textareaRef}
               placeholder="Type your message here..."
               value={input}
               onChange={handleTextareaChange}
-              className={`flex-1 min-h-[120px] max-h-[300px] border-5 ${
+              className={`flex-1 min-h-[120px] max-h-[300px] ${
                 fileNames.length > 0 ? "rounded-t-none" : "rounded-t-2xl"
-              } rounded-b-none resize-y w-full p-4 pr-36 bg-input
-              }`}
+              } rounded-b-none w-full p-4 pr-24 bg-input
+              `}
               rows={1}
               autoFocus
               onKeyDown={handleKeyDown}
@@ -191,14 +201,14 @@ export default function ChatInput({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="absolute flex justify-between bottom-1 left-1 gap-1">
+            <div className="flex bg-input bottom-1 left-1 gap-2">
               <Select
                 value={selectedModel}
                 onValueChange={(value) => {
                   onModelChange(value as ModelId);
                 }}
               >
-                <SelectTrigger className="min-w-[135px] h-8 focus:ring-0">
+                <SelectTrigger className="max-w-[210px] h-8 focus:ring-0">
                   <SelectValue
                     placeholder={
                       availableModels.find(
@@ -215,34 +225,34 @@ export default function ChatInput({
                   ))}
                 </SelectContent>
               </Select>
-              
+
               {selectedModel !== "gpt-4o-mini" && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant={webSearchEnabled ? "default" : "ghost"}
-                      className="h-8 w-28 rounded-lg"
-                      onClick={toggleWebSearch}
-                      disabled={chatLoading}
-                      aria-label={
-                        webSearchEnabled
-                          ? "Disable web search"
-                          : "Enable web search"
-                      }
-                    >
-                      <Globe className="h-4 w-4 pb-0.5" />
-                      Search
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {webSearchEnabled
-                      ? "Disable web search"
-                      : "Enable web search"}
-                  </TooltipContent>
-                </Tooltip>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant={webSearchEnabled ? "default" : "ghost"}
+                        className="h-8 w-24 rounded-lg"
+                        onClick={toggleWebSearch}
+                        disabled={chatLoading}
+                        aria-label={
+                          webSearchEnabled
+                            ? "Disable web search"
+                            : "Enable web search"
+                        }
+                      >
+                        <Globe className="h-4 w-4 pb-0.5" />
+                        Search
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {webSearchEnabled
+                        ? "Disable web search"
+                        : "Enable web search"}
+                    </TooltipContent>
+                  </Tooltip>
                 </TooltipProvider>
               )}
             </div>
