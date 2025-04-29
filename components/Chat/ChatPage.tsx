@@ -411,6 +411,7 @@ export default function ChatPage({
           handleFormSubmit={typedHandleFormSubmit}
           chatLoading={isLoading}
           handleKeyDown={handleKeyDown}
+          handleStopGeneration={stop}
           files={files}
           setFiles={setFiles}
           webSearchEnabled={webSearchEnabled}

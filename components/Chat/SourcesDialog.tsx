@@ -44,6 +44,13 @@ export default function SourcesDialog({
   sources = [],
   files = [],
 }: SourcesDialogProps) {
+  // Debug logging
+  console.log("SourcesDialog initialized with:", {
+    sourceCount: sources.length,
+    fileCount: files.length,
+    files: files,
+  });
+
   // Generate a key based on the content to ensure component resets when sources/files change
   const dialogKey = React.useMemo(() => {
     const sourceIds = sources.map((s) => s.url).join("|");
@@ -99,7 +106,24 @@ export default function SourcesDialog({
     loadPreviews();
   }, [sources, open, hasSources]);
 
-  if (!hasSources && !hasFiles) return null;
+  // Log when component is unmounted without showing
+  useEffect(() => {
+    return () => {
+      if (!open && (hasSources || hasFiles)) {
+        console.log("SourcesDialog unmounted without being opened", {
+          hasSources,
+          hasFiles,
+          sourceCount: sources.length,
+          fileCount: files.length,
+        });
+      }
+    };
+  }, [open, hasSources, hasFiles, sources.length, files.length]);
+
+  if (!hasSources && !hasFiles) {
+    console.log("SourcesDialog rendering null: no sources or files");
+    return null;
+  }
 
   const itemCount = sources.length + files.length;
   const buttonLabel =
@@ -108,6 +132,8 @@ export default function SourcesDialog({
       : hasSources
       ? `Sources (${sources.length})`
       : `Files (${files.length})`;
+
+  console.log("SourcesDialog rendering button with label:", buttonLabel);
 
   return (
     <div className="mt-2 mb-2">
