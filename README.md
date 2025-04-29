@@ -63,8 +63,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **AI Integration**: Vercel AI SDK
 - **Database**: Prisma ORM with Supabase
 - **AI Models**:
-  - Primary: Gemini 2.0 Flash
-  - Search: Perplexity API
+  - Gemini 2.0 Flash
+  - Gemini 2.0 Flash lite
+  - OpenAI GPT-4o mini
+  - Search: Gemini Search Grounding
+
 - **State Management**: React Context API and Server-sent events (SSE)
 
 ## Environment Variables
