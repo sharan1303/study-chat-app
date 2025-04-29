@@ -1,9 +1,21 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { MessageSquare, X, ExternalLink, Plus, Trash } from "lucide-react";
+import {
+  MessageSquare,
+  X,
+  ExternalLink,
+  Trash,
+  ChevronDown,
+} from "lucide-react";
 import { cn, encodeModuleSlug } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -20,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useNavigation } from "./SidebarParts";
+import { api } from "@/lib/api";
 
 import {
   ContextMenu,
@@ -45,20 +58,89 @@ export interface Chat {
   _currentPath?: string; // Store the current path for active state
 }
 
+export interface PaginationInfo {
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
 interface ChatHistoryProps {
   chats?: Chat[];
   loading?: boolean;
   maxWidth?: string;
+  onLoadMore?: (cursor: string) => Promise<any>;
+  pagination?: PaginationInfo;
 }
 
 export default function ChatHistory({
   chats = [],
   loading = false,
   maxWidth,
+  onLoadMore,
+  pagination,
 }: ChatHistoryProps) {
   const pathname = usePathname();
   const [chatToDelete, setChatToDelete] = useState<Chat | null>(null);
   const { navigate } = useNavigation();
+  const [loadingMore, setLoadingMore] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [isNearBottom, setIsNearBottom] = useState(false);
+
+  // Function to check if user is scrolling near the bottom
+  const handleScroll = useCallback((e: Event) => {
+    if (!scrollAreaRef.current) return;
+
+    const target = e.target as HTMLElement;
+    const scrollPosition = target.scrollTop;
+    const scrollHeight = target.scrollHeight;
+    const clientHeight = target.clientHeight;
+
+    // Load more when user scrolls to within 200px of the bottom
+    const scrollThreshold = 200;
+    const isNearBottom =
+      scrollHeight - scrollPosition - clientHeight < scrollThreshold;
+
+    setIsNearBottom(isNearBottom);
+  }, []);
+
+  // Attach scroll event listener
+  useEffect(() => {
+    const scrollContainer = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    );
+
+    if (scrollContainer) {
+      scrollContainer.addEventListener("scroll", handleScroll);
+
+      return () => {
+        scrollContainer.removeEventListener("scroll", handleScroll);
+      };
+    }
+  }, [handleScroll]);
+
+  // Load more content when user is near bottom
+  useEffect(() => {
+    const loadMore = async () => {
+      if (
+        !isNearBottom ||
+        !pagination?.hasMore ||
+        !pagination?.nextCursor ||
+        loadingMore ||
+        !onLoadMore
+      )
+        return;
+
+      try {
+        setLoadingMore(true);
+        await onLoadMore(pagination.nextCursor);
+      } catch (error) {
+        console.error("Failed to load more chats:", error);
+      } finally {
+        setLoadingMore(false);
+      }
+    };
+
+    loadMore();
+  }, [isNearBottom, pagination, loadingMore, onLoadMore]);
 
   // Function to group chats by time periods
   const groupChatsByDate = (chats: Chat[]) => {
@@ -295,9 +377,9 @@ export default function ChatHistory({
       <div className="flex items-center justify-between px-4 h-8">
         <h2 className="text-sm font-semibold">Chat History</h2>
       </div>
-      <ScrollArea className="h-full pb-8">
+      <ScrollArea ref={scrollAreaRef} className="h-full pb-8">
         <div className="py-1">
-          {loading ? (
+          {loading && chats.length === 0 ? (
             <div className="flex items-center justify-center py-4">
               <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-r-transparent" />
             </div>
@@ -311,6 +393,13 @@ export default function ChatHistory({
               {!loading && chats.length === 0 && (
                 <div className="px-4 py-3 text-center">
                   <p className="text-sm text-muted-foreground">No chats yet</p>
+                </div>
+              )}
+
+              {/* Loading indicator at bottom when fetching more */}
+              {loadingMore && pagination?.hasMore && (
+                <div className="px-4 py-3 flex justify-center">
+                  <div className="animate-spin h-4 w-4 border-2 border-primary rounded-full border-r-transparent" />
                 </div>
               )}
             </div>

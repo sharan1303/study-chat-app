@@ -23,7 +23,7 @@ export default function Header() {
           onClick={handleSearchClick}
           title={`Search (${getOSModifierKey()}+K)`}
         >
-          <Search className="h-5 w-5" />
+          <Search className="h-4 w-4" />
         </Button>
         <ThemeToggle />
       </div>

@@ -142,30 +142,34 @@ export async function POST(request: Request) {
     // Only try to fetch user data if we should save history with a userId
     if (shouldSaveHistory && userId) {
       try {
-        // Find the user by Clerk ID
-        user = await prisma.user.findUnique({
-          where: { id: userId },
-        });
-
-        // If user doesn't exist, create a new one using Clerk data
-        if (!user && currentUserObj) {
-          user = await prisma.user.create({
-            data: {
+        // Find the user by Clerk ID or create using upsert operation
+        if (userId) {
+          user = await prisma.user.upsert({
+            where: { id: userId },
+            update: {
+              email:
+                currentUserObj?.emailAddresses[0]?.emailAddress ||
+                "user@example.com",
+              name: currentUserObj?.firstName
+                ? `${currentUserObj.firstName} ${currentUserObj.lastName || ""}`
+                : "Anonymous User",
+            },
+            create: {
               id: userId,
               email:
-                currentUserObj.emailAddresses[0]?.emailAddress ||
+                currentUserObj?.emailAddresses[0]?.emailAddress ||
                 "user@example.com",
-              name: currentUserObj.firstName
+              name: currentUserObj?.firstName
                 ? `${currentUserObj.firstName} ${currentUserObj.lastName || ""}`
                 : "Anonymous User",
             },
           });
         }
 
-        if (!user) {
-          console.error(`Failed to find or create user with ID: ${userId}`);
+        if (!user && userId) {
+          console.error(`Failed to upsert user with ID: ${userId}`);
           return Response.json(
-            { error: "User not found and could not be created" },
+            { error: "User could not be created or updated" },
             { status: 500 }
           );
         }

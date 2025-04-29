@@ -90,9 +90,16 @@ function ClientSidebarContent({
   const pathname = usePathname();
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // State for chat history
+  // State for chat history with pagination
   const [chats, setChats] = useState<Chat[]>([]);
   const [loadingChats, setLoadingChats] = useState(true);
+  const [chatPagination, setChatPagination] = useState<{
+    hasMore: boolean;
+    nextCursor: string | null;
+  }>({
+    hasMore: false,
+    nextCursor: null,
+  });
 
   // Get active module from URL if not provided in props
   const currentModule = searchParams?.get("module") || null;
@@ -117,18 +124,36 @@ function ClientSidebarContent({
   }, [isLoaded]);
 
   // Fetch chats function
-  const fetchChats = useCallback(async () => {
+  const fetchChats = useCallback(async (cursor?: string) => {
     try {
-      const data = await api.getChatHistory();
-      // Handle different response formats
-      if (Array.isArray(data)) {
-        return data;
-      } else if (data && Array.isArray(data.chats)) {
-        return data.chats;
+      const data = await api.getChatHistory({
+        limit: 20,
+        cursor,
+      });
+
+      // Handle the new response format
+      if (data && Array.isArray(data.chats)) {
+        return {
+          chats: data.chats,
+          pagination: data.pagination,
+        };
+      } else if (Array.isArray(data)) {
+        // Fallback for backward compatibility
+        return {
+          chats: data,
+          pagination: { hasMore: false, nextCursor: null },
+        };
       }
-      return [];
+
+      return {
+        chats: [],
+        pagination: { hasMore: false, nextCursor: null },
+      };
     } catch (error) {
-      return [];
+      return {
+        chats: [],
+        pagination: { hasMore: false, nextCursor: null },
+      };
     }
   }, []);
 
@@ -177,17 +202,38 @@ function ClientSidebarContent({
     [modules]
   );
 
-  // Fetch chat history function - refreshes the chat list
+  // Fetch initial chat history
   const refreshChatHistory = useCallback(async () => {
     setLoadingChats(true);
     try {
-      const chats = await fetchChats();
-      setChats(chats);
+      const result = await fetchChats();
+      setChats(result.chats);
+      setChatPagination(result.pagination);
     } catch (error) {
+      console.error("Error refreshing chat history:", error);
     } finally {
       setLoadingChats(false);
     }
   }, [fetchChats]);
+
+  // Load more chats
+  const loadMoreChats = useCallback(
+    async (cursor: string) => {
+      try {
+        const result = await fetchChats(cursor);
+
+        // Append new chats to existing ones
+        setChats((prevChats) => [...prevChats, ...result.chats]);
+        setChatPagination(result.pagination);
+
+        return result;
+      } catch (error) {
+        console.error("Error loading more chats:", error);
+        throw error;
+      }
+    },
+    [fetchChats]
+  );
 
   // Set up Server-Sent Events (SSE) for real-time updates
   useEffect(() => {
@@ -310,6 +356,33 @@ function ClientSidebarContent({
           // Handle different event types
           if (data.type === "CONNECTION_ACK") {
             // Connection confirmed by server
+          } else if (data.type === "RECONNECT") {
+            // Server is requesting a reconnection (Vercel timeout)
+            console.log("Server requested reconnection - reconnecting SSE");
+
+            // Close the existing connection
+            if (es) {
+              es.close();
+              eventSourceRef.current = null;
+            }
+
+            // Create a new connection after a short delay
+            setTimeout(() => {
+              try {
+                const newEs = new EventSource(url, { withCredentials: true });
+                eventSourceRef.current = newEs;
+
+                // Set up the same handlers on the new connection
+                newEs.onopen = es.onopen;
+                newEs.onerror = es.onerror;
+                newEs.onmessage = es.onmessage;
+              } catch (reconnectError) {
+                console.error(
+                  "Failed to reconnect after server request:",
+                  reconnectError
+                );
+              }
+            }, 1000);
           } else if (
             isEventType(EVENT_TYPES.MODULE_CREATED, "module.created")
           ) {
@@ -509,6 +582,10 @@ function ClientSidebarContent({
                 return [newChat, ...prevChats];
               }
             });
+            setChatPagination(prev => ({
+              ...prev,
+              hasMore: prev.hasMore || chats.length >= 20
+            }));
           } else if (
             isEventType(EVENT_TYPES.MESSAGE_CREATED, "message.created")
           ) {
@@ -703,6 +780,10 @@ function ClientSidebarContent({
               // Fall back to refresh if data is incomplete
               refreshChatHistory();
             }
+            setChatPagination(prev => ({
+              ...prev,
+              hasMore: prev.hasMore || chats.length >= 20
+            }));
           } else if (
             isEventType(EVENT_TYPES.USER_MESSAGE_SENT, "user.message.sent")
           ) {
@@ -1020,6 +1101,10 @@ function ClientSidebarContent({
                   return [newChat, ...prevChats];
                 }
               });
+              setChatPagination(prev => ({
+                ...prev,
+                hasMore: prev.hasMore || chats.length >= 20
+              }));
             } else {
               // Invalid or incomplete user message data in event
               refreshChatHistory();
@@ -1294,6 +1379,10 @@ function ClientSidebarContent({
           return [optimisticChat, ...prevChats];
         }
       });
+      setChatPagination(prev => ({
+        ...prev,
+        hasMore: prev.hasMore || chats.length >= 20
+      }));
 
       return optimisticChat.id;
     },
@@ -1528,6 +1617,8 @@ function ClientSidebarContent({
               chats={chats}
               loading={loadingChats}
               maxWidth={isMobile ? "270px" : "240px"}
+              onLoadMore={loadMoreChats}
+              pagination={chatPagination}
             />
           </div>
         )}

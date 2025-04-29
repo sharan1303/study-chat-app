@@ -1,6 +1,17 @@
 import { getOrCreateSessionIdClient } from "./session";
 
 /**
+ * Chat history response interface
+ */
+export interface ChatHistoryResponse {
+  chats: any[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+}
+
+/**
  * API client for making requests to the backend
  * Automatically handles session IDs for anonymous users
  */
@@ -121,14 +132,26 @@ export const api = {
   },
 
   /**
-   * Get chat history
+   * Chat history response interface
    */
-  async getChatHistory() {
+  async getChatHistory(options?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<ChatHistoryResponse> {
     const sessionId = getOrCreateSessionIdClient();
 
     const params = new URLSearchParams();
     if (sessionId) {
       params.append("sessionId", sessionId);
+    }
+
+    // Add pagination parameters if provided
+    if (options?.limit) {
+      params.append("limit", options.limit.toString());
+    }
+
+    if (options?.cursor) {
+      params.append("cursor", options.cursor);
     }
 
     // Add a timestamp to avoid caching
@@ -144,10 +167,20 @@ export const api = {
       throw new Error(`Failed to fetch chat history: ${response.statusText}`);
     }
 
-    // Get the response as JSON - this returns an array directly
+    // Get the response JSON
     const data = await response.json();
 
-    // Return the data directly as it's already in the right format (array of chats)
+    // Handle backward compatibility with old API format
+    if (Array.isArray(data)) {
+      return {
+        chats: data,
+        pagination: {
+          hasMore: false,
+          nextCursor: null,
+        },
+      };
+    }
+
     return data;
   },
 

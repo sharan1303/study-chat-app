@@ -4,6 +4,9 @@ import { SESSION_ID_KEY } from "@/lib/session";
 import { EventData } from "@/lib/events";
 import { setupBroadcastEvent } from "@/lib/events/broadcast";
 
+// Max connection duration for Vercel serverless (slightly less than 90s limit)
+const MAX_CONNECTION_DURATION = 85 * 1000; // 85 seconds
+
 // Track connection attempts for debugging
 const connectionAttempts = new Map();
 
@@ -42,17 +45,6 @@ export async function GET(request: NextRequest) {
   clientAttempts.count++;
   clientAttempts.lastAttempt = Date.now();
 
-  // Check if this client already has an active connection
-  const hasExistingConnection = global.sseClients?.some(
-    (c) => c.id === clientId
-  );
-  if (hasExistingConnection) {
-    console.log(
-      `Client ${clientId} already has an active connection. Cleaning up old connection.`
-    );
-    // We'll establish a new connection and the old one will be removed when it's aborted
-  }
-
   // Set headers for SSE
   const headers = new Headers({
     "Content-Type": "text/event-stream",
@@ -65,10 +57,11 @@ export async function GET(request: NextRequest) {
     "Access-Control-Allow-Headers": "Content-Type",
   });
 
-  // Create a readable stream for sending events
+  // Create a readable stream for sending events with timeout for Vercel
   const stream = new ReadableStream({
     start(controller) {
       const encoder = new TextEncoder();
+      const startTime = Date.now();
 
       // Send an initial message to establish the connection
       controller.enqueue(
@@ -110,19 +103,31 @@ export async function GET(request: NextRequest) {
                 error
               );
             }
-            // Cleanup client on stream close
-            if (global.sseClients) {
-              global.sseClients = global.sseClients.filter(
-                (c) => c.id !== client.id
-              );
-            }
+            // Remove client from global array
+            removeClient(client.id);
             clearInterval(heartbeatInterval);
+            clearTimeout(connectionTimeout);
           }
         },
       };
 
-      // Add to global clients list
-      // Check if there's an existing client with same ID - remove it first
+      // Function to remove client from global array
+      const removeClient = (id: string) => {
+        if (global.sseClients) {
+          const beforeCount = global.sseClients.length;
+          global.sseClients = global.sseClients.filter(
+            (c) => c.id !== id || c.connectedAt > client.connectedAt
+          );
+          // Log only if we actually removed something
+          if (beforeCount !== global.sseClients.length) {
+            console.log(
+              `SSE client ${id} removed. Remaining clients: ${global.sseClients.length}`
+            );
+          }
+        }
+      };
+
+      // Check for existing client with same ID - remove it first
       if (global.sseClients) {
         const existingClientIndex = global.sseClients.findIndex(
           (c) => c.id === clientId
@@ -152,24 +157,35 @@ export async function GET(request: NextRequest) {
 
       // Define cleanup when connection is closed
       request.signal.addEventListener("abort", () => {
-        // Remove client from global list when connection closes
-        if (global.sseClients) {
-          const beforeCount = global.sseClients.length;
-          global.sseClients = global.sseClients.filter(
-            (c) => c.id !== client.id || c.connectedAt > client.connectedAt
-          );
-          // Only log if we actually removed something
-          if (beforeCount !== global.sseClients.length) {
-            console.log(
-              `SSE client ${client.id} removed. Remaining clients: ${global.sseClients.length}`
-            );
-          }
-        }
+        removeClient(client.id);
+        clearInterval(heartbeatInterval);
+        clearTimeout(connectionTimeout);
       });
 
-      // Set up a heartbeat to keep the connection alive
+      // Set up a heartbeat to keep the connection alive (every 15 seconds)
       const heartbeatInterval = setInterval(() => {
         try {
+          // Check if we're close to the timeout limit
+          if (Date.now() - startTime > MAX_CONNECTION_DURATION - 5000) {
+            // Send a special reconnect message and close this connection
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: "RECONNECT",
+                  timestamp: new Date().toISOString(),
+                  message: "Connection timeout - please reconnect",
+                })}\n\n`
+              )
+            );
+
+            // Close this connection
+            controller.close();
+            removeClient(client.id);
+            clearInterval(heartbeatInterval);
+            clearTimeout(connectionTimeout);
+            return;
+          }
+
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({
@@ -181,23 +197,46 @@ export async function GET(request: NextRequest) {
           client.lastActivity = Date.now();
         } catch (error) {
           console.error(`Heartbeat error for client ${client.id}:`, error);
+          removeClient(client.id);
           clearInterval(heartbeatInterval);
+          clearTimeout(connectionTimeout);
         }
-      }, 30000); // Send heartbeat every 30 seconds
+      }, 15000); // Send heartbeat every 15 seconds
 
-      // Clean up interval on abort
-      request.signal.addEventListener("abort", () => {
-        clearInterval(heartbeatInterval);
-      });
+      // Set a forced timeout for Vercel serverless functions
+      const connectionTimeout = setTimeout(() => {
+        try {
+          // Send reconnect instruction before closing
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "RECONNECT",
+                timestamp: new Date().toISOString(),
+                message: "Connection timeout - please reconnect",
+              })}\n\n`
+            )
+          );
+
+          // Close controller
+          controller.close();
+          removeClient(client.id);
+          clearInterval(heartbeatInterval);
+        } catch (error) {
+          console.error(
+            `Error closing connection for client ${client.id}:`,
+            error
+          );
+        }
+      }, MAX_CONNECTION_DURATION);
     },
   });
 
   return new Response(stream, { headers });
 }
 
-// Clean up dead connections periodically
-const CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const CONNECTION_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+// Clean up dead connections periodically (shorter interval for Vercel)
+const CLEANUP_INTERVAL = 60 * 1000; // 1 minute
+const CONNECTION_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 
 if (typeof global !== "undefined") {
   // Only set up in a server environment

@@ -112,7 +112,6 @@ export const ModuleForm = ({
       setIsSubmitting(true);
 
       if (initialData) {
-
         // Check if we need to add sessionId
         let updateUrl = `/api/modules/${initialData.id}`;
         if (!isSignedIn && sessionId) {
@@ -133,23 +132,25 @@ export const ModuleForm = ({
         }
         // SSE will handle the update, no need for additional refreshes
       } else {
-
         try {
           const createdModule = await api.createModule(values);
 
-          // Close the dialog
-          triggerSuccess();
+          toast.success("Module created successfully");
 
           // Dispatch a global event for module creation to refresh the modules list
           if (typeof window !== "undefined") {
+            // Use the same event for both creation notification and dialog closing
             window.dispatchEvent(
-              new CustomEvent("module.created", {
+              new CustomEvent(successEventName || "module.created", {
                 detail: createdModule,
               })
             );
           }
 
-          // No need to force a page reload - SSE will handle the sidebar update
+          // Close the dialog
+          triggerSuccess();
+
+          // No need for a separate event dispatch since we used successEventName above
         } catch (error: unknown) {
           console.error("Error creating module:", error);
           const errorMessage =
