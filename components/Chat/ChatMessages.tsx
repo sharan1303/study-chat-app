@@ -19,16 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export interface ChatMessagesProps {
-  messages: Message[];
-  scrollContainerRef?: React.RefObject<HTMLDivElement>;
-  modelName: string;
-  isLoading?: boolean;
-  copyToClipboard?: (text: string, messageId: string) => void;
-  copiedMessageId?: string | null;
-  stop?: () => void;
-}
-
+// Define content types
 interface TextContent {
   type: "text";
   text: string;
@@ -42,6 +33,16 @@ interface FileContent {
 }
 
 type MessageContent = TextContent | FileContent;
+
+export interface ChatMessagesProps {
+  messages: Message[];
+  scrollContainerRef?: React.RefObject<HTMLDivElement>;
+  modelName: string;
+  isLoading?: boolean;
+  copyToClipboard?: (text: string, messageId: string) => void;
+  copiedMessageId?: string | null;
+  stop?: () => void;
+}
 
 // Helper function to extract text from message content for clipboard
 const getClipboardText = (content: string | MessageContent[]) => {
@@ -57,51 +58,69 @@ const getClipboardText = (content: string | MessageContent[]) => {
 const renderMessageContent = (
   content: string | MessageContent[],
   messageId: string,
-  isAssistant: boolean
+  isAssistant: boolean,
+  message?: Message
 ) => {
   // Collect file attachments for the SourcesDialog
   const files: FileAttachmentType[] = [];
 
+  // Try to extract file attachments from message metadata if available
+  if (message && (message as any).metadata?.files) {
+    const metadataFiles = (message as any).metadata.files as any[];
+    metadataFiles.forEach((file) => {
+      if (file.name && file.type) {
+        files.push({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: file.url,
+        });
+      }
+    });
+  }
+
+  // If this is an assistant message, look for file attachments in content array
+  if (Array.isArray(content)) {
+    content.forEach((part) => {
+      if (part.type === "file") {
+        const fileContent = part as FileContent;
+        const fileExists = files.some(
+          (f) => f.name === fileContent.name && f.type === fileContent.mimeType
+        );
+
+        if (!fileExists) {
+          files.push({
+            name: fileContent.name || `File${files.length + 1}`,
+            type: fileContent.mimeType,
+            url: `data:${fileContent.mimeType};base64,${fileContent.data}`,
+            size: fileContent.data
+              ? Math.ceil(fileContent.data.length * 0.75)
+              : undefined,
+          });
+        }
+      }
+    });
+  }
+
   if (typeof content === "string") {
     if (isAssistant) {
       // Format assistant message with markdown and handle sources
-      return formatAssistantContent(content);
+      return formatAssistantContent(content, files);
     }
     // Simple text rendering for user messages
     return <div>{content}</div>;
   }
 
   if (Array.isArray(content)) {
-    // Extract file attachments
-    content.forEach((part) => {
-      if (part.type === "file") {
-        const fileContent = part as FileContent;
-        files.push({
-          name: fileContent.name || `File${files.length + 1}`,
-          type: fileContent.mimeType,
-          url: `data:${fileContent.mimeType};base64,${fileContent.data}`,
-          size: fileContent.data
-            ? Math.ceil(fileContent.data.length * 0.75)
-            : undefined, // Estimate size from base64
-        });
-      }
-    });
-
     const textContent = content.filter((part) => part.type === "text");
 
     return (
       <div className="w-full">
-        {files.length > 0 && (
-          <div className="mb-4">
-            <SourcesDialog files={files} />
-          </div>
-        )}
-
-        {/* Render text parts */}
+        {/* Render text parts with files */}
         {textContent.map((part, i) => {
           if (part.type === "text") {
             return isAssistant ? (
-              <div key={i}>{formatAssistantContent(part.text)}</div>
+              <div key={i}>{formatAssistantContent(part.text, files)}</div>
             ) : (
               <div key={i}>{part.text}</div>
             );
@@ -131,62 +150,62 @@ const renderMessageContent = (
 };
 
 // Function to format assistant message content with markdown and handle sources
-const formatAssistantContent = (content: string) => {
+const formatAssistantContent = (
+  content: string,
+  files?: FileAttachmentType[]
+) => {
   // Extract sources for the dialog
   const sources = extractSourcesFromContent(content);
 
-  // Check if the message has a sources section
+  // Always show the sources dialog if we have sources or files
+  const hasSources = sources.length > 0;
+  const hasFiles = files && files.length > 0;
+  const shouldShowSourcesDialog = hasSources || hasFiles;
+
+  // Debug logging
+  console.log("formatAssistantContent:", {
+    hasSources,
+    hasFiles,
+    shouldShowSourcesDialog,
+    sourceCount: sources.length,
+    fileCount: files?.length || 0,
+    files: files,
+  });
+
+  // Check if the message has a sources section to split the content
   const sourcesSectionRegex = /---\s*\n\s*\*\*Sources:\*\*/;
-  if (sourcesSectionRegex.test(content)) {
-    const [mainContent] = content.split(/---\s*\n/);
+  const hasSourcesSection = sourcesSectionRegex.test(content);
 
-    return (
-      <>
-        {sources.length > 0 && <SourcesDialog sources={sources} />}
-        <ReactMarkdown
-          components={{
-            code(props: any) {
-              const { inline, className, children, ...rest } = props;
-              return (
-                <CodeBlock
-                  key={`code-${inline ? 'inline' : 'block'}-${children}`}
-                  inline={inline}
-                  className={className}
-                  {...rest}
-                >
-                  {children}
-                </CodeBlock>
-              );
-            },
-          }}
-        >
-          {mainContent}
-        </ReactMarkdown>
-      </>
-    );
-  }
+  // If we have a sources section, only show the main content
+  const mainContent = hasSourcesSection
+    ? content.split(/---\s*\n/)[0]
+    : content;
 
-  // If no sources section, render normally
   return (
-    <ReactMarkdown
-      components={{
-        code(props: any) {
-          const { inline, className, children, ...rest } = props;
-          return (
-            <CodeBlock
-              key={Math.random()}
-              inline={inline}
-              className={className}
-              {...rest}
-            >
-              {children}
-            </CodeBlock>
-          );
-        },
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+    <>
+      {shouldShowSourcesDialog && (
+        <SourcesDialog sources={sources} files={files || []} />
+      )}
+      <ReactMarkdown
+        components={{
+          code(props: any) {
+            const { inline, className, children, ...rest } = props;
+            return (
+              <CodeBlock
+                key={`code-${inline ? "inline" : "block"}-${Math.random()}`}
+                inline={inline}
+                className={className}
+                {...rest}
+              >
+                {children}
+              </CodeBlock>
+            );
+          },
+        }}
+      >
+        {mainContent}
+      </ReactMarkdown>
+    </>
   );
 };
 
@@ -219,10 +238,11 @@ const UserMessage: React.FC<{
     <div
       ref={messageRef}
       key={`user-${message.id}`}
-      className="flex flex-col items-end group relative"
+      className="flex flex-col items-end group relative user-message"
+      data-message-id={message.id}
     >
       <div className="rounded-xl p-4 bg-card text-card-foreground break-words">
-        {renderMessageContent(message.content, message.id, false)}
+        {renderMessageContent(message.content, message.id, false, message)}
       </div>
       <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <TooltipProvider>
@@ -267,6 +287,17 @@ const AssistantMessage: React.FC<{
 }> = ({ message, modelName, copyToClipboard, isCopied }) => {
   const messageRef = useRef<HTMLDivElement>(null);
 
+  // Debug message metadata
+  React.useEffect(() => {
+    console.log("AssistantMessage metadata:", {
+      messageId: message.id,
+      hasMetadata: !!(message as any).metadata,
+      metadata: (message as any).metadata,
+      contentType: typeof message.content,
+      isArray: Array.isArray(message.content),
+    });
+  }, [message]);
+
   // Add keyboard shortcut listener
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -289,10 +320,11 @@ const AssistantMessage: React.FC<{
     <div
       ref={messageRef}
       key={`assistant-${message.id}`}
-      className="text-gray-800 dark:text-gray-200 group relative"
+      className="text-gray-800 dark:text-gray-200 group relative assistant-message"
+      data-message-id={message.id}
     >
       <div className="prose prose-xs dark:prose-invert max-w-none w-full break-words prose-spacing text-sm">
-        {renderMessageContent(message.content, message.id, true)}
+        {renderMessageContent(message.content, message.id, true, message)}
       </div>
       <div className="mb-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-5">
         <TooltipProvider>

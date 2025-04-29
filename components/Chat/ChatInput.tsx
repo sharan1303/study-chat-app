@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, Loader2, Paperclip, X, Globe, ChevronDown, Square, Fullscreen, SquareActivity, SquareIcon } from "lucide-react";
+import { Send, Paperclip, X, Globe, Square } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +25,7 @@ interface ChatInputProps {
   handleFormSubmit: (e: React.FormEvent) => void;
   chatLoading: boolean;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  handleStopGeneration?: () => void;
   files?: FileList | null;
   setFiles?: (files: FileList | null) => void;
   webSearchEnabled?: boolean;
@@ -40,6 +41,7 @@ export default function ChatInput({
   handleFormSubmit,
   chatLoading,
   handleKeyDown,
+  handleStopGeneration,
   files,
   setFiles,
   webSearchEnabled = false,
@@ -83,9 +85,41 @@ export default function ChatInput({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      // Log file info for debugging
+      logAttachments(e.target.files);
+
       setFiles?.(e.target.files);
       const names = Array.from(e.target.files).map((file) => file.name);
       setFileNames(names);
+    }
+  };
+
+  // Helper function to log file attachments for debugging
+  const logAttachments = async (files: FileList) => {
+    try {
+      // Create an array of attachment data to log
+      const attachmentsToLog = await Promise.all(
+        Array.from(files).map(async (file) => {
+          return {
+            name: file.name,
+            mimeType: file.type,
+            size: file.size,
+            // We don't need to send the full data for logging
+            data: "data-preview-removed-for-logging",
+          };
+        })
+      );
+
+      // Send to our logging endpoint
+      await fetch("/api/chat/attachments-log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ attachments: attachmentsToLog }),
+      });
+    } catch (error) {
+      console.error("Error logging attachments:", error);
     }
   };
 
@@ -152,7 +186,8 @@ export default function ChatInput({
               ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
-              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.tiff,.ico,.webp"
+              accept=".pdf,.png,.jpg,.jpeg,.gif,.bmp,.tiff,.ico,.webp"
+              // accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.tiff,.ico,.webp,.csv,.xls,.xlsx,.ppt,.pptx"
               multiple
               aria-label="Upload attachments"
             />
@@ -180,24 +215,33 @@ export default function ChatInput({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      type="submit"
-                      size="icon"
-                      className="h-10 w-10 rounded-lg"
-                      disabled={
-                        chatLoading ||
-                        (!input.trim() && (!files || files.length === 0))
-                      }
-                      aria-label="Send message"
-                    >
-                      {chatLoading ? (
-                        <Square className="h-5 w-5" />
-                      ) : (
+                    {chatLoading ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        className="h-10 w-10 rounded-lg"
+                        onClick={handleStopGeneration}
+                        aria-label="Stop generation"
+                      >
+                        <Square className="h-5 w-5 fill-current" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="submit"
+                        size="icon"
+                        className="h-10 w-10 rounded-lg"
+                        disabled={
+                          !input.trim() && (!files || files.length === 0)
+                        }
+                        aria-label="Send message"
+                      >
                         <Send className="h-5 w-5" />
-                      )}
-                    </Button>
+                      </Button>
+                    )}
                   </TooltipTrigger>
-                  <TooltipContent>Send message</TooltipContent>
+                  <TooltipContent>
+                    {chatLoading ? "Stop generation" : "Send message"}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>

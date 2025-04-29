@@ -72,8 +72,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { messages, chatId, moduleId } = body;
     const sessionId = body.sessionId || null;
-    // We keep this parameter but don't use it anymore since we always want to broadcast AI responses
-    // const skipMessageBroadcast = body.skipMessageBroadcast || false;
     const optimisticChatId = body.optimisticChatId || null;
     // Extract experimental_attachments if available
     const attachments = body.experimental_attachments || null;
@@ -181,36 +179,128 @@ export async function POST(request: Request) {
     }
 
     // Process messages for content extraction and format adjustment
-    const processedMessages = messages.map((message: Message) => {
+    let processedMessages = messages.map((message: Message) => {
       // For all messages, just return as is - we'll handle content type differences when needed
       return message;
     });
+
+    // Validate attachment count and total size
+    const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_ATTACHMENTS = 5;
+
+    if (attachments && attachments.length > MAX_ATTACHMENTS) {
+      return Response.json(
+        { error: `Too many attachments. Maximum allowed: ${MAX_ATTACHMENTS}` },
+        { status: 400 }
+      );
+    }
+
+    let totalSize = 0;
+    for (const att of attachments || []) {
+      // Estimate size from base64
+      totalSize += att.data ? Math.ceil(att.data.length * 0.75) : 0;
+      if (totalSize > MAX_ATTACHMENT_SIZE) {
+        return Response.json(
+          {
+            error: `Attachments too large. Maximum allowed: ${
+              MAX_ATTACHMENT_SIZE / (1024 * 1024)
+            }MB`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Handle attachments in the last user message if it exists
     if (attachments && processedMessages.length > 0) {
       const lastMessageIndex = processedMessages.length - 1;
       const lastMessage = processedMessages[lastMessageIndex];
 
-      // Only process if it's a user message
       if (lastMessage.role === "user") {
-        const content =
+        const contentArray =
           typeof lastMessage.content === "string"
             ? [{ type: "text", text: lastMessage.content }]
             : lastMessage.content;
+        const updatedContent = [...contentArray];
 
-        // Add file attachments to the content array
-        const updatedContent = [...content];
+        // Log all attachments for debugging
+        console.log(`Processing ${attachments.length} attachments`);
+        attachments.forEach(
+          (
+            att: { data: string; mimeType: string; name?: string },
+            index: number
+          ) => {
+            console.log(
+              `Attachment #${index + 1}: ${att.mimeType} ${att.name || ""}`
+            );
+          }
+        );
 
-        // Process each attachment
-        attachments.forEach((att: { data: string; mimeType: string }) => {
-          updatedContent.push({
-            type: "file",
-            data: att.data,
-            mimeType: att.mimeType,
-          });
-        });
+        try {
+          // Add valid attachments to the message
+          attachments.forEach(
+            (att: { data: string; mimeType: string; name?: string }) => {
+              // Add some validation
+              if (!att.data || !att.mimeType) {
+                console.warn(
+                  `Skipping invalid attachment: missing data or mimeType`
+                );
+                return;
+              }
 
-        processedMessages[lastMessageIndex].content = updatedContent;
+              // Ensure the attachment has reasonable size
+              const estimatedSize = att.data
+                ? Math.ceil(att.data.length * 0.75)
+                : 0;
+              if (estimatedSize <= 0) {
+                console.warn(`Skipping empty attachment`);
+                return;
+              }
+
+              // Check file type for debugging
+              const isDocument = [
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/vnd.oasis.opendocument.text",
+                "application/vnd.oasis.opendocument.spreadsheet",
+                "application/vnd.oasis.opendocument.presentation",
+                "application/rtf",
+                "text/plain",
+                "text/csv",
+              ].includes(att.mimeType);
+
+              if (isDocument) {
+                console.log(`Processing document attachment: ${att.mimeType}`);
+              }
+
+              // Add the attachment to the message content
+              updatedContent.push({
+                type: "file",
+                data: att.data,
+                mimeType: att.mimeType,
+                name: att.name,
+              });
+
+              console.log(
+                `Successfully added attachment: ${att.mimeType}, size: ${
+                  estimatedSize / 1024
+                }KB`
+              );
+            }
+          );
+
+          // Update the message with all valid attachments
+          const updatedMessages = [...processedMessages];
+          updatedMessages[lastMessageIndex] = {
+            ...updatedMessages[lastMessageIndex],
+            content: updatedContent,
+          };
+          processedMessages = updatedMessages;
+        } catch (attachmentError) {
+          console.error("Error processing attachments:", attachmentError);
+          // Continue with the request even if attachments fail
+        }
       }
     }
 
@@ -359,6 +449,59 @@ export async function POST(request: Request) {
               }
             );
           }
+
+          // Add user file attachments to the AI's response metadata
+          const fileAttachments: any[] = [];
+
+          // Step 1: Always extract file attachments from the last user message
+          const lastUserMessage = processedMessages.find(
+            (msg: Message) => msg.role === "user"
+          );
+
+          if (lastUserMessage) {
+            if (Array.isArray(lastUserMessage.content)) {
+              lastUserMessage.content.forEach((part: any) => {
+                if (part.type === "file") {
+                  fileAttachments.push({
+                    name: part.name || `File`,
+                    type: part.mimeType,
+                    size: part.data
+                      ? Math.ceil(part.data.length * 0.75)
+                      : undefined,
+                  });
+                }
+              });
+            }
+          }
+
+          // Step 2: Also collect any attachments sent directly
+          if (attachments && attachments.length > 0) {
+            for (const att of attachments) {
+              if (att.name && att.mimeType) {
+                // Check for duplicates
+                const isDuplicate = fileAttachments.some(
+                  (existing) =>
+                    existing.name === att.name && existing.type === att.mimeType
+                );
+
+                if (!isDuplicate) {
+                  fileAttachments.push({
+                    name: att.name,
+                    type: att.mimeType,
+                    size: att.data
+                      ? Math.ceil(att.data.length * 0.75)
+                      : undefined,
+                  });
+                }
+              }
+            }
+          }
+
+          // Add metadata to the message
+          (completion as any).metadata = {
+            ...(completion as any).metadata,
+            files: fileAttachments,
+          };
 
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {

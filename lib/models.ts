@@ -8,7 +8,7 @@ export const SUPPORTED_MODELS = {
   "gemini-2.0-flash": "Gemini 2.0 Flash",
   "gemini-2.5-flash-preview-04-17": "Gemini 2.5 Flash Preview",
   "gemini-2.0-flash-lite": "Gemini 2.0 Flash Lite",
-  "gpt-4o-mini": "GPT-4o-mini",
+  "gpt-4o-mini": "GPT-4o-mini"
 } as const;
 
 /**

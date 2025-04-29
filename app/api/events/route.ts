@@ -98,7 +98,25 @@ export async function GET(request: NextRequest) {
             );
             client.lastActivity = Date.now();
           } catch (error) {
-            console.error(`Error sending event to client ${client.id}:`, error);
+            // If controller is already closed, skip logging
+            if (
+              !(
+                error instanceof TypeError &&
+                error.message.includes("Controller is already closed")
+              )
+            ) {
+              console.error(
+                `Error sending event to client ${client.id}:`,
+                error
+              );
+            }
+            // Cleanup client on stream close
+            if (global.sseClients) {
+              global.sseClients = global.sseClients.filter(
+                (c) => c.id !== client.id
+              );
+            }
+            clearInterval(heartbeatInterval);
           }
         },
       };
