@@ -88,6 +88,7 @@ export default clerkMiddleware(
     authorizedParties: [
       process.env.NEXT_PUBLIC_CLERK_FRONTEND_API || "http://localhost:3000",
     ],
+    contentSecurityPolicy: {},
   }
 );
 

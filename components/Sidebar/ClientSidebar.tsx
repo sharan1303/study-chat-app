@@ -18,19 +18,33 @@ import {
   SidebarRail,
 } from "@/components/Sidebar/SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
+
 import ModuleList from "./ModuleList";
 import ChatHistory from "./ChatHistory";
 import UserSection from "./UserSection";
+
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { encodeModuleSlug, cn } from "@/lib/utils";
+import { encodeModuleSlug, cn, getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
+import { Edit, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { EVENT_TYPES } from "@/lib/events";
 import { getOrCreateSessionIdClient } from "@/lib/session";
-import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { Separator } from "@radix-ui/react-separator";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+} from "@radix-ui/react-dialog";
+import { ModuleForm } from "../dialogs/ModuleForm";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Define module type
 export interface Module {
@@ -76,9 +90,16 @@ function ClientSidebarContent({
   const pathname = usePathname();
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // State for chat history
+  // State for chat history with pagination
   const [chats, setChats] = useState<Chat[]>([]);
   const [loadingChats, setLoadingChats] = useState(true);
+  const [chatPagination, setChatPagination] = useState<{
+    hasMore: boolean;
+    nextCursor: string | null;
+  }>({
+    hasMore: false,
+    nextCursor: null,
+  });
 
   // Get active module from URL if not provided in props
   const currentModule = searchParams?.get("module") || null;
@@ -103,18 +124,36 @@ function ClientSidebarContent({
   }, [isLoaded]);
 
   // Fetch chats function
-  const fetchChats = useCallback(async () => {
+  const fetchChats = useCallback(async (cursor?: string) => {
     try {
-      const data = await api.getChatHistory();
-      // Handle different response formats
-      if (Array.isArray(data)) {
-        return data;
-      } else if (data && Array.isArray(data.chats)) {
-        return data.chats;
+      const data = await api.getChatHistory({
+        limit: 20,
+        cursor,
+      });
+
+      // Handle the new response format
+      if (data && Array.isArray(data.chats)) {
+        return {
+          chats: data.chats,
+          pagination: data.pagination,
+        };
+      } else if (Array.isArray(data)) {
+        // Fallback for backward compatibility
+        return {
+          chats: data,
+          pagination: { hasMore: false, nextCursor: null },
+        };
       }
-      return [];
+
+      return {
+        chats: [],
+        pagination: { hasMore: false, nextCursor: null },
+      };
     } catch (error) {
-      return [];
+      return {
+        chats: [],
+        pagination: { hasMore: false, nextCursor: null },
+      };
     }
   }, []);
 
@@ -163,17 +202,38 @@ function ClientSidebarContent({
     [modules]
   );
 
-  // Fetch chat history function - refreshes the chat list
+  // Fetch initial chat history
   const refreshChatHistory = useCallback(async () => {
     setLoadingChats(true);
     try {
-      const chats = await fetchChats();
-      setChats(chats);
+      const result = await fetchChats();
+      setChats(result.chats);
+      setChatPagination(result.pagination);
     } catch (error) {
+      console.error("Error refreshing chat history:", error);
     } finally {
       setLoadingChats(false);
     }
   }, [fetchChats]);
+
+  // Load more chats
+  const loadMoreChats = useCallback(
+    async (cursor: string) => {
+      try {
+        const result = await fetchChats(cursor);
+
+        // Append new chats to existing ones
+        setChats((prevChats) => [...prevChats, ...result.chats]);
+        setChatPagination(result.pagination);
+
+        return result;
+      } catch (error) {
+        console.error("Error loading more chats:", error);
+        throw error;
+      }
+    },
+    [fetchChats]
+  );
 
   // Set up Server-Sent Events (SSE) for real-time updates
   useEffect(() => {
@@ -296,6 +356,33 @@ function ClientSidebarContent({
           // Handle different event types
           if (data.type === "CONNECTION_ACK") {
             // Connection confirmed by server
+          } else if (data.type === "RECONNECT") {
+            // Server is requesting a reconnection (Vercel timeout)
+            console.log("Server requested reconnection - reconnecting SSE");
+
+            // Close the existing connection
+            if (es) {
+              es.close();
+              eventSourceRef.current = null;
+            }
+
+            // Create a new connection after a short delay
+            setTimeout(() => {
+              try {
+                const newEs = new EventSource(url, { withCredentials: true });
+                eventSourceRef.current = newEs;
+
+                // Set up the same handlers on the new connection
+                newEs.onopen = es.onopen;
+                newEs.onerror = es.onerror;
+                newEs.onmessage = es.onmessage;
+              } catch (reconnectError) {
+                console.error(
+                  "Failed to reconnect after server request:",
+                  reconnectError
+                );
+              }
+            }, 1000);
           } else if (
             isEventType(EVENT_TYPES.MODULE_CREATED, "module.created")
           ) {
@@ -495,6 +582,10 @@ function ClientSidebarContent({
                 return [newChat, ...prevChats];
               }
             });
+            setChatPagination(prev => ({
+              ...prev,
+              hasMore: prev.hasMore || chats.length >= 20
+            }));
           } else if (
             isEventType(EVENT_TYPES.MESSAGE_CREATED, "message.created")
           ) {
@@ -689,6 +780,10 @@ function ClientSidebarContent({
               // Fall back to refresh if data is incomplete
               refreshChatHistory();
             }
+            setChatPagination(prev => ({
+              ...prev,
+              hasMore: prev.hasMore || chats.length >= 20
+            }));
           } else if (
             isEventType(EVENT_TYPES.USER_MESSAGE_SENT, "user.message.sent")
           ) {
@@ -1006,6 +1101,10 @@ function ClientSidebarContent({
                   return [newChat, ...prevChats];
                 }
               });
+              setChatPagination(prev => ({
+                ...prev,
+                hasMore: prev.hasMore || chats.length >= 20
+              }));
             } else {
               // Invalid or incomplete user message data in event
               refreshChatHistory();
@@ -1280,6 +1379,10 @@ function ClientSidebarContent({
           return [optimisticChat, ...prevChats];
         }
       });
+      setChatPagination(prev => ({
+        ...prev,
+        hasMore: prev.hasMore || chats.length >= 20
+      }));
 
       return optimisticChat.id;
     },
@@ -1394,35 +1497,86 @@ function ClientSidebarContent({
           <Link
             href="/chat"
             className={cn(
-              "text-xl font-bold",
+              "text-xl font-medium",
               state === "expanded" || isMobile ? "block" : "hidden"
             )}
           >
-            Study Chat
+            study chat
           </Link>
           <div
             className={cn(
               "flex items-center gap-1",
               state === "collapsed" &&
                 !isMobile &&
-                "fixed left-[0.75rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md"
+                "fixed left-[0.5rem] top-3 bg-[hsl(var(--sidebar-background))] rounded-md shadow-md"
             )}
           >
-            <SidebarTrigger />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNewChat}
-              title={`New chat (${modifierKey}+${SHORTCUTS.NEW_CHAT})`}
-              className={cn(
-                "h-9 w-9",
-                state === "collapsed" &&
-                  !isMobile &&
-                  "bg-[hsl(var(--sidebar-background))]"
-              )}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarTrigger />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>
+                    Collapse sidebar (
+                    {`${modifierKey}+${SHORTCUTS.TOGGLE_SIDEBAR}`})
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleNewChat}
+                    className={cn(
+                      "h-9 w-9",
+                      state === "collapsed" &&
+                        !isMobile &&
+                        "bg-[hsl(var(--sidebar-background))]"
+                    )}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>New chat ({`${modifierKey}+${SHORTCUTS.NEW_CHAT}`})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {state === "collapsed" && (
+              <Dialog>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-accent h-9 w-9"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>
+                        Create New Module (
+                        {`${modifierKey}+${SHORTCUTS.NEW_MODULE}`})
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DialogContent>
+                  <DialogTitle className="text-xl font-bold">
+                    Create New Module
+                  </DialogTitle>
+                  <ModuleForm successEventName="module.created" />
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
       </SidebarHeader>
@@ -1463,6 +1617,8 @@ function ClientSidebarContent({
               chats={chats}
               loading={loadingChats}
               maxWidth={isMobile ? "270px" : "240px"}
+              onLoadMore={loadMoreChats}
+              pagination={chatPagination}
             />
           </div>
         )}

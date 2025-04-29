@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { generateId, decodeModuleSlug } from "@/lib/utils";
-import ClientChatPage from "@/components/Chat/ClientChatPage";
+import ChatPage from "@/components/Chat/ChatPage";
 import { ChatPageLoading } from "@/components/Chat/ChatPageLoading";
 import { useMemo } from "react";
 import { Message } from "@ai-sdk/react";
@@ -354,11 +354,9 @@ export default function NewModuleChat() {
     return <ChatPageLoading />;
   }
 
-  // Debug log right before rendering
-  console.log("Final moduleData being passed to ClientChatPage:", moduleData);
 
   return (
-    <ClientChatPage
+    <ChatPage
       initialModuleDetails={moduleData}
       chatId={chatId}
       initialMessages={[welcomeMessage]}

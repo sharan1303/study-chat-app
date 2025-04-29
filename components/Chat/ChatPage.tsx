@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Loader2 } from "lucide-react";
-import { Message, useChat } from "@ai-sdk/react";
+import { Message } from "@ai-sdk/react";
 import { toast } from "sonner";
 import { ModuleWithResources } from "@/lib/actions";
 import { useRouter } from "next/navigation";
@@ -10,17 +10,16 @@ import { encodeModuleSlug } from "@/lib/utils";
 import Header from "../Main/Header";
 import dynamic from "next/dynamic";
 
+// Import the useFileChat hook for PDF support
+import { useFileChat } from "@/hooks/useOptionsChat";
+import { AVAILABLE_MODELS, SUPPORTED_MODELS } from "@/lib/models";
+
 // Import the components that don't need to be loaded dynamically
 import ChatInput from "./ChatInput";
 import ChatModuleHeader from "./ChatModuleHeader";
 
 // Dynamically import components that are not needed immediately
 const ChatMessages = dynamic(() => import("./ChatMessages"), {
-  loading: () => (
-    <div className="flex-1 overflow-y-auto p-4">
-      <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-    </div>
-  ),
   ssr: false,
 });
 
@@ -28,7 +27,7 @@ const WelcomeScreen = dynamic(() => import("./WelcomeScreen"), {
   loading: () => (
     <div className="text-center flex items-center justify-center h-96"></div>
   ),
-  ssr: false,
+  ssr: true,
 });
 
 /**
@@ -48,7 +47,7 @@ const WelcomeScreen = dynamic(() => import("./WelcomeScreen"), {
  *
  * @returns The rendered chat interface as a React element.
  */
-export default function ClientChatPage({
+export default function ChatPage({
   initialModuleDetails,
   chatId,
   initialMessages = [],
@@ -65,8 +64,6 @@ export default function ClientChatPage({
   forceOldest?: boolean;
   isNewChat?: boolean;
 }) {
-  const [showLogo, setShowLogo] = React.useState(false);
-
   // Store the optimistic chat ID
   const [optimisticChatId, setOptimisticChatId] = React.useState<string | null>(
     null
@@ -77,15 +74,6 @@ export default function ClientChatPage({
   const [displayTitle, setDisplayTitle] = React.useState(
     isNewChat ? "New Chat" : initialTitle
   );
-
-  // After mounting, we have access to the theme
-  React.useEffect(() => {
-    // Add a small delay before showing the logo to prevent flashing
-    const timer = setTimeout(() => {
-      setShowLogo(true);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, []);
 
   // These states are used for initial values and potential future updates
   const [activeModule] = React.useState<string | null>(
@@ -196,20 +184,18 @@ export default function ClientChatPage({
     []
   );
 
-  // Memoize the chat options to prevent unnecessary re-initialization
-  const chatOptions = React.useMemo(
+  // Create stable base options that won't change across renders
+  const baseOptions = React.useMemo(
     () => ({
       api: "/api/chat",
       id: chatId,
       initialMessages,
+      // Include essential fields that are needed for initialization
+      // but are unlikely to change during the component's lifecycle
       body: {
-        moduleId: activeModule,
+        // Keep minimal stable body properties here
         chatId: chatId,
         isAuthenticated: isAuthenticated,
-        sessionId: !isAuthenticated ? sessionId : undefined,
-        title: initialTitle,
-        forceOldest: forceOldest,
-        optimisticChatId: optimisticChatId,
       },
       onResponse: (response: Response) => {
         // Try to extract model information from headers if available
@@ -255,27 +241,51 @@ export default function ClientChatPage({
     [
       chatId,
       initialMessages,
-      activeModule,
       isAuthenticated,
-      moduleDetails,
-      sessionId,
       router,
-      initialTitle,
-      forceOldest,
-      optimisticChatId,
+      moduleDetails,
+      activeModule,
     ]
   );
 
+  // Initialize chat with stable options only
   const {
     messages,
     input,
     handleInputChange,
     handleSubmit,
-    isLoading: chatLoading,
-  } = useChat(chatOptions);
+    isLoading,
+    stop,
+    files,
+    setFiles,
+    webSearchEnabled,
+    setWebSearchEnabled,
+    selectedModel,
+    setSelectedModel,
+  } = useFileChat(baseOptions);
 
   // Keep track if we've already updated the title for first message
   const hasUpdatedTitle = React.useRef(false);
+
+  // Keep track of messages length for scrolling
+  const previousMessagesLengthRef = React.useRef(messages.length);
+
+  // When messages change, scroll to the bottom if a new message was added
+  React.useEffect(() => {
+    // If a new message was added
+    if (messages.length > previousMessagesLengthRef.current) {
+      const newestMessage = messages[messages.length - 1];
+
+      // If the newest message is from the user, scroll to the latest message
+      if (newestMessage.role === "user" && scrollContainerRef.current) {
+        // We'll let the ChatMessages component handle the scrolling
+        // since it has refs to the actual message elements
+      }
+
+      // Update the reference
+      previousMessagesLengthRef.current = messages.length;
+    }
+  }, [messages]);
 
   // When messages change, check if we should update the title
   React.useEffect(() => {
@@ -306,6 +316,14 @@ export default function ClientChatPage({
     isNewChat,
   ]);
 
+  // Update modelName when selectedModel changes
+  React.useEffect(() => {
+    // Update the displayed model name based on the selected model ID
+    if (selectedModel && SUPPORTED_MODELS[selectedModel]) {
+      setModelName(SUPPORTED_MODELS[selectedModel]);
+    }
+  }, [selectedModel]);
+
   // Function to handle navigation to module details page
   const navigateToModuleDetails = React.useCallback(() => {
     if (moduleDetails) {
@@ -314,126 +332,114 @@ export default function ClientChatPage({
     }
   }, [moduleDetails, router]);
 
-  // Handle form submission with optimized event handler
-  const handleFormSubmit = React.useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      if (input.trim() && !chatLoading) {
-        // ONLY add optimistic entry for truly new chats with no messages
-        // and only on the root chat path
-        if (
-          isNewChat &&
-          messages.length === 0 &&
-          sidebarChatUpdater.current &&
-          (chatId === "new" || !chatId.includes("-"))
-        ) {
-          // Create a first message-based title
-          const title =
-            input.trim().substring(0, 50) + (input.length > 50 ? "..." : "");
+  // Handle form submission with some extra logic for first-time messages
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-          // Save the current path to help with maintaining the active state
-          const currentPath = window.location.pathname;
+    // Only process if we have actual input or files
+    const hasText = input && input.trim().length > 0;
+    const hasFiles = files && files.length > 0;
 
-          // Only add optimistic chat if we're on a root chat path AND this is a new chat
-          if (
-            (currentPath === "/chat" || currentPath.endsWith("/chat")) &&
-            !optimisticChatId
-          ) {
-            // Add the chat optimistically to the sidebar and store the ID
-            const newOptimisticId = sidebarChatUpdater.current(
-              title,
-              activeModule,
-              false,
-              currentPath
-            );
-            if (newOptimisticId) {
-              setOptimisticChatId(newOptimisticId);
-            }
-          }
-        }
+    if (!hasText && !hasFiles) {
+      return;
+    }
 
-        handleSubmit(e);
+    // If this is a first message, create an optimistic chat entry in the sidebar
+    if (isFirstMessage && sidebarChatUpdater.current) {
+      // Create a better chat title based on the first message
+      let title = input.trim();
+      if (title.length > 60) {
+        title = title.substring(0, 60) + "...";
       }
-    },
-    [
-      input,
-      chatLoading,
-      handleSubmit,
-      isNewChat,
-      messages.length,
-      sidebarChatUpdater,
-      activeModule,
-      chatId,
-      optimisticChatId,
-    ]
-  );
+
+      // Update the display title immediately
+      setDisplayTitle(title);
+
+      // Add to sidebar and get the optimistic ID (which may be used for updating later)
+      const generatedOptimisticId = sidebarChatUpdater.current(
+        title,
+        activeModule
+      );
+      setOptimisticChatId(generatedOptimisticId);
+
+      // No longer the first message
+      setIsFirstMessage(false);
+    }
+
+    // Pass dynamic body parameters with this specific submission
+    handleSubmit(e as React.FormEvent<HTMLFormElement>, {
+      body: {
+        moduleId: activeModule,
+        sessionId: !isAuthenticated ? sessionId : undefined,
+        title: initialTitle,
+        forceOldest: forceOldest,
+        optimisticChatId: optimisticChatId,
+      },
+    });
+  };
 
   // Handle keyboard event
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        if (input.trim() && !chatLoading) {
+        if (input.trim() && !isLoading) {
           const form = e.currentTarget.form;
           if (form) form.requestSubmit();
         }
       }
     },
-    [input, chatLoading]
+    [input, isLoading]
   );
 
+  // Create a type assertion for the handleFormSubmit to match the ChatInput props
+  const typedHandleFormSubmit = handleFormSubmit as (
+    e: React.FormEvent
+  ) => void;
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      {/* Header component */}
+    <div className="flex flex-col h-screen">
+      {/* Chat header */}
       <Header />
 
-      {/* Module Header - Fixed position */}
-      {moduleDetails && (
-        <ChatModuleHeader
-          moduleDetails={moduleDetails}
-          navigateToModuleDetails={navigateToModuleDetails}
-        />
-      )}
-
-      {/* Main Content Area with Scrollbar - Make it span the full page */}
       <div
+        className="flex-1 overflow-y-auto custom-scrollbar"
         ref={scrollContainerRef}
-        className={`flex-1 flex flex-col ${
-          messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
-        } pr-0 scroll-smooth scrollbar-smooth custom-scrollbar`}
       >
-        {/* Chat content centered container */}
-        <div className="flex-1">
-          {/* Ensure chat thread has same width as input by using identical container classes */}
-          <div className="max-w-3xl mx-auto transition-all duration-200">
-            {/* Use the same padding as the input container */}
-            <div className="px-0">
-              {messages.length === 0 ? (
-                <WelcomeScreen showLogo={showLogo} />
-              ) : (
-                <div className="flex flex-col space-y-8 pt-14 px-4 pb-8">
-                  <ChatMessages
-                    messages={messages}
-                    modelName={modelName}
-                  />
-                </div>
-              )}
-              {chatLoading && (
-                <div className="pl-8 pr-6 mt-4">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        {messages.length === 0 ? (
+          <WelcomeScreen
+            moduleDetails={moduleDetails}
+            chatId={chatId}
+            modelName={modelName}
+          />
+        ) : (
+          <ChatMessages
+            messages={messages}
+            isLoading={isLoading}
+            modelName={modelName}
+            copyToClipboard={copyToClipboard}
+            copiedMessageId={copiedMessageId}
+            stop={stop}
+            scrollContainerRef={scrollContainerRef}
+          />
+        )}
+      </div>
 
-        {/* Input form - Now using the ChatInput component */}
+      <div>
         <ChatInput
           input={input}
           handleInputChange={handleInputChange}
-          handleFormSubmit={handleFormSubmit}
-          chatLoading={chatLoading}
+          handleFormSubmit={typedHandleFormSubmit}
+          chatLoading={isLoading}
           handleKeyDown={handleKeyDown}
+          handleStopGeneration={stop}
+          files={files}
+          setFiles={setFiles}
+          webSearchEnabled={webSearchEnabled}
+          setWebSearchEnabled={setWebSearchEnabled}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          availableModels={AVAILABLE_MODELS}
         />
       </div>
     </div>

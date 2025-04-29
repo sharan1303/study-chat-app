@@ -447,7 +447,7 @@ export function ResourceUploadDialog({
                       disabled={!!preselectedModuleId || isLoading}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full bg-secondary shadow-none">
                           <SelectValue placeholder="Select a module" />
                         </SelectTrigger>
                       </FormControl>

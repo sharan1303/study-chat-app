@@ -7,6 +7,8 @@ import { useKeyboardShortcuts } from "@/context/keyboard-shortcuts-context";
 
 // Custom event name for opening the module dialog - must match the one in command-k.tsx
 const OPEN_MODULE_DIALOG_EVENT = "open-module-dialog";
+// Event for module creation
+const MODULE_CREATED_EVENT = "module.created";
 
 /**
  * GlobalModuleDialog component
@@ -47,6 +49,18 @@ export function GlobalModuleDialog() {
     };
   }, []);
 
+  // Listen for module created event to close the dialog
+  useEffect(() => {
+    const handleModuleCreated = () => {
+      setIsOpen(false);
+    };
+
+    window.addEventListener(MODULE_CREATED_EVENT, handleModuleCreated);
+    return () => {
+      window.removeEventListener(MODULE_CREATED_EVENT, handleModuleCreated);
+    };
+  }, []);
+
   const handleSuccess = () => {
     setIsOpen(false);
   };
@@ -54,12 +68,12 @@ export function GlobalModuleDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent>
-        <DialogTitle className="text-xl font-bold ml-4">
+        <DialogTitle className="text-xl font-normal ml-4">
           Create New Module
         </DialogTitle>
         <ModuleForm
           onSuccess={handleSuccess}
-          successEventName="module.created"
+          successEventName={MODULE_CREATED_EVENT}
         />
       </DialogContent>
     </Dialog>

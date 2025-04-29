@@ -29,6 +29,19 @@ Using Vercel AI SDK to power conversations with AI models, it provides a good se
 **Profile Management**: Integrated Clerk user profile management\
 **Responsive Design**: Optimized for both desktop and mobile devices
 
+## Chat with PDF Support
+
+This application now supports chatting with PDFs! Users can upload PDF documents and ask questions about them. The application uses Google Gemini 2.0 Flash to analyze the PDF content and provide responses based on the document.
+
+## How to Use PDF Chat
+
+1. Click the paperclip icon next to the chat input
+2. Select a PDF file to upload
+3. Ask questions about the PDF content
+4. The AI will analyze the document and provide relevant answers
+
+PDF support is integrated directly into the chat interface, allowing seamless interaction with documents while maintaining conversation context.
+
 ## Getting Started
 
 To run the application locally, follow these steps:
@@ -50,30 +63,48 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **AI Integration**: Vercel AI SDK
 - **Database**: Prisma ORM with Supabase
 - **AI Models**:
-  - Primary: Gemini 2.0 Flash
-  - Search: Perplexity API
+  - Gemini 2.0 Flash
+  - Gemini 2.0 Flash lite
+  - OpenAI GPT-4o mini
+  - Search: Gemini Search Grounding
+
 - **State Management**: React Context API and Server-sent events (SSE)
 
 ## Environment Variables
 
-Create a `.env` file with the following variables:
+The app uses the following environment variables:
 
-```bash
-# Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
+- `CLERK_SECRET_KEY`: For authentication with Clerk
+- `CLERK_PUBLISHABLE_KEY`: For authentication with Clerk
+- `DATABASE_URL`: Your PostgreSQL connection string
+- `DIRECT_URL`: Direct URL to your PostgreSQL database (required for Prisma)
+- `GOOGLE_AI_API_KEY`: Google AI API key for Gemini models
+- `OPENAI_API_KEY`: OpenAI API key for GPT models
 
-# Database
-DATABASE_URL=your_database_url
+### Setting Up API Keys
 
-# AI Models
-GOOGLE_API_KEY=your_google_api_key
-PERPLEXITY_API_KEY=your_perplexity_api_key
+#### Google AI API Key (Required for default operation)
 
-# Dynamic Rendering
-NEXT_PUBLIC_FORCE_DYNAMIC=true
-NEXT_PRIVATE_STANDALONE=1
+1. Visit the [Google AI Studio](https://aistudio.google.com/) and sign up for an account
+2. Create an API key from the settings page
+3. Add it to your .env.local file:
+
 ```
+GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+```
+
+#### OpenAI API Key (Optional)
+
+The application supports OpenAI models (GPT-4o and GPT-3.5 Turbo). To use them:
+
+1. Create an account at [OpenAI](https://platform.openai.com/)
+2. Create an API key and add it to your .env.local file:
+
+```
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+For more details, see the [OpenAI Setup Documentation](docs/openai-setup.md).
 
 ## Project Structure
 
@@ -83,7 +114,7 @@ NEXT_PRIVATE_STANDALONE=1
   - `chat/` - General chat interface
   - `modules/` - Module management UI
   - `settings/` - User settings and preferences
-  - `ClientChatPage` - Client-side chat page interface
+  - `ChatPage` - Client-side chat page interface
 - `components/` - Reusable UI components
   - `ui/` - Shadcn UI components
   - User interface elements (Sidebar, Chat, etc.)

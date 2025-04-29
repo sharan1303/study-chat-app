@@ -15,7 +15,7 @@ export default function Header() {
   };
 
   return (
-    <div className="absolute top-3.5 right-3 flex-shrink-0">
+    <div className="rounded-lg bg-[hsl(var(--sidebar-background))] absolute top-3 right-3 flex-shrink-0 z-50 h-9 shadow-md">
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"

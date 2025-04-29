@@ -90,7 +90,6 @@ export function decodeModuleSlug(encodedSlug: string): string {
   }
 
   try {
-
     // Next.js already decodes the URL parameters, so we don't need to decode again
     // This avoids double-decoding issues that can corrupt the string
     const decodedSlug = encodedSlug;
@@ -142,7 +141,7 @@ export function formatChatTitle(message: string): string {
 
 export function getOSModifierKey() {
   if (typeof navigator === "undefined") return "⌘"; // Default to Mac on SSR
-  
+
   const isMac = /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform);
   return isMac ? "⌘" : "Ctrl";
 }
@@ -154,3 +153,36 @@ export const SHORTCUTS = {
   NEW_MODULE: "J",
   UPLOAD_RESOURCE: "U",
 };
+
+export function extractSourcesFromContent(
+  content: string
+): { title: string; url: string }[] {
+  const sources: { title: string; url: string }[] = [];
+
+  // Check if the message has a sources section
+  if (!content.includes("---") || !content.includes("**Sources:**")) {
+    return sources;
+  }
+
+  // Extract the sources section
+  const sourcesSectionMatch = content.split(/---\s*\n/);
+  if (sourcesSectionMatch.length < 2) return sources;
+
+  const sourcesSection = sourcesSectionMatch[1];
+
+  // Extract markdown links with regex
+  // Format: [Title](URL)
+  const linkRegex = /\d+\.\s*\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g;
+  let match;
+
+  while ((match = linkRegex.exec(sourcesSection)) !== null) {
+    if (match[1] && match[2]) {
+      sources.push({
+        title: match[1].trim(),
+        url: match[2].trim(),
+      });
+    }
+  }
+
+  return sources;
+}

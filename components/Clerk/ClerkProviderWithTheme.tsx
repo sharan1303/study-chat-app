@@ -42,6 +42,7 @@ export function ClerkProviderWithTheme({
     <ClerkProvider
       appearance={clerkAppearance}
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      dynamic
     >
       {children}
     </ClerkProvider>

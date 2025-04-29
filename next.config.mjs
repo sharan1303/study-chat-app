@@ -21,6 +21,23 @@ const nextConfig = {
         protocol: "https",
         hostname: "images.clerk.dev",
       },
+      {
+        protocol: "https",
+        hostname: "www.youtube.com",
+      },
+      // Common domains for source images
+      {
+        protocol: "https",
+        hostname: "*.google.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.ytimg.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.googleusercontent.com",
+      },
     ],
   },
 

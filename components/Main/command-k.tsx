@@ -161,10 +161,10 @@ export function CommandK() {
     <CommandDialog open={open} onOpenChange={setOpen}>
       <DialogTitle className="sr-only">Command Menu</DialogTitle>
       <CommandInput
-        placeholder={`Type a command or search for modules and chats... (${modKey}+K)`}
+        placeholder={`Type a command or search for modules and chats (${modKey}+K)`}
         value={searchQuery}
         onValueChange={setSearchQuery}
-        className="bg-transparent border-none focus:ring-0"
+        className="bg-muted border-none shadow-none"
       />
       <CommandList>
         <CommandEmpty>

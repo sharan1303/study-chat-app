@@ -1,6 +1,17 @@
 import { getOrCreateSessionIdClient } from "./session";
 
 /**
+ * Chat history response interface
+ */
+export interface ChatHistoryResponse {
+  chats: any[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+}
+
+/**
  * API client for making requests to the backend
  * Automatically handles session IDs for anonymous users
  */
@@ -121,14 +132,26 @@ export const api = {
   },
 
   /**
-   * Get chat history
+   * Chat history response interface
    */
-  async getChatHistory() {
+  async getChatHistory(options?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<ChatHistoryResponse> {
     const sessionId = getOrCreateSessionIdClient();
 
     const params = new URLSearchParams();
     if (sessionId) {
       params.append("sessionId", sessionId);
+    }
+
+    // Add pagination parameters if provided
+    if (options?.limit) {
+      params.append("limit", options.limit.toString());
+    }
+
+    if (options?.cursor) {
+      params.append("cursor", options.cursor);
     }
 
     // Add a timestamp to avoid caching
@@ -144,10 +167,20 @@ export const api = {
       throw new Error(`Failed to fetch chat history: ${response.statusText}`);
     }
 
-    // Get the response as JSON - this returns an array directly
+    // Get the response JSON
     const data = await response.json();
 
-    // Return the data directly as it's already in the right format (array of chats)
+    // Handle backward compatibility with old API format
+    if (Array.isArray(data)) {
+      return {
+        chats: data,
+        pagination: {
+          hasMore: false,
+          nextCursor: null,
+        },
+      };
+    }
+
     return data;
   },
 
@@ -209,3 +242,59 @@ export const api = {
     return response.json();
   },
 };
+
+/**
+ * Fetch metadata for a URL to generate a link preview
+ */
+export async function fetchLinkPreview(url: string) {
+  try {
+    // Add a timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort("Request timeout"),
+      10000
+    ); // Increased to 10 second timeout
+
+    try {
+      const response = await fetch(
+        `/api/link-preview?url=${encodeURIComponent(url)}`,
+        { signal: controller.signal }
+      );
+
+      // Clear the timeout as soon as the request completes
+      clearTimeout(timeoutId);
+
+      // Get the json regardless of status - our API now returns a valid response even for errors
+      const data = await response.json();
+      return data;
+    } catch (fetchError) {
+      // Clear timeout to prevent memory leaks
+      clearTimeout(timeoutId);
+
+      // Re-throw the error to be handled by the outer catch
+      throw fetchError;
+    }
+  } catch (error) {
+    console.error("Error fetching link preview:", error);
+
+    // Return a default object with basic information
+    try {
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname;
+
+      return {
+        success: false,
+        url,
+        title: hostname,
+        favicon: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
+      };
+    } catch (parseError) {
+      // Handle URL parsing errors
+      return {
+        success: false,
+        url,
+        title: url,
+      };
+    }
+  }
+}

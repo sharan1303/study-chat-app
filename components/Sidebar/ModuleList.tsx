@@ -18,6 +18,12 @@ import { getOSModifierKey, SHORTCUTS } from "@/lib/utils";
 import { useNavigation } from "./SidebarParts";
 import { useSidebar } from "@/context/sidebar-context";
 import { ModuleContextMenu } from "./ModuleContextMenu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 // Define the Module type here instead of importing from Sidebar
 export interface Module {
@@ -123,9 +129,9 @@ export default function ModuleList({
   return (
     <div className="flex flex-col h-full">
       {!collapsed && (
-        <div className="px-2 py-1 flex items-center justify-between">
+        <div className="pl-2 pr-4 py-1 flex items-center justify-between">
           <Button
-            variant={pathname?.startsWith("/modules") ? "secondary" : "ghost"}
+            variant={pathname === "/modules" ? "accent" : "ghost"}
             className="justify-start hover:bg-accent w-40 pl-2 pb-2 text-left"
             asChild
             title="Open Dashboard"
@@ -139,23 +145,35 @@ export default function ModuleList({
           </Button>
 
           <Dialog open={isCreating} onOpenChange={setIsCreating}>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hover:bg-accent h-8 w-8 mr-2.5"
-                title={`Create New Module (${getOSModifierKey()}+${
-                  SHORTCUTS.NEW_MODULE
-                })`}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:bg-accent h-9 w-9"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>
+                    Create New Module (
+                    {`${getOSModifierKey()}+${SHORTCUTS.NEW_MODULE}`})
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <DialogContent>
-              <DialogTitle className="text-xl font-bold ml-4">
+              <DialogTitle className="text-xl font-bold">
                 Create New Module
               </DialogTitle>
-              <ModuleForm successEventName="module.created" />
+              <ModuleForm
+                successEventName="module.created"
+                onSuccess={handleCreateSuccess}
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -184,7 +202,10 @@ export default function ModuleList({
                     <DialogTitle className="text-xl font-bold ml-4">
                       Create New Module
                     </DialogTitle>
-                    <ModuleForm successEventName="module.created" />
+                    <ModuleForm
+                      successEventName="module.created"
+                      onSuccess={handleCreateSuccess}
+                    />
                   </DialogContent>
                 </Dialog>
               </div>
