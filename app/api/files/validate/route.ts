@@ -309,7 +309,17 @@ async function validateDocument(
     if (mimeType === "text/plain" || mimeType === "text/csv") {
       try {
         // Try to decode as UTF-8 to ensure it's valid text
-        documentBinaryData.toString("utf-8");
+        const decoded = documentBinaryData.toString("utf-8");
+        
+        // Check for control characters that might indicate binary content
+        // misrepresented as text (excludes tabs, newlines, etc.)
+        const hasSuspiciousControlChars = /[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(decoded);
+        if (hasSuspiciousControlChars) {
+          return NextResponse.json(
+            { error: "Invalid text file: contains control characters" },
+            { status: 400 }
+          );
+        }
       } catch (e) {
         return NextResponse.json(
           { error: "Invalid text encoding in document" },

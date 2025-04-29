@@ -164,7 +164,7 @@ export function CommandK() {
         placeholder={`Type a command or search for modules and chats (${modKey}+K)`}
         value={searchQuery}
         onValueChange={setSearchQuery}
-        className="bg-secondary border-none shadow-none"
+        className="bg-muted border-none shadow-none"
       />
       <CommandList>
         <CommandEmpty>

@@ -85,9 +85,10 @@ export async function POST(request: Request) {
         documentBinaryData = Buffer.from(cleanBase64, "base64");
 
         // Verify that the data is actually valid base64
+        const base64Pattern = /^[A-Za-z0-9+/]+={0,2}$/;
         if (
           documentBinaryData.length === 0 ||
-          documentBinaryData.toString("base64") !== cleanBase64
+          !base64Pattern.test(cleanBase64)
         ) {
           console.error("Base64 data is not properly encoded");
           throw new Error("Invalid base64 encoding");

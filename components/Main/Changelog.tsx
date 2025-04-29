@@ -16,7 +16,7 @@ import { getOSModifierKey } from "@/lib/utils";
 import React from "react";
 
 // Version of the app, increment when adding new changelog entries
-const CURRENT_VERSION = "1.0.1";
+const CURRENT_VERSION = "1.0.2";
 const CHANGELOG_COOKIE_KEY = "app_changelog_version";
 
 // Define TypeScript interfaces for our changelog data
@@ -40,91 +40,133 @@ interface VersionEntry {
 
 // Changelog entries in reverse chronological order (newest first)
 const CHANGELOG_ENTRIES: VersionEntry[] = [
+  // {
+  //   version: "1.0.0",
+  //   date: "April 6, 2025",
+  //   changes: [
+  //     {
+  //       type: "Feature",
+  //       description: "Launched Study Chat 🥳",
+  //     },
+  //     {
+  //       type: "Feature",
+  //       description: "Implemented real-time chat features",
+  //     },
+  //     {
+  //       type: "Feature",
+  //       description: "Provide context to your chat using modules",
+  //     },
+  //     {
+  //       type: "Feature",
+  //       description: "Upload documents to provide context",
+  //     },
+  //     {
+  //       type: "Feature",
+  //       description: "Added dark mode and light mode toggle",
+  //     },
+  //   ],
+  // },
+  // // Add more versions here as your app evolves
+  // {
+  //   version: "1.0.1",
+  //   date: "April 18, 2025",
+  //   title: "",
+  //   changes: [
+  //     {
+  //       type: "Fix",
+  //       description: "Resolved issue with user authentication and signup",
+  //     },
+  //     {
+  //       type: "Improvement",
+  //       description: "UI for mobile devices",
+  //     },
+  //     {
+  //       type: "Feature",
+  //       description: `Implement keyboard shortcuts: 
+  //       ◦ Copy chat message (Hover: ${getOSModifierKey()}+C)
+  //       ◦ New chat (${getOSModifierKey()}+I),
+  //       ◦ New module (${getOSModifierKey()}+J)
+  //       ◦ Toggle sidebar (${getOSModifierKey()}+B) 
+  //       ◦ Upload resources (${getOSModifierKey()}+U)
+  //       `,
+  //     },
+  //     {
+  //       type: "Feature",
+  //       description: `Added Search (${getOSModifierKey()}+K) for global navigation and search for modules and chat threads.`,
+  //     },
+  //     {
+  //       type: "Fix",
+  //       description: "Module chats not updating chat history",
+  //     },
+  //     {
+  //       type: "Improvement",
+  //       description: "Speed up app loading time and module dashboard",
+  //     },
+  //     {
+  //       type: "Improvement",
+  //       description: "Chat History displays module name on hover",
+  //     },
+  //   ],
+  // },
   {
-    version: "1.0.0",
-    date: "April 6, 2025",
-    changes: [
-      {
-        type: "Feature",
-        description: "Launched Study Chat 🥳",
-      },
-      {
-        type: "Feature",
-        description: "Implemented real-time chat features",
-      },
-      {
-        type: "Feature",
-        description: "Provide context to your chat using modules",
-      },
-      {
-        type: "Feature",
-        description: "Upload documents to provide context",
-      },
-      {
-        type: "Feature",
-        description: "Added dark mode and light mode toggle",
-      },
-    ],
-  },
-  // Add more versions here as your app evolves
-  {
-    version: "1.0.1",
-    date: "April 18, 2025",
+    version: "1.0.2",
+    date: "30 April 2025",
     title: "",
     changes: [
       {
-        type: "Fix",
-        description: "Resolved issue with user authentication and signup",
-      },
-      {
-        type: "Improvement",
-        description: "UI for mobile devices",
-      },
-      {
         type: "Feature",
-        description: `Implement keyboard shortcuts: 
-        ◦ Copy chat message (Hover: ${getOSModifierKey()}+C)
-        ◦ New chat (${getOSModifierKey()}+I),
-        ◦ New module (${getOSModifierKey()}+J)
-        ◦ Toggle sidebar (${getOSModifierKey()}+B) 
-        ◦ Upload resources (${getOSModifierKey()}+U)
+        description: `Added more AI models: 
+        ◦ Gemini 2.0 Flash (Default)
+        ◦ Gemini 2.0 Flash Lite
+        ◦ Gemini 2.5 Flash Preview
+        ◦ GPT 4o mini
         `,
       },
       {
         type: "Feature",
-        description: `Added Search (${getOSModifierKey()}+K) for global navigation and search for modules and chat threads.`,
-      },
-      {
-        type: "Fix",
-        description: "Module chats not updating chat history",
-      },
-      {
-        type: "Improvement",
-        description: "Speed up app loading time and module dashboard",
-      },
-      {
-        type: "Improvement",
-        description: "Chat History displays module name on hover",
-      },
-    ],
-  },
-  {
-    version: "1.0.2",
-    date: "Coming Soon",
-    title: "",
-    changes: [
-      {
-        type: "Feature",
-        description: "Support for more models",
+        description:
+          "Using Gemini models, you can now query uploaded PDF and image files",
       },
       {
         type: "Feature",
         description:
-          "Module integration directly from chat using @ to call for module context and documents",
+          "Gemini models can search the web",
       },
       {
         type: "Improvement",
-        description: "Uploaded documents added to context",
+        description: "Improved chat interface",
+      },
+    ],
+  },
+  {
+    version: "1.0.3",
+    date: "Coming soon",
+    title: "",
+    changes: [
+      {
+        type: "Feature",
+        description:
+          "RAG support for resources uploaded to modules to add context to your chat",
+      },
+      {
+        type: "Feature",
+        description:
+          "Calling context from modules into your chat using `@` to call for module context and documents",
+      },
+      {
+        type: "Feature",
+        description:
+          "More models to choose from: GPT-4.1 and more Gemini models",
+      },
+      {
+        type: "Feature",
+        description:
+          "Web crawling to give web search context to all AI models",
+      },
+      {
+        type: "Improvement",
+        description:
+          "Faster interface and module dashboard",
       },
     ],
   },

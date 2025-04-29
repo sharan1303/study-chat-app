@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import TypingIndicator from "./TypingIndicator";
 
 // Define content types
 interface TextContent {
@@ -36,7 +37,7 @@ type MessageContent = TextContent | FileContent;
 
 export interface ChatMessagesProps {
   messages: Message[];
-  scrollContainerRef?: React.RefObject<HTMLDivElement>;
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
   modelName: string;
   isLoading?: boolean;
   copyToClipboard?: (text: string, messageId: string) => void;
@@ -378,6 +379,43 @@ export default function ChatMessages({
     string | null
   >(null);
 
+  // Keep track of the last messages count to know when a new message is added
+  const lastMessagesCountRef = useRef<number>(messages.length);
+  // Reference to the latest user message element
+  const latestUserMessageRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the most recent user message when it's added
+  React.useEffect(() => {
+    if (messages.length > lastMessagesCountRef.current) {
+      // Check if the newest message is from the user
+      const newestMessage = messages[messages.length - 1];
+      if (newestMessage.role === "user" && latestUserMessageRef.current) {
+        // Small timeout to ensure DOM is fully updated
+        setTimeout(() => {
+          if (scrollContainerRef?.current) {
+            // Calculate the position to scroll to (adjust for header height)
+            // Adding more space (120px instead of 80px) from the top of the viewport
+            const scrollTop = latestUserMessageRef.current
+              ? latestUserMessageRef.current.offsetTop - 120
+              : 0;
+            scrollContainerRef.current.scrollTo({
+              top: scrollTop,
+              behavior: "smooth",
+            });
+          } else {
+            // Fallback to scrolling the element into view
+            latestUserMessageRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }
+        }, 100);
+      }
+      // Update the messages count reference
+      lastMessagesCountRef.current = messages.length;
+    }
+  }, [messages, scrollContainerRef]);
+
   const handleCopyToClipboard = (text: string, messageId: string) => {
     navigator.clipboard
       .writeText(text)
@@ -388,20 +426,39 @@ export default function ChatMessages({
       })
       .catch(() => toast.error("Failed to copy"));
   };
+
+  // Get the index of the latest user message
+  const latestUserMessageIndex = React.useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        return i;
+      }
+    }
+    return -1;
+  }, [messages]);
+
   return (
     <div className="flex-1 overflow-y-auto pt-14">
-      <div className="max-w-3xl mx-auto px-4">
+      <div className="max-w-3xl mx-auto pl-6 pr-4 pb-20">
         {messages.map((message, index) => {
+          // Determine if this is the latest user message
+          const isLatestUserMessage = index === latestUserMessageIndex;
+
           return (
             <React.Fragment key={message.id || index}>
               {message.role === "user" ? (
-                <UserMessage
-                  message={message}
-                  copyToClipboard={(text) =>
-                    handleCopyToClipboard(text, message.id)
-                  }
-                  isCopied={localCopiedMessageId === message.id}
-                />
+                <div
+                  ref={isLatestUserMessage ? latestUserMessageRef : null}
+                  className={isLatestUserMessage ? "scroll-mt-28" : ""}
+                >
+                  <UserMessage
+                    message={message}
+                    copyToClipboard={(text) =>
+                      handleCopyToClipboard(text, message.id)
+                    }
+                    isCopied={localCopiedMessageId === message.id}
+                  />
+                </div>
               ) : message.role === "assistant" ? (
                 <AssistantMessage
                   message={message}
@@ -415,6 +472,9 @@ export default function ChatMessages({
             </React.Fragment>
           );
         })}
+
+        {/* Show typing indicator when loading */}
+        {isLoading && <TypingIndicator />}
       </div>
     </div>
   );
