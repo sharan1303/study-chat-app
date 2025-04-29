@@ -5,7 +5,7 @@ import "./globals.css";
 import localFont from "next/font/local";
 
 import ClientSidebar from "@/components/Sidebar/ClientSidebar";
-import { CommandK } from "@/components/dialogs/command-k";
+import { CommandK } from "@/components/Main/command-k";
 
 import { Providers as AppProviders } from "@/context/providers";
 import { SidebarProvider } from "@/context/sidebar-context";
@@ -18,10 +18,9 @@ import PrivacyConsentBar from "@/components/dialogs/PrivacyConsentBar";
 import { ClerkProviderWithTheme } from "@/components/Clerk/ClerkProviderWithTheme";
 import { GlobalModuleDialog } from "@/components/dialogs/GlobalModuleCreationDialog";
 import { GlobalResourceUploadDialog } from "@/components/dialogs/GlobalResourceUploadDialog";
-import { ChangelogDialog } from "@/components/dialogs/ChangelogDialog";
+import { ChangelogDialog } from "@/components/Main/Changelog";
 
 import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Session initializer - client component
 import { SessionInitializer } from "@/components/Main/SessionInitializer";
@@ -77,7 +76,6 @@ export default function RootLayout({
                   <main className="flex-1 relative">
                     {children}
                     <Analytics />
-                    <SpeedInsights />
                     <AnonymousDataMigration />
                   </main>
 
