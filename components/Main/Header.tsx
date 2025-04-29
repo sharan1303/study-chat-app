@@ -15,7 +15,7 @@ export default function Header() {
   };
 
   return (
-    <div className="absolute top-3.5 right-3 flex-shrink-0 z-50">
+    <div className="rounded-lg bg-[hsl(var(--sidebar-background))] absolute top-3 right-3 flex-shrink-0 z-50 h-9 shadow-md">
       <div className="flex items-center gap-1">
         <Button
           variant="ghost"
@@ -23,7 +23,7 @@ export default function Header() {
           onClick={handleSearchClick}
           title={`Search (${getOSModifierKey()}+K)`}
         >
-          <Search className="h-4 w-4" />
+          <Search className="h-5 w-5" />
         </Button>
         <ThemeToggle />
       </div>

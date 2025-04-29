@@ -267,6 +267,26 @@ export default function ChatPage({
   // Keep track if we've already updated the title for first message
   const hasUpdatedTitle = React.useRef(false);
 
+  // Keep track of messages length for scrolling
+  const previousMessagesLengthRef = React.useRef(messages.length);
+
+  // When messages change, scroll to the bottom if a new message was added
+  React.useEffect(() => {
+    // If a new message was added
+    if (messages.length > previousMessagesLengthRef.current) {
+      const newestMessage = messages[messages.length - 1];
+
+      // If the newest message is from the user, scroll to the latest message
+      if (newestMessage.role === "user" && scrollContainerRef.current) {
+        // We'll let the ChatMessages component handle the scrolling
+        // since it has refs to the actual message elements
+      }
+
+      // Update the reference
+      previousMessagesLengthRef.current = messages.length;
+    }
+  }, [messages]);
+
   // When messages change, check if we should update the title
   React.useEffect(() => {
     // Only update title for truly new chats with their first message
@@ -400,6 +420,7 @@ export default function ChatPage({
             copyToClipboard={copyToClipboard}
             copiedMessageId={copiedMessageId}
             stop={stop}
+            scrollContainerRef={scrollContainerRef}
           />
         )}
       </div>

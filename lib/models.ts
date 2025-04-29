@@ -6,9 +6,9 @@ import { createAzure } from "@ai-sdk/azure";
  */
 export const SUPPORTED_MODELS = {
   "gemini-2.0-flash": "Gemini 2.0 Flash",
-  "gemini-2.5-flash-preview-04-17": "Gemini 2.5 Flash Preview",
   "gemini-2.0-flash-lite": "Gemini 2.0 Flash Lite",
-  "gpt-4o-mini": "GPT-4o-mini"
+  "gemini-2.5-flash-preview-04-17": "Gemini 2.5 Flash Preview",
+  "gpt-4o-mini": "GPT-4o mini"
 } as const;
 
 /**
@@ -26,8 +26,8 @@ export type Provider = "google" | "azure";
  */
 export const MODEL_TO_PROVIDER: Record<ModelId, Provider> = {
   "gemini-2.0-flash": "google",
-  "gemini-2.5-flash-preview-04-17": "google",
   "gemini-2.0-flash-lite": "google",
+  "gemini-2.5-flash-preview-04-17": "google",
   "gpt-4o-mini": "azure",
 };
 
