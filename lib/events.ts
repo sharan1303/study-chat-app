@@ -6,15 +6,13 @@ export interface EventData {
   [key: string]: string | number | boolean | null | undefined | Date | object;
 }
 
-// Type for SSE client connections
-export interface SSEClient {
-  id: string;
-  controller: ReadableStreamDefaultController;
-  connectedAt: number;
-  lastActivity: number;
-  ip: string;
-  userAgent: string;
-  send: (data: { type: string; data: EventData; timestamp: string }) => void;
+// Type definition for SSE clients
+interface SSEClient {
+  res: {
+    write: (data: string) => void;
+  };
+  userId?: string;
+  sessionId?: string;
 }
 
 // Event types
@@ -32,8 +30,9 @@ export const EVENT_TYPES = {
   RESOURCE_DELETED: "resource.deleted",
 };
 
-// Get access to the global SSE clients array
+// Add global type declaration
 declare global {
+  var clients: Record<string, SSEClient> | undefined;
   // eslint-disable-next-line no-var
   var sseClients: SSEClient[];
   // eslint-disable-next-line no-var
@@ -45,47 +44,66 @@ if (typeof global !== "undefined" && !global.sseClients) {
   global.sseClients = [];
 }
 
-// Broadcast an event to connected clients
+// Broadcast an event to registered clients
 export function broadcastEvent(
   eventType: string,
-  data: EventData,
+  data: any,
   targetIds?: string[]
-): { sent: number; skipped: number } {
-  // Initialize metrics
-  const metrics = { sent: 0, skipped: 0 };
-
-
-  if (!global.sseClients || global.sseClients.length === 0) {
-    return metrics;
+) {
+  if (!global.clients || Object.keys(global.clients).length === 0) {
+    console.warn(`No SSE clients connected for event: ${eventType}`);
+    return;
   }
 
-  // Send the event to appropriate clients
-  for (const client of global.sseClients) {
-    // Check if this client should receive the event
-    const shouldSend =
-      !targetIds || targetIds.length === 0 || targetIds.includes(client.id);
+  const event = {
+    type: eventType,
+    data,
+    timestamp: new Date().toISOString(),
+  };
 
-    if (shouldSend) {
-      try {
-        client.send({
-          type: eventType,
-          data,
-          timestamp: new Date().toISOString(),
-        });
-        metrics.sent++;
-      } catch (error) {
-        console.error(
-          `[BROADCAST DEBUG] Error sending event to client ID: ${client.id}`,
-          error
+  console.log(`Broadcasting event: ${eventType}`, {
+    targetIds: targetIds || "all",
+    numClients: Object.keys(global.clients).length,
+    dataKeys: Object.keys(data),
+  });
+
+  // Check if data contains expected properties for specific event types
+  if (eventType === EVENT_TYPES.CHAT_CREATED && (!data.id || !data.title)) {
+    console.warn(
+      `CHAT_CREATED event missing critical data - id: ${data.id}, title: ${data.title}`
+    );
+  }
+
+  let clientCount = 0;
+  let targetedClientCount = 0;
+
+  for (const clientId in global.clients) {
+    // If targetIds is specified, only send to those clients
+    if (targetIds && targetIds.length > 0) {
+      // Check if this client ID is in the target list
+      if (
+        targetIds.includes(global.clients[clientId]?.userId || "") ||
+        targetIds.includes(global.clients[clientId]?.sessionId || "")
+      ) {
+        global.clients[clientId]?.res.write(
+          `data: ${JSON.stringify(event)}\n\n`
         );
-        metrics.skipped++;
+        targetedClientCount++;
       }
     } else {
-      metrics.skipped++;
+      // Broadcast to all clients
+      global.clients[clientId]?.res.write(`data: ${JSON.stringify(event)}\n\n`);
+      clientCount++;
     }
   }
 
-  return metrics;
+  console.log(
+    `Event ${eventType} sent to ${
+      targetIds ? targetedClientCount : clientCount
+    } clients ${targetIds ? `(out of ${targetIds.length} targets)` : ""}`
+  );
+
+  return event;
 }
 
 // Specialized event broadcasters

@@ -58,17 +58,28 @@ model Resource {
 }
 
 model Chat {
-  id        String   @id @default(cuid())
-  title     String   @default("New Chat")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  messages  Json
+  id        String    @id @default(cuid())
+  title     String    @default("New Chat")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   userId    String?
   sessionId String?
   moduleId  String?
-  module    Module?  @relation(fields: [moduleId], references: [id])
-  user      User?    @relation(fields: [userId], references: [id])
+  module    Module?   @relation(fields: [moduleId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
+  messages  Message[]
 
   @@index([userId])
   @@index([sessionId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
 }

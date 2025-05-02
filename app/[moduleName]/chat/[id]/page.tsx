@@ -14,7 +14,7 @@ import { decodeModuleSlug } from "@/lib/utils";
  * decodes the module name, and fetches the corresponding module and chat data from the database. Module date fields are converted
  * to ISO strings for client-side compatibility. If the user or module cannot be found, a 404 response is returned.
  *
- * @param props - Contains a promise that resolves to an object with the module’s encoded name and chat identifier.
+ * @param props - Contains a promise that resolves to an object with the module's encoded name and chat identifier.
  *
  * @returns A Suspense component that wraps the client chat page configured with the appropriate module and chat data.
  */
@@ -79,10 +79,21 @@ export default async function ModuleChatPage(props: {
     },
   });
 
-  // Parse messages if chat exists
-  const initialMessages = chat?.messages
-    ? JSON.parse(JSON.stringify(chat.messages))
+  // Fetch messages separately
+  const messages = chat
+    ? await prisma.message.findMany({
+        where: {
+          chatId: chat.id,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      })
     : [];
+
+  // Parse messages if chat exists
+  const initialMessages =
+    messages.length > 0 ? JSON.parse(JSON.stringify(messages)) : [];
 
   // Convert Prisma Date objects to ISO strings for client components
   const moduleWithStringDates = {

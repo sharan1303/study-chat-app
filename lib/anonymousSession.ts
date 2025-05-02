@@ -1,10 +1,49 @@
 import { getSessionIdClient } from "./session";
 
+// Constants
+const SESSION_ID_KEY = "study_chat_session_id";
+
 /**
- * Gets the current session ID from cookies or creates a new one
- * @deprecated Use getSessionIdClient from lib/session instead
+ * Generates a random session ID for anonymous users
  */
-export const getOrCreateSessionId = getSessionIdClient;
+function generateSessionId(): string {
+  // Generate a random string with timestamp for uniqueness
+  return `anon_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
+
+/**
+ * Get an existing session ID from localStorage or create a new one if none exists
+ *
+ * @returns The session ID string
+ */
+export function getOrCreateSessionId(): string {
+  // Only run on client
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  try {
+    // Try to get from localStorage
+    let sessionId = localStorage.getItem(SESSION_ID_KEY);
+
+    // If no session ID exists, create one
+    if (!sessionId) {
+      sessionId = generateSessionId();
+      localStorage.setItem(SESSION_ID_KEY, sessionId);
+      console.log("Created new anonymous session ID:", sessionId);
+    } else {
+      console.log("Using existing anonymous session ID:", sessionId);
+    }
+
+    return sessionId;
+  } catch (error) {
+    // Handle localStorage errors (private browsing, etc.)
+    console.error("Error accessing localStorage for session ID:", error);
+
+    // Return a temporary session ID that won't persist
+    return generateSessionId();
+  }
+}
 
 /**
  * Clears the anonymous session ID

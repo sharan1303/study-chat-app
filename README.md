@@ -63,6 +63,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **AI Integration**: Vercel AI SDK
 - **Database**: Prisma ORM with Supabase
 - **AI Models**:
+
   - Gemini 2.0 Flash
   - Gemini 2.0 Flash lite
   - OpenAI GPT-4o mini
@@ -168,3 +169,28 @@ The application uses three primary models:
 - **Chat**: User conversations with metadata and module associations
 
 Each resource is associated with a module, and each module is associated with a user, creating a clean hierarchical structure. Chat history is also linked to modules when applicable.
+
+## Redis Integration
+
+This app uses Upstash Redis for:
+
+1. Real-time chat history storage
+2. Efficient message retrieval
+3. Hybrid persistence with PostgreSQL
+
+### Features
+
+- Chat data is stored in Redis for fast access with automatic fallback to PostgreSQL
+- Server Actions are used for state management instead of SSE for better performance
+- Client-side mutations trigger UI updates, eliminating constant connection overhead
+
+### Configuration
+
+To use Redis in your development environment, add these to your `.env.local` file:
+
+```
+REDIS_URL=https://your-redis-instance.upstash.io
+REDIS_TOKEN=your-redis-token
+```
+
+For production deployment, add these environment variables to your hosting platform.

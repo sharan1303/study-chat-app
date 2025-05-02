@@ -16,7 +16,6 @@ import { AVAILABLE_MODELS, SUPPORTED_MODELS } from "@/lib/models";
 
 // Import the components that don't need to be loaded dynamically
 import ChatInput from "./ChatInput";
-import ChatModuleHeader from "./ChatModuleHeader";
 
 // Dynamically import components that are not needed immediately
 const ChatMessages = dynamic(() => import("./ChatMessages"), {
@@ -64,6 +63,14 @@ export default function ChatPage({
   forceOldest?: boolean;
   isNewChat?: boolean;
 }) {
+  // Add debug log for component initialization
+  console.log("ChatPage initializing with:", {
+    chatId,
+    initialMessagesCount: initialMessages.length,
+    isNewChat,
+    isAuthenticated,
+  });
+
   // Store the optimistic chat ID
   const [optimisticChatId, setOptimisticChatId] = React.useState<string | null>(
     null
@@ -122,6 +129,9 @@ export default function ChatPage({
       };
       if (win.__sidebarChatUpdater) {
         sidebarChatUpdater.current = win.__sidebarChatUpdater;
+        console.log("Connected to sidebar chat updater");
+      } else {
+        console.warn("Sidebar chat updater not available");
       }
     }
   }, []);
@@ -130,10 +140,13 @@ export default function ChatPage({
   React.useEffect(() => {
     if (typeof window !== "undefined" && !isAuthenticated) {
       // Import the session utility dynamically since it's a client-side module
-      import("@/lib/session").then(({ getOrCreateSessionIdClient }) => {
-        const storedSessionId = getOrCreateSessionIdClient();
+      import("@/lib/anonymousSession").then(({ getOrCreateSessionId }) => {
+        const storedSessionId = getOrCreateSessionId();
         if (storedSessionId) {
+          console.log("Setting session ID for chat:", storedSessionId);
           setSessionId(storedSessionId);
+        } else {
+          console.error("Failed to get or create session ID");
         }
       });
     }
@@ -152,6 +165,7 @@ export default function ChatPage({
         chatId.startsWith("welcome-chat-"))
     ) {
       // Add the welcome chat to the sidebar for anonymous users
+      console.log("Adding welcome chat to sidebar with ID:", chatId);
       sidebarChatUpdater.current(initialTitle, activeModule, true);
     }
   }, [
@@ -209,12 +223,21 @@ export default function ChatPage({
           // Update URL to include the chat ID after user sends a message
           const currentPath = window.location.pathname;
 
-          // Make sure chatId is defined before updating URL
-          if (!chatId) {
-            console.error("Error: chatId is undefined");
+          // If we have an optimistic chat ID and we're on the base chat page
+          if (
+            optimisticChatId &&
+            (currentPath === "/chat" || !chatId || chatId === "")
+          ) {
+            router.replace(`/chat/${optimisticChatId}`, { scroll: false });
             return;
           }
 
+          // Skip URL update if chatId doesn't exist or is empty
+          if (!chatId || chatId === "") {
+            return;
+          }
+
+          // Make sure chatId is defined before updating URL
           if (currentPath === "/chat" && !activeModule) {
             // Only update URL if we're on the main chat page and not in a module
             router.replace(`/chat/${chatId}`, { scroll: false });
@@ -245,6 +268,7 @@ export default function ChatPage({
       router,
       moduleDetails,
       activeModule,
+      optimisticChatId,
     ]
   );
 
@@ -344,6 +368,8 @@ export default function ChatPage({
       return;
     }
 
+    console.log("Submitting form with session ID:", sessionId);
+
     // If this is a first message, create an optimistic chat entry in the sidebar
     if (isFirstMessage && sidebarChatUpdater.current) {
       // Create a better chat title based on the first message
@@ -355,26 +381,71 @@ export default function ChatPage({
       // Update the display title immediately
       setDisplayTitle(title);
 
-      // Add to sidebar and get the optimistic ID (which may be used for updating later)
+      // This is the first real message, chat should be created in the database
+      // and added to the sidebar now
+      console.log("Creating optimistic chat with title:", title);
       const generatedOptimisticId = sidebarChatUpdater.current(
         title,
         activeModule
       );
+      console.log("Generated optimistic ID:", generatedOptimisticId);
+
+      // Store the optimistic ID for updating the URL later
       setOptimisticChatId(generatedOptimisticId);
+
+      // Update URL immediately for new chats
+      if (
+        isAuthenticated &&
+        generatedOptimisticId &&
+        (chatId === "" || chatId === "new" || !chatId)
+      ) {
+        router.replace(`/chat/${generatedOptimisticId}`, { scroll: false });
+      }
 
       // No longer the first message
       setIsFirstMessage(false);
+      hasUpdatedTitle.current = true;
     }
+
+    // Build the request body with dynamic parameters
+    const bodyParams = {
+      moduleId: activeModule,
+      sessionId: !isAuthenticated ? sessionId : undefined,
+      title: displayTitle || initialTitle,
+      forceOldest: forceOldest,
+      optimisticChatId: optimisticChatId,
+      // Always save history for new chats
+      saveHistory: true,
+    };
+
+    // Ensure we have a valid chatId for new chats
+    // If we're on an empty chatId and have no optimistic ID, generate one
+    if ((chatId === "" || !chatId) && !optimisticChatId) {
+      // Create a temporary ID using uuid if available, or timestamp
+      const tempId =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `temp-${Date.now()}`;
+
+      console.log(`No chat ID available, generating temporary ID: ${tempId}`);
+
+      // Store this ID for future use
+      setOptimisticChatId(tempId);
+
+      // Add it to the request
+      bodyParams.optimisticChatId = tempId;
+
+      // Update URL immediately for authenticated users
+      if (isAuthenticated) {
+        router.replace(`/chat/${tempId}`, { scroll: false });
+      }
+    }
+
+    console.log("Submitting with body params:", bodyParams);
 
     // Pass dynamic body parameters with this specific submission
     handleSubmit(e as React.FormEvent<HTMLFormElement>, {
-      body: {
-        moduleId: activeModule,
-        sessionId: !isAuthenticated ? sessionId : undefined,
-        title: initialTitle,
-        forceOldest: forceOldest,
-        optimisticChatId: optimisticChatId,
-      },
+      body: bodyParams,
     });
   };
 
@@ -396,6 +467,35 @@ export default function ChatPage({
   const typedHandleFormSubmit = handleFormSubmit as (
     e: React.FormEvent
   ) => void;
+
+  // Add logging to the chat state
+  const chat = useFileChat({
+    // ... existing settings ...
+    onFinish: (message) => {
+      console.log("Chat finished with message:", {
+        id: message.id,
+        content:
+          typeof message.content === "string"
+            ? message.content.substring(0, 100) + "..."
+            : "complex content",
+      });
+
+      // ... rest of onFinish handler ...
+    },
+    onError: (error) => {
+      console.error("Chat error:", error);
+      // ... rest of onError handler ...
+    },
+  });
+
+  // Add debug log to check welcome screen rendering logic
+  const shouldShowWelcomeScreen = chat.messages.length === 0 && !chat.isLoading;
+  console.log("Chat render state:", {
+    messagesLength: chat.messages.length,
+    isLoading: chat.isLoading,
+    showWelcome: shouldShowWelcomeScreen,
+    chatId: chatId || optimisticChatId,
+  });
 
   return (
     <div className="flex flex-col h-screen">

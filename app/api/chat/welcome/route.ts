@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
         sessionId: sessionId,
         title: "Welcome to Study Chat",
       },
+      include: {
+        messages: true,
+      },
     });
 
     // If it already exists, just return it
@@ -38,11 +41,36 @@ export async function POST(request: NextRequest) {
         data: {
           id: "welcome",
           title: "Welcome to Study Chat",
-          messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
           sessionId: sessionId,
           createdAt: tenYearsAgo,
           updatedAt: tenYearsAgo,
         },
+      });
+
+      // Add welcome messages to the chat
+      await prisma.message.createMany({
+        data: [
+          {
+            id: `welcome-prompt-${sessionId}`,
+            content: JSON.stringify(WELCOME_PROMPT),
+            role: WELCOME_PROMPT.role,
+            chatId: chat.id,
+            createdAt: tenYearsAgo,
+          },
+          {
+            id: `welcome-response-${sessionId}`,
+            content: JSON.stringify(WELCOME_RESPONSE),
+            role: WELCOME_RESPONSE.role,
+            chatId: chat.id,
+            createdAt: new Date(tenYearsAgo.getTime() + 1000), // 1 second after prompt
+          },
+        ],
+      });
+
+      // Fetch messages to include in response
+      const messages = await prisma.message.findMany({
+        where: { chatId: chat.id },
+        orderBy: { createdAt: "asc" },
       });
 
       // Broadcast a chat created event for this session
@@ -59,7 +87,10 @@ export async function POST(request: NextRequest) {
         global.broadcastEvent("chat.created", chatEventData, [sessionId]);
       }
 
-      return Response.json(chat);
+      return Response.json({
+        ...chat,
+        messages,
+      });
     } catch (uniqueError) {
       // If "welcome" ID is already taken, fallback to a session-specific ID
       if (
@@ -72,11 +103,36 @@ export async function POST(request: NextRequest) {
           data: {
             id: fallbackId,
             title: "Welcome to Study Chat",
-            messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
             sessionId: sessionId,
             createdAt: tenYearsAgo,
             updatedAt: tenYearsAgo,
           },
+        });
+
+        // Add welcome messages to the chat
+        await prisma.message.createMany({
+          data: [
+            {
+              id: `welcome-prompt-fallback-${sessionId}`,
+              content: JSON.stringify(WELCOME_PROMPT),
+              role: WELCOME_PROMPT.role,
+              chatId: fallbackChat.id,
+              createdAt: tenYearsAgo,
+            },
+            {
+              id: `welcome-response-fallback-${sessionId}`,
+              content: JSON.stringify(WELCOME_RESPONSE),
+              role: WELCOME_RESPONSE.role,
+              chatId: fallbackChat.id,
+              createdAt: new Date(tenYearsAgo.getTime() + 1000), // 1 second after prompt
+            },
+          ],
+        });
+
+        // Fetch messages to include in response
+        const messages = await prisma.message.findMany({
+          where: { chatId: fallbackChat.id },
+          orderBy: { createdAt: "asc" },
         });
 
         // Broadcast a chat created event for this session
@@ -93,7 +149,10 @@ export async function POST(request: NextRequest) {
           global.broadcastEvent("chat.created", chatEventData, [sessionId]);
         }
 
-        return Response.json(fallbackChat);
+        return Response.json({
+          ...fallbackChat,
+          messages,
+        });
       }
       throw uniqueError;
     }

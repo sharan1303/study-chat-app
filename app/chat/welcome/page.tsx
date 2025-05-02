@@ -38,16 +38,36 @@ const getOrCreateWelcomeChatId = cache(
       tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
       try {
-        await prisma.chat.create({
+        // Create the chat
+        const newChat = await prisma.chat.create({
           data: {
             id: chatId,
             title: "Welcome to Study Chat",
-            messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
             moduleId: null,
             userId: userId,
             createdAt: tenYearsAgo,
             updatedAt: tenYearsAgo,
           },
+        });
+
+        // Add welcome messages to the chat
+        await prisma.message.createMany({
+          data: [
+            {
+              id: `welcome-prompt-${userId}`,
+              content: JSON.stringify(WELCOME_PROMPT),
+              role: WELCOME_PROMPT.role,
+              chatId: chatId,
+              createdAt: tenYearsAgo,
+            },
+            {
+              id: `welcome-response-${userId}`,
+              content: JSON.stringify(WELCOME_RESPONSE),
+              role: WELCOME_RESPONSE.role,
+              chatId: chatId,
+              createdAt: new Date(tenYearsAgo.getTime() + 1000), // 1 second after prompt
+            },
+          ],
         });
 
         return chatId;
@@ -79,15 +99,35 @@ const getOrCreateWelcomeChatId = cache(
       tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
 
       try {
-        await prisma.chat.create({
+        // Create the chat
+        const newChat = await prisma.chat.create({
           data: {
             id: chatId,
             title: "Welcome to Study Chat",
-            messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
             sessionId: sessionId,
             createdAt: tenYearsAgo,
             updatedAt: tenYearsAgo,
           },
+        });
+
+        // Add welcome messages to the chat
+        await prisma.message.createMany({
+          data: [
+            {
+              id: `welcome-prompt-${sessionId}`,
+              content: JSON.stringify(WELCOME_PROMPT),
+              role: WELCOME_PROMPT.role,
+              chatId: chatId,
+              createdAt: tenYearsAgo,
+            },
+            {
+              id: `welcome-response-${sessionId}`,
+              content: JSON.stringify(WELCOME_RESPONSE),
+              role: WELCOME_RESPONSE.role,
+              chatId: chatId,
+              createdAt: new Date(tenYearsAgo.getTime() + 1000), // 1 second after prompt
+            },
+          ],
         });
 
         return chatId;
@@ -101,16 +141,37 @@ const getOrCreateWelcomeChatId = cache(
         ) {
           const fallbackId = `welcome-${sessionId.substring(0, 8)}`;
           try {
-            await prisma.chat.create({
+            // Create the chat with fallback ID
+            const newChat = await prisma.chat.create({
               data: {
                 id: fallbackId,
                 title: "Welcome to Study Chat",
-                messages: [WELCOME_PROMPT, WELCOME_RESPONSE],
                 sessionId: sessionId,
                 createdAt: tenYearsAgo,
                 updatedAt: tenYearsAgo,
               },
             });
+
+            // Add welcome messages to the chat
+            await prisma.message.createMany({
+              data: [
+                {
+                  id: `welcome-prompt-${fallbackId}`,
+                  content: JSON.stringify(WELCOME_PROMPT),
+                  role: WELCOME_PROMPT.role,
+                  chatId: fallbackId,
+                  createdAt: tenYearsAgo,
+                },
+                {
+                  id: `welcome-response-${fallbackId}`,
+                  content: JSON.stringify(WELCOME_RESPONSE),
+                  role: WELCOME_RESPONSE.role,
+                  chatId: fallbackId,
+                  createdAt: new Date(tenYearsAgo.getTime() + 1000), // 1 second after prompt
+                },
+              ],
+            });
+
             return fallbackId;
           } catch (innerError) {
             console.error("Error creating fallback welcome chat:", innerError);

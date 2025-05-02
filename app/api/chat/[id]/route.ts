@@ -55,7 +55,23 @@ export async function GET(
       return new Response("Chat not found", { status: 404 });
     }
 
-    return Response.json(chat);
+    // Fetch messages separately
+    const messages = await prisma.message.findMany({
+      where: {
+        chatId: chat.id,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    // Add messages to the chat response
+    const chatWithMessages = {
+      ...chat,
+      messages,
+    };
+
+    return Response.json(chatWithMessages);
   } catch (error) {
     console.error("Error fetching chat:", error);
     return new Response("Error fetching chat", { status: 500 });
@@ -82,7 +98,6 @@ export async function DELETE(
         sessionId = cookieValue;
       }
     }
-
 
     // Check if either userId or sessionId is provided
     if (!userId && !sessionId) {

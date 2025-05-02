@@ -69,7 +69,16 @@ interface Citation {
  */
 export async function POST(request: Request) {
   try {
+    console.log("POST /api/chat: Starting request processing");
     const body = await request.json();
+    console.log("POST /api/chat: Request body parsed", {
+      chatId: body.chatId,
+      messageCount: body.messages?.length,
+      hasSessionId: !!body.sessionId,
+      hasOptimisticId: !!body.optimisticChatId,
+      isWebSearch: body.webSearch === true,
+    });
+
     const { messages, chatId, moduleId } = body;
     const sessionId = body.sessionId || null;
     const optimisticChatId = body.optimisticChatId || null;
@@ -90,11 +99,19 @@ export async function POST(request: Request) {
     const currentUserObj = await currentUser();
     const userId = currentUserObj?.id || null;
 
-    // Ensure we have a valid chatId - generate one if not provided
-    const requestedChatId = chatId || generateId();
+    // Ensure we have a valid chatId - generate one if not provided or if we have a "new" placeholder
+    const requestedChatId =
+      chatId && chatId !== "new" && chatId !== ""
+        ? chatId
+        : optimisticChatId || generateId();
+
+    console.log(
+      `Processing chat request: ID=${requestedChatId}, sessionId=${sessionId}, optimisticId=${optimisticChatId}, userId=${userId}, shouldSaveHistory=${shouldSaveHistory}`
+    );
 
     // Both userId and sessionId can't be null if we want to save history
     if (shouldSaveHistory && !userId && !sessionId) {
+      console.warn("No userId or sessionId provided for saving chat history");
       return Response.json(
         { error: "Session ID or authentication required to save chat history" },
         { status: 401 }
@@ -115,6 +132,10 @@ export async function POST(request: Request) {
             : lastMessage.content[0]?.text || "New Chat"
         );
 
+        console.log(
+          `Generated message title: ${messageTitle} for chat ID: ${requestedChatId}`
+        );
+
         // Send an immediate event with the user's message
         const immediateMessageData = {
           id: generateId(),
@@ -128,13 +149,23 @@ export async function POST(request: Request) {
 
         const targetId = userId || sessionId;
         if (targetId) {
-          console.log("Broadcasting user.message.sent event:", requestedChatId);
+          console.log(
+            `Broadcasting user.message.sent event for targetId: ${targetId}, chatId: ${requestedChatId}`
+          );
           broadcastUserMessageSent(immediateMessageData, [targetId]);
+        } else {
+          console.error(
+            `No targetId available for broadcasting, userId: ${userId}, sessionId: ${sessionId}`
+          );
         }
       } catch (error) {
         console.error("Error broadcasting immediate user message:", error);
         // Continue processing even if this fails
       }
+    } else {
+      console.log(
+        `Not sending user.message.sent event. shouldSaveHistory: ${shouldSaveHistory}, userId: ${userId}, sessionId: ${sessionId}`
+      );
     }
 
     let user = null;
@@ -547,7 +578,7 @@ export async function POST(request: Request) {
                 id: string;
                 title: string;
                 moduleId: string | null;
-                messages: { role: string; content: string }[];
+                messages?: any;
                 createdAt: Date;
                 updatedAt: Date;
                 userId?: string;
@@ -556,11 +587,18 @@ export async function POST(request: Request) {
                 id: requestedChatId,
                 title: chatTitle,
                 moduleId: moduleId,
-                messages: simplifiedMessages.concat([
-                  { role: "assistant", content: finalText },
-                ]),
                 createdAt: new Date(),
                 updatedAt: new Date(),
+              };
+
+              // Set up the messages relationship
+              chatData.messages = {
+                create: simplifiedMessages
+                  .concat([{ role: "assistant", content: finalText }])
+                  .map((msg: { role: string; content: string }) => ({
+                    role: msg.role,
+                    content: msg.content,
+                  })),
               };
 
               // Add user ID or session ID based on authentication status
@@ -571,22 +609,44 @@ export async function POST(request: Request) {
               }
 
               // If this chat should be forced to appear as the oldest, set an old timestamp
+              let oldTimestamp = new Date();
               if (forceOldest) {
-                const oneYearAgo = new Date();
-                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                chatData.createdAt = oneYearAgo;
-                chatData.updatedAt = oneYearAgo;
+                oldTimestamp.setFullYear(oldTimestamp.getFullYear() - 1);
               }
 
               const savedChat = await prisma.chat.upsert({
                 where: { id: requestedChatId },
                 update: {
-                  messages: simplifiedMessages.concat([
-                    { role: "assistant", content: finalText },
-                  ]),
+                  title: chatTitle,
                   updatedAt: new Date(),
+                  // Add assistant's response as a new message
+                  messages: {
+                    create: {
+                      id: generateId(),
+                      role: "assistant",
+                      content: finalText,
+                    },
+                  },
                 },
-                create: chatData,
+                create: {
+                  id: requestedChatId,
+                  title: chatTitle,
+                  moduleId: moduleId,
+                  createdAt: forceOldest ? oldTimestamp : new Date(),
+                  updatedAt: forceOldest ? oldTimestamp : new Date(),
+                  ...(userId ? { userId } : {}),
+                  ...(sessionId && !userId ? { sessionId } : {}),
+                  // Create all messages using the nested create
+                  messages: {
+                    create: simplifiedMessages
+                      .concat([{ role: "assistant", content: finalText }])
+                      .map((msg: { role: string; content: string }) => ({
+                        id: generateId(),
+                        role: msg.role,
+                        content: msg.content,
+                      })),
+                  },
+                },
               });
 
               // Determine if this was a new chat by comparing timestamps
@@ -744,6 +804,17 @@ export async function POST(request: Request) {
       const headers = new Headers(response.headers);
       headers.set("x-model-used", modelDisplayName);
       headers.set("x-web-search-used", useWebSearch ? "true" : "false");
+
+      // After processing the chat message, add logging before returning the stream
+      console.log(
+        `POST /api/chat: Returning stream response for chatId ${requestedChatId}`,
+        {
+          userId,
+          sessionId,
+          hasMessages: !!messages.length,
+          modelUsed: modelId,
+        }
+      );
 
       // Return a new response with our custom headers
       return new Response(response.body, {

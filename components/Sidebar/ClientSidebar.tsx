@@ -45,6 +45,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import useChatRedis from "@/hooks/useChatRedis";
 
 // Define module type
 export interface Module {
@@ -123,39 +124,27 @@ function ClientSidebarContent({
     }
   }, [isLoaded]);
 
-  // Fetch chats function
-  const fetchChats = useCallback(async (cursor?: string) => {
-    try {
-      const data = await api.getChatHistory({
-        limit: 20,
-        cursor,
-      });
+  // Use Redis-based chat hook
+  const {
+    chats: redisChats,
+    isLoading: loadingRedisChats,
+    error: redisChatsError,
+    pagination: redisChatsPagination,
+    loadMore: loadMoreRedisChats,
+    startNewChat: redisStartNewChat,
+    removeChat: redisRemoveChat,
+  } = useChatRedis();
 
-      // Handle the new response format
-      if (data && Array.isArray(data.chats)) {
-        return {
-          chats: data.chats,
-          pagination: data.pagination,
-        };
-      } else if (Array.isArray(data)) {
-        // Fallback for backward compatibility
-        return {
-          chats: data,
-          pagination: { hasMore: false, nextCursor: null },
-        };
-      }
-
+  // Compatibility function to match existing API pattern
+  const fetchChats = useCallback(
+    async (cursor?: string) => {
       return {
-        chats: [],
-        pagination: { hasMore: false, nextCursor: null },
+        chats: redisChats,
+        pagination: redisChatsPagination,
       };
-    } catch (error) {
-      return {
-        chats: [],
-        pagination: { hasMore: false, nextCursor: null },
-      };
-    }
-  }, []);
+    },
+    [redisChats, redisChatsPagination]
+  );
 
   // Function to fetch a single chat with complete module information
   const fetchSingleChat = useCallback(
@@ -202,1101 +191,26 @@ function ClientSidebarContent({
     [modules]
   );
 
-  // Fetch initial chat history
-  const refreshChatHistory = useCallback(async () => {
-    setLoadingChats(true);
-    try {
-      const result = await fetchChats();
-      setChats(result.chats);
-      setChatPagination(result.pagination);
-    } catch (error) {
-      console.error("Error refreshing chat history:", error);
-    } finally {
-      setLoadingChats(false);
-    }
-  }, [fetchChats]);
-
-  // Load more chats
-  const loadMoreChats = useCallback(
-    async (cursor: string) => {
-      try {
-        const result = await fetchChats(cursor);
-
-        // Append new chats to existing ones
-        setChats((prevChats) => [...prevChats, ...result.chats]);
-        setChatPagination(result.pagination);
-
-        return result;
-      } catch (error) {
-        console.error("Error loading more chats:", error);
-        throw error;
-      }
-    },
-    [fetchChats]
-  );
-
-  // Set up Server-Sent Events (SSE) for real-time updates
+  // Use Redis-based chats directly
   useEffect(() => {
-    if (!isLoaded) return;
-
-    // Check if EventSource is supported in this browser
-    if (typeof EventSource === "undefined") {
-      // EventSource is not supported in this browser
-      // Consider implementing a fallback mechanism like polling
-      return;
-    }
-
-    let url = `/api/events`;
-
-    // Add either userId for authenticated users or get sessionId for anonymous users
-    if (userId) {
-      url += `?userId=${userId}`;
-    } else {
-      // For anonymous users, get the session ID from localStorage
-      const sessionId = getOrCreateSessionIdClient();
-      if (sessionId) {
-        url += `?sessionId=${sessionId}`;
-      } else {
-        // No sessionId found for anonymous user
-      }
-    }
-
-    let es: EventSource | null = null;
-
-    // Create a new EventSource if it doesn't exist, or reuse existing one
-    if (eventSourceRef.current) {
-      es = eventSourceRef.current;
-    } else if (typeof window !== "undefined") {
-      try {
-        // Use a try-catch block for EventSource creation
-        const newEs = new EventSource(url, { withCredentials: true });
-        es = newEs;
-        eventSourceRef.current = newEs;
-
-        // Add a delay before setting up event handlers to ensure connection is properly established
-        setTimeout(() => {
-          // Event handlers will be set up below
-        }, 100);
-      } catch (error) {
-        // Try to reconnect after delay
-        setTimeout(() => {
-          try {
-            const retryEs = new EventSource(url, { withCredentials: true });
-            eventSourceRef.current = retryEs;
-          } catch (retryError) {
-            // Retry failed
-          }
-        }, 3000);
-      }
-    }
-
-    if (es) {
-      // Set up error handler
-      es.onerror = (err) => {
-        // EventSource error
-
-        // Check the readyState and connection state
-        const connectionState = es
-          ? es.readyState === 0
-            ? "CONNECTING"
-            : es.readyState === 1
-            ? "OPEN"
-            : es.readyState === 2
-            ? "CLOSED"
-            : "UNKNOWN"
-          : "NULL";
-
-        // Add a more robust error handling and reconnection strategy
-        if (!es || es.readyState === EventSource.CLOSED) {
-          // EventSource connection closed or in error state, attempting to reconnect
-
-          // Close the existing connection if it exists
-          if (es) {
-            es.close();
-            eventSourceRef.current = null;
-          }
-
-          // Try to reconnect after a delay with exponential backoff
-          setTimeout(() => {
-            if (typeof window !== "undefined") {
-              try {
-                const newEs = new EventSource(url);
-                eventSourceRef.current = newEs;
-
-                // Set up same handlers on the new connection
-                newEs.onopen = () => {
-                  // Reconnected EventSource opened successfully
-                };
-                newEs.onerror = es.onerror; // Reuse same error handler
-
-                // Re-attach the message handler
-                newEs.onmessage = es.onmessage;
-              } catch (reconnectError) {
-                // Failed to reconnect EventSource
-              }
-            }
-          }, 3000);
-        }
-      };
-
-      // Add open handler to confirm connection
-      es.onopen = () => {
-        // EventSource connection opened successfully
-      };
-
-      // Set up message handler for general messages
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          // Helper function to check event type against both string literals and constants
-          const isEventType = (type: string, constant: string) =>
-            data.type === type || data.type === constant;
-
-          // Handle different event types
-          if (data.type === "CONNECTION_ACK") {
-            // Connection confirmed by server
-          } else if (data.type === "RECONNECT") {
-            // Server is requesting a reconnection (Vercel timeout)
-            console.log("Server requested reconnection - reconnecting SSE");
-
-            // Close the existing connection
-            if (es) {
-              es.close();
-              eventSourceRef.current = null;
-            }
-
-            // Create a new connection after a short delay
-            setTimeout(() => {
-              try {
-                const newEs = new EventSource(url, { withCredentials: true });
-                eventSourceRef.current = newEs;
-
-                // Set up the same handlers on the new connection
-                newEs.onopen = es.onopen;
-                newEs.onerror = es.onerror;
-                newEs.onmessage = es.onmessage;
-              } catch (reconnectError) {
-                console.error(
-                  "Failed to reconnect after server request:",
-                  reconnectError
-                );
-              }
-            }, 1000);
-          } else if (
-            isEventType(EVENT_TYPES.MODULE_CREATED, "module.created")
-          ) {
-            // Module created event
-            fetchModules().then((data) => {
-              if (data.modules) {
-                setModules(data.modules);
-              }
-            });
-          } else if (
-            isEventType(EVENT_TYPES.MODULE_UPDATED, "module.updated")
-          ) {
-            // Module updated event
-            // Only refresh modules if this is not part of a data migration
-            if (!data.isDataMigration) {
-              fetchModules().then((data) => {
-                if (data.modules) {
-                  setModules(data.modules);
-                }
-              });
-            }
-          } else if (
-            isEventType(EVENT_TYPES.MODULE_DELETED, "module.deleted")
-          ) {
-            // Remove the deleted module from the list
-            setModules((prevModules) =>
-              prevModules.filter((module) => module.id !== data.data.id)
-            );
-          } else if (isEventType(EVENT_TYPES.CHAT_DELETED, "chat.deleted")) {
-            // Handle chat deletion event
-            const chatData = data.data;
-
-            if (chatData && chatData.id) {
-              // Remove the deleted chat from the list
-              setChats((prevChats) =>
-                prevChats.filter((chat) => chat.id !== chatData.id)
-              );
-            } else {
-              // Invalid chat deletion data in event
-            }
-          } else if (data.type === "HEARTBEAT") {
-            // Server heartbeat received
-          } else if (isEventType(EVENT_TYPES.CHAT_CREATED, "chat.created")) {
-            // We got a real chat - might be replacing an optimistic one
-            const newChat = data.data;
-
-            // First check if this is replacing an optimistic chat
-            setChats((prevChats) => {
-              // Make sure newChat exists before attempting to access properties
-              if (!newChat) {
-                // Received chat.created event with undefined chat data
-                return prevChats;
-              }
-
-              // First check if this chat already exists in our list
-              const existingChatIndex = prevChats.findIndex(
-                (chat) => chat.id === newChat.id
-              );
-
-              if (existingChatIndex >= 0) {
-                return prevChats;
-              }
-
-              // Check if we have an optimistic chat ID to match against
-              if (newChat.optimisticChatId) {
-                // Try to find the optimistic chat with matching ID
-                const optimisticIdIndex = prevChats.findIndex(
-                  (chat) => chat.id === newChat.optimisticChatId
-                );
-
-                if (optimisticIdIndex >= 0) {
-                  // Replace the optimistic chat with the real one but preserve UI state
-                  const updatedChats = [...prevChats];
-                  const existingChat = prevChats[optimisticIdIndex];
-
-                  // Ensure module info is preserved if it exists in the optimistic chat
-                  // but missing in the server response
-                  const moduleInfo =
-                    newChat.module || (newChat.moduleId && existingChat.module)
-                      ? {
-                          id: newChat.moduleId || existingChat.moduleId,
-                          name:
-                            (newChat.module && newChat.module.name) ??
-                            (existingChat.module && existingChat.module.name) ??
-                            modules.find(
-                              (m) =>
-                                m.id ===
-                                (newChat.moduleId || existingChat.moduleId)
-                            )?.name ??
-                            "Module",
-                          icon:
-                            (newChat.module && newChat.module.icon) ??
-                            (existingChat.module && existingChat.module.icon) ??
-                            modules.find(
-                              (m) =>
-                                m.id ===
-                                (newChat.moduleId || existingChat.moduleId)
-                            )?.icon ??
-                            "📚",
-                        }
-                      : null;
-
-                  // Preserve UI state attributes
-                  updatedChats[optimisticIdIndex] = {
-                    ...existingChat,
-                    id: newChat.id,
-                    title: newChat.title,
-                    createdAt: newChat.createdAt,
-                    updatedAt: newChat.updatedAt,
-                    moduleId: newChat.moduleId,
-                    module: moduleInfo,
-                    _isOptimistic: false,
-                    _currentPath: existingChat._currentPath,
-                  };
-                  return updatedChats;
-                }
-              }
-
-              // If no optimistic chat ID match, look for a generic optimistic chat
-              const optimisticIndex = prevChats.findIndex(
-                (chat) =>
-                  chat._isOptimistic &&
-                  (chat.moduleId === (newChat?.moduleId || null) ||
-                    (!chat.moduleId && !newChat?.moduleId))
-              );
-
-              if (optimisticIndex >= 0) {
-                // Replace the optimistic chat with the real one but preserve UI state
-                const updatedChats = [...prevChats];
-                const existingChat = prevChats[optimisticIndex];
-
-                // Ensure module info is preserved if it exists in the optimistic chat
-                // but missing in the server response
-                const moduleInfo =
-                  newChat.module || (newChat.moduleId && existingChat.module)
-                    ? {
-                        id: newChat.moduleId || existingChat.moduleId,
-                        name:
-                          (newChat.module && newChat.module.name) ??
-                          (existingChat.module && existingChat.module.name) ??
-                          modules.find(
-                            (m) =>
-                              m.id ===
-                              (newChat.moduleId || existingChat.moduleId)
-                          )?.name ??
-                          "Module",
-                        icon:
-                          (newChat.module && newChat.module.icon) ??
-                          (existingChat.module && existingChat.module.icon) ??
-                          modules.find(
-                            (m) =>
-                              m.id ===
-                              (newChat.moduleId || existingChat.moduleId)
-                          )?.icon ??
-                          "📚",
-                      }
-                    : null;
-
-                // Log module information for debugging
-                console.log(
-                  "CHAT_CREATED replacing optimistic chat - moduleInfo:",
-                  moduleInfo
-                );
-
-                // Preserve UI state attributes
-                updatedChats[optimisticIndex] = {
-                  ...existingChat,
-                  id: newChat.id,
-                  title: newChat.title,
-                  createdAt: newChat.createdAt,
-                  updatedAt: newChat.updatedAt,
-                  moduleId: newChat.moduleId,
-                  module: moduleInfo,
-                  _isOptimistic: false,
-                  _currentPath: existingChat._currentPath,
-                };
-                return updatedChats;
-              } else {
-                // If the new chat has a moduleId but no module info, try to add it
-                if (newChat.moduleId && !newChat.module) {
-                  const moduleInfo = modules.find(
-                    (m) => m.id === newChat.moduleId
-                  );
-                  if (moduleInfo) {
-                    console.log(
-                      "Adding module info to chat:",
-                      moduleInfo?.name
-                    );
-                    newChat.module = {
-                      id: moduleInfo.id,
-                      name: moduleInfo?.name ?? "Module",
-                      icon: moduleInfo?.icon ?? "📚",
-                    };
-                  }
-                }
-                // Just add as a new chat
-                return [newChat, ...prevChats];
-              }
-            });
-            setChatPagination(prev => ({
-              ...prev,
-              hasMore: prev.hasMore || chats.length >= 20
-            }));
-          } else if (
-            isEventType(EVENT_TYPES.MESSAGE_CREATED, "message.created")
-          ) {
-            // Handle new message creation event - this is where we update chat titles
-            const messageData = data.data;
-
-            if (
-              messageData &&
-              messageData.chatId &&
-              messageData.chatTitle &&
-              messageData.updatedAt
-            ) {
-              // For module chats, ensure we have complete module info by fetching the chat
-              if (messageData.moduleId) {
-                // First update the chat list with what we know
-                setChats((prevChats) => {
-                  // Check for "New Chat" that needs title update first
-                  const newChatIndex = prevChats.findIndex(
-                    (chat) =>
-                      (chat.title === "New Chat" || chat._isOptimistic) &&
-                      chat.id === messageData.chatId
-                  );
-
-                  if (newChatIndex >= 0) {
-                    // Update the New Chat title with first message
-                    const updatedChats = [...prevChats];
-                    updatedChats[newChatIndex] = {
-                      ...updatedChats[newChatIndex],
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                      _isOptimistic: false,
-                    };
-                    return [
-                      updatedChats[newChatIndex],
-                      ...updatedChats.slice(0, newChatIndex),
-                      ...updatedChats.slice(newChatIndex + 1),
-                    ];
-                  }
-
-                  // Regular chat update logic continues...
-                  const chatIndex = prevChats.findIndex(
-                    (chat) => chat.id === messageData.chatId
-                  );
-
-                  if (chatIndex === -1) {
-                    return prevChats;
-                  }
-
-                  // Extract and update the chat
-                  const chatToUpdate = prevChats[chatIndex];
-                  const updatedChat = {
-                    ...chatToUpdate,
-                    updatedAt: messageData.updatedAt,
-                    moduleId: messageData.moduleId,
-                    // Do NOT update title for existing chats
-                  };
-
-                  // If missing module info, add it from modules list if possible
-                  if (!updatedChat.module && messageData.moduleId) {
-                    const moduleInfo = modules.find(
-                      (m) => m.id === messageData.moduleId
-                    );
-
-                    if (moduleInfo) {
-                      updatedChat.module = {
-                        id: moduleInfo.id,
-                        name: moduleInfo?.name ?? "Module",
-                        icon: moduleInfo?.icon ?? "📚",
-                      };
-                    }
-                  }
-
-                  // Create new array with updated chat at top
-                  return [
-                    updatedChat,
-                    ...prevChats.slice(0, chatIndex),
-                    ...prevChats.slice(chatIndex + 1),
-                  ];
-                });
-
-                // Then fetch complete chat info to ensure we have module data
-                fetchSingleChat(messageData.chatId).then((completeChat) => {
-                  if (completeChat) {
-                    setChats((prevChats) => {
-                      // Find the chat in the current list
-                      const chatIndex = prevChats.findIndex(
-                        (chat) => chat.id === messageData.chatId
-                      );
-
-                      // If chat doesn't exist, add it
-                      if (chatIndex === -1) {
-                        return [completeChat, ...prevChats];
-                      }
-
-                      // Replace the existing chat with complete info
-                      return [
-                        completeChat,
-                        ...prevChats.slice(0, chatIndex),
-                        ...prevChats.slice(chatIndex + 1),
-                      ];
-                    });
-                  }
-                });
-              } else {
-                // For regular chats, check if we need to update an optimistic chat
-                setChats((prevChats) => {
-                  // Check for "New Chat" that needs title update first
-                  const newChatIndex = prevChats.findIndex(
-                    (chat) =>
-                      (chat.title === "New Chat" || chat._isOptimistic) &&
-                      chat.id === messageData.chatId
-                  );
-
-                  if (newChatIndex >= 0) {
-                    // Update the New Chat title with first message
-                    const updatedChats = [...prevChats];
-                    updatedChats[newChatIndex] = {
-                      ...updatedChats[newChatIndex],
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                      _isOptimistic: false,
-                    };
-                    return [
-                      updatedChats[newChatIndex],
-                      ...updatedChats.slice(0, newChatIndex),
-                      ...updatedChats.slice(newChatIndex + 1),
-                    ];
-                  }
-
-                  // Check if there's an optimistic chat to update (any optimistic chat, not just "New Chat")
-                  const optimisticChatIndex = prevChats.findIndex(
-                    (chat) => chat._isOptimistic === true
-                  );
-
-                  // If we found an optimistic chat, replace it with the real one
-                  if (optimisticChatIndex !== -1) {
-                    // Get the optimistic chat to preserve any needed data
-                    const optimisticChat = prevChats[optimisticChatIndex];
-
-                    // Create updated chat with real ID and data
-                    const updatedChat = {
-                      ...optimisticChat,
-                      id: messageData.chatId,
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                      createdAt:
-                        prevChats[optimisticChatIndex].createdAt ||
-                        new Date().toISOString(),
-                      moduleId: messageData.moduleId,
-                      module: messageData.module || null,
-                      _isOptimistic: false,
-                      _currentPath: prevChats[optimisticChatIndex]._currentPath,
-                    } as Chat;
-
-                    // Create a new array with the updated chat moved to the top
-                    return [
-                      updatedChat,
-                      ...prevChats.slice(0, optimisticChatIndex),
-                      ...prevChats.slice(optimisticChatIndex + 1),
-                    ];
-                  }
-
-                  // For existing chats, ONLY update position and timestamp - NOT title
-                  const chatIndex = prevChats.findIndex(
-                    (chat) => chat.id === messageData.chatId
-                  );
-
-                  if (chatIndex === -1) {
-                    return prevChats;
-                  }
-
-                  // Extract and update the chat
-                  const chatToUpdate = prevChats[chatIndex];
-
-                  // Create updated chat with new timestamp only
-                  const updatedChat = {
-                    ...chatToUpdate,
-                    updatedAt: messageData.updatedAt,
-                    // Do NOT update title for existing chats that aren't optimistic
-                  };
-
-                  // Create a new array with the chat moved to the top
-                  return [
-                    updatedChat,
-                    ...prevChats.slice(0, chatIndex),
-                    ...prevChats.slice(chatIndex + 1),
-                  ];
-                });
-              }
-            } else {
-              // Invalid or incomplete message data in event
-              // Fall back to refresh if data is incomplete
-              refreshChatHistory();
-            }
-            setChatPagination(prev => ({
-              ...prev,
-              hasMore: prev.hasMore || chats.length >= 20
-            }));
-          } else if (
-            isEventType(EVENT_TYPES.USER_MESSAGE_SENT, "user.message.sent")
-          ) {
-            // Handle user message sent event - similar to MESSAGE_CREATED
-            const messageData = data.data;
-
-            if (
-              messageData &&
-              messageData.chatId &&
-              messageData.chatTitle &&
-              messageData.updatedAt
-            ) {
-              // Check specifically for "New Chat" that needs to be updated
-              setChats((prevChats) => {
-                // Look for "New Chat" entries first, regardless of optimisticChatId
-                const newChatIndex = prevChats.findIndex(
-                  (chat) =>
-                    (chat.title === "New Chat" ||
-                      chat._isOptimistic === true) &&
-                    (chat.id === messageData.chatId ||
-                      chat.id === messageData.optimisticChatId ||
-                      (!messageData.optimisticChatId &&
-                        chat._isOptimistic === true))
-                );
-
-                if (newChatIndex >= 0) {
-                  // Preserve module info if it exists in the optimistic chat
-                  const existingChat = prevChats[newChatIndex];
-                  const moduleInfo =
-                    messageData.module ||
-                    (messageData.moduleId && existingChat.module)
-                      ? {
-                          id: messageData.moduleId || existingChat.moduleId,
-                          name:
-                            (messageData.module && messageData.module.name) ??
-                            (existingChat.module && existingChat.module.name) ??
-                            modules.find(
-                              (m) =>
-                                m.id ===
-                                (messageData.moduleId || existingChat.moduleId)
-                            )?.name ??
-                            "Module",
-                          icon:
-                            (messageData.module && messageData.module.icon) ??
-                            (existingChat.module && existingChat.module.icon) ??
-                            modules.find(
-                              (m) =>
-                                m.id ===
-                                (messageData.moduleId || existingChat.moduleId)
-                            )?.icon ??
-                            "📚",
-                        }
-                      : null;
-
-                  // Replace the "New Chat" with the actual message title
-                  const updatedChats = [...prevChats];
-                  updatedChats[newChatIndex] = {
-                    ...updatedChats[newChatIndex],
-                    id: messageData.chatId, // Ensure ID is set correctly
-                    title: messageData.chatTitle,
-                    updatedAt: messageData.updatedAt,
-                    moduleId: messageData.moduleId || existingChat.moduleId,
-                    module: moduleInfo,
-                    _isOptimistic: false,
-                    _currentPath: existingChat._currentPath,
-                  };
-
-                  // Move to top of list
-                  return [
-                    updatedChats[newChatIndex],
-                    ...updatedChats.slice(0, newChatIndex),
-                    ...updatedChats.slice(newChatIndex + 1),
-                  ];
-                }
-
-                // For existing chats, ONLY update position, timestamp - NEVER create optimistic entries
-                if (messageData.chatId) {
-                  const chatIndex = prevChats.findIndex(
-                    (chat) =>
-                      chat.id === messageData.chatId && !chat._isOptimistic
-                  );
-
-                  if (chatIndex !== -1) {
-                    // Just update the existing chat's timestamp to move it to the top
-                    // but PRESERVE the original title - only update timestamp
-                    const updatedChat = {
-                      ...prevChats[chatIndex],
-                      updatedAt: messageData.updatedAt,
-                      // Do NOT update title for existing chats with non-first messages
-                    };
-
-                    // Move to top of list without creating an optimistic entry
-                    return [
-                      updatedChat,
-                      ...prevChats.slice(0, chatIndex),
-                      ...prevChats.slice(chatIndex + 1),
-                    ];
-                  }
-                }
-
-                // Continue with the existing logic for other cases
-                if (messageData.optimisticChatId) {
-                  // Find the optimistic chat by its ID
-                  const optimisticChatIndex = prevChats.findIndex(
-                    (chat) => chat.id === messageData.optimisticChatId
-                  );
-
-                  // If found, replace the optimistic chat with the real one
-                  if (optimisticChatIndex !== -1) {
-                    // Create a new chat object with the correct ID and data
-                    const updatedChat = {
-                      id: messageData.chatId,
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                      createdAt:
-                        prevChats[optimisticChatIndex].createdAt ||
-                        new Date().toISOString(),
-                      moduleId: messageData.moduleId,
-                      module: messageData.module || null,
-                      _isOptimistic: false,
-                      _currentPath: prevChats[optimisticChatIndex]._currentPath,
-                    } as Chat;
-
-                    // Create a new array with the real chat replacing the optimistic one
-                    return [
-                      updatedChat,
-                      ...prevChats.slice(0, optimisticChatIndex),
-                      ...prevChats.slice(optimisticChatIndex + 1),
-                    ];
-                  }
-
-                  // If optimistic chat not found, maybe it was already replaced
-                  // Just update the real chat if it exists
-                  const chatIndex = prevChats.findIndex(
-                    (chat) => chat.id === messageData.chatId
-                  );
-
-                  if (chatIndex !== -1) {
-                    // Update the existing chat
-                    const chatToUpdate = prevChats[chatIndex];
-                    const updatedChat = {
-                      ...chatToUpdate,
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                      moduleId: messageData.moduleId,
-                      module: messageData.module || chatToUpdate.module,
-                    };
-
-                    // Move it to the top
-                    return [
-                      updatedChat,
-                      ...prevChats.slice(0, chatIndex),
-                      ...prevChats.slice(chatIndex + 1),
-                    ];
-                  }
-
-                  // If neither chat is found, just add the new chat
-                  const newChat = {
-                    id: messageData.chatId,
-                    title: messageData.chatTitle,
-                    updatedAt: messageData.updatedAt,
-                    createdAt: new Date().toISOString(),
-                    moduleId: messageData.moduleId,
-                    module: messageData.module || null,
-                  } as Chat;
-
-                  return [newChat, ...prevChats];
-                } else if (messageData.moduleId) {
-                  // For module chats, ensure we have complete module info
-                  // First check if there's any optimistic chat to replace
-                  const optimisticChatIndex = prevChats.findIndex(
-                    (chat) => chat._isOptimistic === true
-                  );
-
-                  if (optimisticChatIndex !== -1) {
-                    // Find module information
-                    const moduleInfo = modules.find(
-                      (m) => m.id === messageData.moduleId
-                    );
-
-                    // Create module object with complete info
-                    const moduleObject = moduleInfo
-                      ? {
-                          id: messageData.moduleId,
-                          name: moduleInfo.name ?? "Module",
-                          icon: moduleInfo.icon ?? "📚",
-                        }
-                      : null;
-
-                    console.log(
-                      "Module chat update - Module info:",
-                      moduleObject
-                    );
-
-                    // Replace the optimistic chat with the real one
-                    const updatedChat = {
-                      id: messageData.chatId,
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                      createdAt:
-                        prevChats[optimisticChatIndex].createdAt ||
-                        new Date().toISOString(),
-                      moduleId: messageData.moduleId,
-                      module: moduleObject,
-                      _isOptimistic: false,
-                      _currentPath: prevChats[optimisticChatIndex]._currentPath,
-                    } as Chat;
-
-                    return [
-                      updatedChat,
-                      ...prevChats.slice(0, optimisticChatIndex),
-                      ...prevChats.slice(optimisticChatIndex + 1),
-                    ];
-                  }
-
-                  // Otherwise, update the chat list with what we know
-                  const chatIndex = prevChats.findIndex(
-                    (chat) => chat.id === messageData.chatId
-                  );
-
-                  if (chatIndex === -1) {
-                    // If chat not found, add a new entry with module info
-                    const moduleInfo = modules.find(
-                      (m) => m.id === messageData.moduleId
-                    );
-
-                    // Create module object with complete info
-                    const moduleObject = moduleInfo
-                      ? {
-                          id: messageData.moduleId,
-                          name: moduleInfo.name ?? "Module",
-                          icon: moduleInfo.icon ?? "📚",
-                        }
-                      : null;
-
-                    console.log("New module chat - Module info:", moduleObject);
-
-                    const newChat = {
-                      id: messageData.chatId,
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                      createdAt: new Date().toISOString(),
-                      moduleId: messageData.moduleId,
-                      module: moduleObject,
-                      _isOptimistic: false,
-                    } as Chat;
-
-                    return [newChat, ...prevChats];
-                  }
-
-                  // Otherwise update the existing chat with module info
-                  const chatToUpdate = prevChats[chatIndex];
-                  const moduleInfo = modules.find(
-                    (m) => m.id === messageData.moduleId
-                  );
-
-                  // Create module object with complete info
-                  const moduleObject = moduleInfo
-                    ? {
-                        id: messageData.moduleId,
-                        name: moduleInfo.name ?? "Module",
-                        icon: moduleInfo.icon ?? "📚",
-                      }
-                    : chatToUpdate.module;
-
-                  console.log(
-                    "Updating existing module chat - Module info:",
-                    moduleObject
-                  );
-
-                  const updatedChat = {
-                    ...chatToUpdate,
-                    title: messageData.chatTitle,
-                    updatedAt: messageData.updatedAt,
-                    moduleId: messageData.moduleId,
-                    module: moduleObject,
-                  };
-
-                  return [
-                    updatedChat,
-                    ...prevChats.slice(0, chatIndex),
-                    ...prevChats.slice(chatIndex + 1),
-                  ];
-                } else {
-                  // For regular chats just updating title, find the chat
-                  const chatIndex = prevChats.findIndex(
-                    (chat) => chat.id === messageData.chatId
-                  );
-
-                  if (chatIndex !== -1) {
-                    // Update title and move to top
-                    const updatedChat = {
-                      ...prevChats[chatIndex],
-                      title: messageData.chatTitle,
-                      updatedAt: messageData.updatedAt,
-                    };
-
-                    return [
-                      updatedChat,
-                      ...prevChats.slice(0, chatIndex),
-                      ...prevChats.slice(chatIndex + 1),
-                    ];
-                  }
-
-                  // If chat not found, create a new one
-                  const newChat = {
-                    id: messageData.chatId,
-                    title: messageData.chatTitle,
-                    updatedAt: messageData.updatedAt,
-                    createdAt: new Date().toISOString(),
-                    moduleId: null,
-                    module: null,
-                  } as Chat;
-
-                  return [newChat, ...prevChats];
-                }
-              });
-              setChatPagination(prev => ({
-                ...prev,
-                hasMore: prev.hasMore || chats.length >= 20
-              }));
-            } else {
-              // Invalid or incomplete user message data in event
-              refreshChatHistory();
-            }
-          } else if (isEventType(EVENT_TYPES.DATA_MIGRATED, "data.migrated")) {
-            // Data migration event occurred, refresh both modules and chats
-            fetchModules().then((data) => {
-              if (data.modules) {
-                setModules(data.modules);
-              }
-            });
-
-            // Refresh chat history
-            refreshChatHistory();
-          } else {
-            // Unknown event type
-          }
-        } catch (error) {
-          // Log parsing errors
-        }
-      };
-    }
-
-    // Set up a keepalive timer to ensure the connection stays active
-    const keepaliveTimer = setInterval(() => {
-      if (es && es.readyState === EventSource.OPEN) {
-        try {
-          // Send a ping to keep the connection alive
-          let pingUrl = "/api/events/ping";
-          if (!userId) {
-            const sessionId = getOrCreateSessionIdClient();
-            if (sessionId) {
-              pingUrl += `?sessionId=${sessionId}`;
-            }
-          } else {
-            pingUrl += `?userId=${userId}`;
-          }
-
-          fetch(pingUrl, {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          }).catch((pingError) => {
-            // If ping fails, close and reconnect
-            if (es) {
-              es.close();
-              eventSourceRef.current = null;
-            }
-          });
-        } catch (error) {
-          // Error during keepalive ping
-        }
-      } else if (es && es.readyState === EventSource.CLOSED) {
-        // Attempt reconnection
-        try {
-          es.close();
-          eventSourceRef.current = null;
-          const newEs = new EventSource(url, { withCredentials: true });
-          eventSourceRef.current = newEs;
-        } catch (reconnectError) {
-          // Failed to reconnect during keepalive check
-        }
-      }
-    }, 30000);
-
-    // Clean up on unmount or when dependencies change
-    return () => {
-      clearInterval(keepaliveTimer);
-
-      // Always close the EventSource connection on cleanup
-      if (eventSourceRef.current) {
-        try {
-          eventSourceRef.current.close();
-          eventSourceRef.current = null;
-        } catch (error) {
-          // Error closing EventSource during cleanup
-        }
-      }
-    };
-  }, [
-    isLoaded,
-    userId,
-    pathname,
-    router,
-    fetchChats,
-    fetchSingleChat,
-    fetchModules,
-    refreshChatHistory,
-    modules,
-  ]);
-
-  // Listen for custom chat deletion events
-  useEffect(() => {
-    const handleChatDeleted = (event: CustomEvent<{ chatId: string }>) => {
-      const { chatId } = event.detail;
-      setChats((prevChats) => prevChats.filter((chat) => chat.id !== chatId));
-    };
-
-    // Add event listener
-    window.addEventListener("chat-deleted", handleChatDeleted as EventListener);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener(
-        "chat-deleted",
-        handleChatDeleted as EventListener
-      );
-    };
-  }, []);
-
-  // Create a welcome chat for anonymous users
-  const createWelcomeChatForAnonymousUsers = useCallback(async () => {
-    try {
-      const sessionId = getOrCreateSessionIdClient();
-      if (!sessionId) return;
-
-      // Call the welcome chat API
-      const response = await fetch(`/api/chat/welcome?sessionId=${sessionId}`, {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        // Refresh chat history to show the welcome chat
-        refreshChatHistory();
-      }
-    } catch (error) {}
-  }, [refreshChatHistory]);
-
-  // Initial data fetching
-  useEffect(() => {
-    // Load modules and chat history on mount
-    if (isLoaded) {
-      setLoading(true);
-
-      // Fetch modules data
-      fetchModules()
-        .then((data) => {
-          if (data.modules) {
-            setModules(data.modules);
-          }
-        })
-        .catch((error) => {
-          setError("Failed to load modules. Please try again later.");
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-
-      // Use shorter timeout for signed-in users, longer for anonymous
-      const timeoutMs = isSignedIn ? 100 : 300;
-
-      // Fetch chat history with a small delay to ensure auth is settled
-      setTimeout(() => {
-        refreshChatHistory().then(() => {
-          // For anonymous users, ensure they have a welcome chat
-          if (!isSignedIn) {
-            createWelcomeChatForAnonymousUsers();
-          }
-        });
-      }, timeoutMs);
-    }
-  }, [
-    isLoaded,
-    fetchModules,
-    refreshChatHistory,
-    isSignedIn,
-    createWelcomeChatForAnonymousUsers,
-  ]);
-
-  // Get header height for positioning expand button
-  const headerRef = useRef<HTMLDivElement>(null);
-  const [, setHeaderHeight] = useState(0);
-  const [modifierKey, setModifierKey] = useState("⌘");
-
-  // Measure header height on mount and resize
-  useEffect(() => {
-    if (headerRef.current) {
-      setHeaderHeight(headerRef.current.offsetHeight / 2);
-    }
-
-    // Set the modifier key based on OS
-    setModifierKey(getOSModifierKey());
-
-    const updateHeaderHeight = () => {
-      if (headerRef.current) {
-        setHeaderHeight(headerRef.current.offsetHeight / 2);
-      }
-    };
-
-    window.addEventListener("resize", updateHeaderHeight);
-    return () => window.removeEventListener("resize", updateHeaderHeight);
-  }, []);
+    // Convert the Redis Chat format to the format expected by ChatHistory component
+    const convertedChats = redisChats.map((chat) => ({
+      ...chat,
+      createdAt:
+        typeof chat.createdAt === "string"
+          ? chat.createdAt
+          : chat.createdAt.toISOString(),
+      updatedAt:
+        typeof chat.updatedAt === "string"
+          ? chat.updatedAt
+          : chat.updatedAt.toISOString(),
+    }));
+
+    // Now set the chats with the correct type
+    setChats(convertedChats);
+    setChatPagination(redisChatsPagination);
+    setLoadingChats(loadingRedisChats);
+  }, [redisChats, redisChatsPagination, loadingRedisChats]);
 
   // Handle module click - this clarifies why we're tracking activeModuleId
   const handleModuleClick = (
@@ -1313,20 +227,49 @@ function ClientSidebarContent({
   };
 
   // Modified to handle creating a new chat properly with sidebar highlighting
-  const handleNewChat = () => {
-    // Check if we're already on a new chat page to prevent duplicates
-    if (pathname === "/chat" || pathname.endsWith("/chat")) {
-      // If we're already on a chat page, just refresh the router
-      router.refresh();
+  const handleNewChat = useCallback(() => {
+    // Check if there's already a New Chat in the sidebar (optimistic chat)
+    const hasExistingNewChat = chats.some(
+      (chat) => chat._isOptimistic === true || chat.title === "New Chat"
+    );
+
+    if (hasExistingNewChat) {
+      // If there's already a new chat, just navigate to /chat
+      if (activeModuleId) {
+        // Find the module for navigation
+        const module = modules.find((m) => m.id === activeModuleId);
+        if (module) {
+          const encodedName = encodeModuleSlug(module.name);
+          router.push(`/${encodedName}/chat`);
+          return;
+        }
+      }
+
+      // Navigate to basic chat route
+      router.push("/chat");
       return;
     }
 
-    // Regular chat context - always go to main chat, not module-specific
-    router.push("/chat");
+    // Otherwise, if no existing new chat, create one
+    const params: any = {};
 
-    // We're removing the optimistic chat creation here
-    // The chat will be added to history only after first message is sent
-  };
+    // If we're in a module context, add the moduleId
+    if (activeModuleId) {
+      params.moduleId = activeModuleId;
+
+      // Add module info if available
+      const module = modules.find((m) => m.id === activeModuleId);
+      if (module) {
+        params.module = {
+          id: module.id,
+          name: module.name,
+          icon: module.icon,
+        };
+      }
+    }
+
+    redisStartNewChat(params);
+  }, [activeModuleId, modules, redisStartNewChat, chats, router]);
 
   // Now let's add the optimistic UI update functionality
   // This function will be used to add a new chat to the list immediately when user creates one
@@ -1379,9 +322,9 @@ function ClientSidebarContent({
           return [optimisticChat, ...prevChats];
         }
       });
-      setChatPagination(prev => ({
+      setChatPagination((prev) => ({
         ...prev,
-        hasMore: prev.hasMore || chats.length >= 20
+        hasMore: prev.hasMore || chats.length >= 20,
       }));
 
       return optimisticChat.id;
@@ -1483,6 +426,99 @@ function ClientSidebarContent({
       }
     };
   }, [addOptimisticChat, chats]);
+
+  // Handle load more chats
+  const handleLoadMoreChats = useCallback(
+    async (cursor: string) => {
+      // Just delegate to the Redis implementation
+      return loadMoreRedisChats(cursor);
+    },
+    [loadMoreRedisChats]
+  );
+
+  // Handle delete chat
+  const handleDeleteChat = useCallback(
+    async (chatId: string) => {
+      return redisRemoveChat(chatId);
+    },
+    [redisRemoveChat]
+  );
+
+  // Get header height for positioning expand button
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [, setHeaderHeight] = useState(0);
+  const [modifierKey, setModifierKey] = useState("⌘");
+
+  // Measure header height on mount and resize
+  useEffect(() => {
+    if (headerRef.current) {
+      setHeaderHeight(headerRef.current.offsetHeight / 2);
+    }
+
+    // Set the modifier key based on OS
+    setModifierKey(getOSModifierKey());
+
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight / 2);
+      }
+    };
+
+    window.addEventListener("resize", updateHeaderHeight);
+    return () => window.removeEventListener("resize", updateHeaderHeight);
+  }, []);
+
+  // Initial data fetching
+  useEffect(() => {
+    // Load modules and chat history on mount
+    if (isLoaded) {
+      setLoading(true);
+
+      // Fetch modules data
+      fetchModules()
+        .then((data) => {
+          if (data.modules) {
+            setModules(data.modules);
+          }
+        })
+        .catch((error) => {
+          setError("Failed to load modules. Please try again later.");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+
+      // Use shorter timeout for signed-in users, longer for anonymous
+      const timeoutMs = isSignedIn ? 100 : 300;
+
+      // Fetch chat history with a small delay to ensure auth is settled
+      setTimeout(() => {
+        // Convert the Redis Chat format to the format expected by ChatHistory component
+        const convertedChats = redisChats.map((chat) => ({
+          ...chat,
+          createdAt:
+            typeof chat.createdAt === "string"
+              ? chat.createdAt
+              : chat.createdAt.toISOString(),
+          updatedAt:
+            typeof chat.updatedAt === "string"
+              ? chat.updatedAt
+              : chat.updatedAt.toISOString(),
+        }));
+
+        setChats(convertedChats);
+        setChatPagination(redisChatsPagination);
+        setLoadingChats(loadingRedisChats);
+      }, timeoutMs);
+    }
+  }, [
+    isLoaded,
+    fetchModules,
+    redisChats,
+    redisChatsPagination,
+    loadingRedisChats,
+    isSignedIn,
+  ]);
 
   // Return the new sidebar component structure
   return (
@@ -1617,7 +653,7 @@ function ClientSidebarContent({
               chats={chats}
               loading={loadingChats}
               maxWidth={isMobile ? "270px" : "240px"}
-              onLoadMore={loadMoreChats}
+              onLoadMore={handleLoadMoreChats}
               pagination={chatPagination}
             />
           </div>

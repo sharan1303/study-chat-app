@@ -45,10 +45,21 @@ export default async function ChatPage(props: {
     },
   });
 
-  // Parse messages if chat exists
-  const initialMessages = chat?.messages
-    ? JSON.parse(JSON.stringify(chat.messages))
+  // Fetch messages separately
+  const messages = chat
+    ? await prisma.message.findMany({
+        where: {
+          chatId: chat.id,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      })
     : [];
+
+  // Parse messages if chat exists
+  const initialMessages =
+    messages.length > 0 ? JSON.parse(JSON.stringify(messages)) : [];
 
   return (
     <Suspense fallback={<ChatPageLoading />}>

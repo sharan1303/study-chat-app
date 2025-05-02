@@ -6,6 +6,10 @@ export function broadcastEvent(
   data: EventData,
   targetIds?: string[]
 ) {
+  // SSE is disabled for testing - this is a no-op function
+  return;
+
+  /* Original implementation commented out
   if (!global.sseClients || global.sseClients.length === 0) {
     return;
   }
@@ -45,14 +49,20 @@ export function broadcastEvent(
       }
     }
   });
+  */
 }
 
 // Function to set up the broadcast event - to be called from the route.ts file
 export function setupBroadcastEvent() {
+  // SSE is disabled for testing - this is a no-op function
+  return;
+
+  /* Original implementation commented out
   // Make broadcastEvent available globally
   if (typeof global !== "undefined") {
     global.broadcastEvent = broadcastEvent;
   }
+  */
 }
 
 // Add TypeScript declaration
