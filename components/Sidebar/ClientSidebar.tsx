@@ -304,13 +304,12 @@ function ClientSidebarContent({
         module:
           moduleId && moduleInfo
             ? {
-                id: moduleId,
-                name: moduleInfo?.name ?? "Module",
-                icon: moduleInfo?.icon ?? "📚",
+                id: moduleInfo.id,
+                name: moduleInfo.name,
+                icon: moduleInfo.icon,
               }
             : null,
-        _isOptimistic: true, // Mark as optimistic to replace when real data arrives
-        _currentPath: currentPath, // Store the current path for active state
+        _isOptimistic: true, // Mark as optimistic for later replacement
       };
 
       setChats((prevChats) => {
@@ -426,6 +425,62 @@ function ClientSidebarContent({
       }
     };
   }, [addOptimisticChat, chats]);
+
+  // Function to add a new chat or replace an optimistic chat with a real one
+  const syncNewChat = useCallback(
+    (chat: Chat) => {
+      console.log("Syncing new chat:", chat.id, chat.title);
+      // Check if this chat already exists (by ID)
+      const existingIndex = chats.findIndex((c) => c.id === chat.id);
+
+      if (existingIndex !== -1) {
+        // Replace the existing chat
+        const updatedChats = [...chats];
+        updatedChats[existingIndex] = {
+          ...chat,
+          createdAt:
+            typeof chat.createdAt === "string"
+              ? chat.createdAt
+              : new Date(chat.createdAt).toISOString(),
+          updatedAt:
+            typeof chat.updatedAt === "string"
+              ? chat.updatedAt
+              : new Date(chat.updatedAt).toISOString(),
+        };
+        setChats(updatedChats);
+      } else {
+        // Add as a new chat at the beginning of the list
+        const newChat = {
+          ...chat,
+          createdAt:
+            typeof chat.createdAt === "string"
+              ? chat.createdAt
+              : new Date(chat.createdAt).toISOString(),
+          updatedAt:
+            typeof chat.updatedAt === "string"
+              ? chat.updatedAt
+              : new Date(chat.updatedAt).toISOString(),
+        };
+        setChats((prevChats) => [newChat, ...prevChats]);
+      }
+    },
+    [chats]
+  );
+
+  // Expose the sync function to the window object for direct access from other components
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // @ts-ignore - Adding properties to window
+      window.__syncNewChat = syncNewChat;
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        // @ts-ignore - Cleanup
+        delete window.__syncNewChat;
+      }
+    };
+  }, [syncNewChat]);
 
   // Handle load more chats
   const handleLoadMoreChats = useCallback(

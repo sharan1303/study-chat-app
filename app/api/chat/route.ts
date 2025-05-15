@@ -19,6 +19,7 @@ import {
   createGeneralSystemPrompt,
   createModuleSystemPrompt,
 } from "@/lib/prompts";
+import { storeChat } from "@/lib/redis";
 
 import { azure } from "@ai-sdk/azure";
 
@@ -79,7 +80,8 @@ export async function POST(request: Request) {
       isWebSearch: body.webSearch === true,
     });
 
-    const { messages, chatId, moduleId } = body;
+    const { messages, moduleId } = body;
+    const chatId = body.chatId || null;
     const sessionId = body.sessionId || null;
     const optimisticChatId = body.optimisticChatId || null;
     // Extract experimental_attachments if available
@@ -104,6 +106,10 @@ export async function POST(request: Request) {
       chatId && chatId !== "new" && chatId !== ""
         ? chatId
         : optimisticChatId || generateId();
+
+    console.log(
+      `Chat ID resolution: Provided chatId=${chatId}, optimisticChatId=${optimisticChatId}, final requestedChatId=${requestedChatId}`
+    );
 
     console.log(
       `Processing chat request: ID=${requestedChatId}, sessionId=${sessionId}, optimisticId=${optimisticChatId}, userId=${userId}, shouldSaveHistory=${shouldSaveHistory}`
@@ -541,39 +547,16 @@ export async function POST(request: Request) {
           // Save chat history for authenticated users or anonymous users with sessionId
           if (shouldSaveHistory && (userId || sessionId)) {
             try {
-              // For saving to database, simplify messages to string content
-              const simplifiedMessages = processedMessages.map(
-                (message: Message) => {
-                  if (typeof message.content === "string") {
-                    return { role: message.role, content: message.content };
-                  }
-
-                  // For multi-part content, extract text and create a simple note about attachments
-                  let textContent = "";
-                  let hasAttachments = false;
-
-                  if (Array.isArray(message.content)) {
-                    // Safe to use as ContentArray since we validate the array
-                    const contentArray = message.content as ContentArray;
-                    const textPart = contentArray.find(
-                      (c) => c.type === "text"
-                    ) as TextPart | undefined;
-                    textContent = textPart?.text || "";
-                    hasAttachments = contentArray.some(
-                      (c) => c.type === "file"
-                    );
-                  }
-
-                  return {
-                    role: message.role,
-                    content: hasAttachments
-                      ? `${textContent}\n[This message included file attachments]`
-                      : textContent,
-                  };
+              // Create a new chat in the database
+              console.log(
+                `Creating chat in database with ID: ${requestedChatId}, title: ${chatTitle}`,
+                {
+                  userId,
+                  sessionId,
+                  optimisticId: optimisticChatId,
                 }
               );
 
-              // Prepare data for creation
               const chatData: {
                 id: string;
                 title: string;
@@ -593,7 +576,7 @@ export async function POST(request: Request) {
 
               // Set up the messages relationship
               chatData.messages = {
-                create: simplifiedMessages
+                create: processedMessages
                   .concat([{ role: "assistant", content: finalText }])
                   .map((msg: { role: string; content: string }) => ({
                     role: msg.role,
@@ -614,184 +597,69 @@ export async function POST(request: Request) {
                 oldTimestamp.setFullYear(oldTimestamp.getFullYear() - 1);
               }
 
-              const savedChat = await prisma.chat.upsert({
+              const chat = await prisma.chat.upsert({
                 where: { id: requestedChatId },
                 update: {
                   title: chatTitle,
                   updatedAt: new Date(),
-                  // Add assistant's response as a new message
-                  messages: {
-                    create: {
-                      id: generateId(),
-                      role: "assistant",
-                      content: finalText,
-                    },
-                  },
+                  moduleId,
                 },
-                create: {
-                  id: requestedChatId,
-                  title: chatTitle,
-                  moduleId: moduleId,
-                  createdAt: forceOldest ? oldTimestamp : new Date(),
-                  updatedAt: forceOldest ? oldTimestamp : new Date(),
-                  ...(userId ? { userId } : {}),
-                  ...(sessionId && !userId ? { sessionId } : {}),
-                  // Create all messages using the nested create
-                  messages: {
-                    create: simplifiedMessages
-                      .concat([{ role: "assistant", content: finalText }])
-                      .map((msg: { role: string; content: string }) => ({
-                        id: generateId(),
-                        role: msg.role,
-                        content: msg.content,
-                      })),
-                  },
-                },
+                create: chatData,
               });
 
-              // Determine if this was a new chat by comparing timestamps
-              // If timestamps are equal (accounting for millisecond precision differences),
-              // or this was forced as oldest, then it's a new chat
-              const isNewChat =
-                forceOldest ||
-                Math.abs(
-                  savedChat.createdAt.getTime() - savedChat.updatedAt.getTime()
-                ) < 1000;
+              // Store in Redis for faster access
+              try {
+                await storeChat(chatData);
+              } catch (redisError) {
+                console.error("Redis storage error:", redisError);
+                // Continue - Redis failure is non-critical
+              }
 
-              // Only broadcast for new chats
-              if (isNewChat) {
-                // Create single chat creation event
-                const chatEventData: {
-                  id: string;
-                  title: string;
-                  moduleId: string | null;
-                  createdAt: Date;
-                  updatedAt: Date;
-                  sessionId: string | null;
-                  optimisticChatId?: string;
-                  module: { id: string; name: string; icon: string } | null;
-                } = {
-                  id: savedChat.id,
-                  title: savedChat.title,
-                  moduleId: savedChat.moduleId,
-                  createdAt: savedChat.createdAt,
-                  updatedAt: savedChat.updatedAt,
-                  sessionId: sessionId,
-                  // Include optimisticChatId if it was provided, to help client replace the optimistic chat
-                  optimisticChatId: optimisticChatId,
-                  // Include module info if available
-                  module: null, // Will be populated below
-                };
-
-                // Get module info if this is a module chat
-                if (savedChat.moduleId) {
-                  try {
-                    const moduleData = await getModuleMeta(savedChat.moduleId);
-
-                    if (moduleData) {
-                      chatEventData.module = moduleData;
+              // Refresh cache in Redis for new or updated chat
+              setTimeout(async () => {
+                try {
+                  // First check if the module exists and get its metadata
+                  let moduleInfo = null;
+                  if (moduleId) {
+                    try {
+                      moduleInfo = await getModuleMeta(moduleId);
+                    } catch (moduleError) {
+                      console.error("Error fetching module metadata:", moduleError);
                     }
-                  } catch (err) {
-                    console.error(
-                      "Error fetching module details for chat.created event:",
-                      err
-                    );
                   }
-                }
-
-                // Determine target ID for broadcast
-                const targetId = userId || sessionId;
-
-                if (targetId) {
-                  broadcastChatCreated(chatEventData, [targetId]);
-                } else {
-                  console.warn(
-                    "No target ID found for broadcasting chat.created event"
+                  
+                  // Create the event data object with all required properties
+                  const chatEventData = {
+                    id: requestedChatId,
+                    title: chatTitle,
+                    moduleId: moduleId,
+                    createdAt: new Date(),
+                    // Don't include updatedAt in the broadcast data
+                    sessionId,
+                    optimisticChatId,
+                    module: moduleInfo
+                  };
+                  
+                  // Determine the target for the broadcast
+                  const targetId = userId || sessionId;
+                  if (!targetId) {
+                    console.warn("No target ID for broadcasting chat events");
+                    return;
+                  }
+                  
+                  // Send the event
+                  await broadcastChatCreated(chatEventData, [targetId]);
+                  
+                  console.log(
+                    `Broadcast chat created event for chat ${requestedChatId} to user/session ${targetId}`
+                  );
+                } catch (broadcastError) {
+                  console.error(
+                    "Error broadcasting chat created event:",
+                    broadcastError
                   );
                 }
-              } else {
-                console.log(
-                  "Chat already exists, not sending chat.created event"
-                );
-
-                // TEMPORARY FIX: Also send chat.created for existing chats to help debug
-                const chatEventData: {
-                  id: string;
-                  title: string;
-                  moduleId: string | null;
-                  createdAt: Date;
-                  updatedAt: Date;
-                  sessionId: string | null;
-                  optimisticChatId?: string;
-                  module: { id: string; name: string; icon: string } | null;
-                } = {
-                  id: savedChat.id,
-                  title: savedChat.title,
-                  moduleId: savedChat.moduleId,
-                  createdAt: savedChat.createdAt,
-                  updatedAt: savedChat.updatedAt,
-                  sessionId: sessionId,
-                  optimisticChatId: optimisticChatId,
-                  module: null, // Will be populated below
-                };
-
-                // Get module info if this is a module chat
-                if (savedChat.moduleId) {
-                  try {
-                    const moduleData = await getModuleMeta(savedChat.moduleId);
-
-                    if (moduleData) {
-                      chatEventData.module = moduleData;
-                    }
-                  } catch (err) {
-                    console.error(
-                      "Error fetching module details for existing chat:",
-                      err
-                    );
-                  }
-                }
-
-                const targetId = userId || sessionId;
-                if (targetId) {
-                  broadcastChatCreated(chatEventData, [targetId]);
-                }
-
-                // For existing chats, always broadcast message created event
-                try {
-                  // Get any module details if this is a module chat
-                  let moduleDetails = null;
-                  if (savedChat.moduleId) {
-                    try {
-                      moduleDetails = await getModuleMeta(savedChat.moduleId);
-                    } catch (err) {
-                      console.error(
-                        "Error fetching module details for event:",
-                        err
-                      );
-                    }
-                  }
-
-                  const messageData = {
-                    id: generateId(),
-                    chatId: savedChat.id,
-                    chatTitle: savedChat.title,
-                    updatedAt: savedChat.updatedAt.toISOString(),
-                    moduleId: savedChat.moduleId,
-                    // Include optimistic chat ID if it was provided
-                    optimisticChatId: optimisticChatId,
-                    // Include module info if available for better client-side handling
-                    module: moduleDetails,
-                  };
-
-                  const targetId = userId || sessionId;
-
-                  if (targetId) {
-                    broadcastMessageCreated(messageData, [targetId]);
-                  }
-                } catch (error) {
-                  console.error("Error broadcasting message creation:", error);
-                }
-              }
+              }, 100); // Slight delay to prevent blocking
             } catch (error) {
               console.error("Error saving chat history:", error);
             }
@@ -804,6 +672,10 @@ export async function POST(request: Request) {
       const headers = new Headers(response.headers);
       headers.set("x-model-used", modelDisplayName);
       headers.set("x-web-search-used", useWebSearch ? "true" : "false");
+      // Add the chat ID to help client synchronize
+      headers.set("x-chat-id", requestedChatId);
+      // Also add the chat title to help with sidebar synchronization
+      headers.set("x-chat-title", chatTitle);
 
       // After processing the chat message, add logging before returning the stream
       console.log(

@@ -15,9 +15,13 @@ Study Chat provides an intelligent chat interface where students can:
 
 Using Vercel AI SDK to power conversations with AI models, it provides a good selection of models to use with a clean, modern UI built with shadcn/ui components.
 
-[Production deployment can be found here at Study Chat App](https://study-chat-app.vercel.app/)
+[Production deployment can be found here at Study Chat App](https://mystudy.chat/)
 
-## Features
+## Modules
+
+A module is context to add to the chat. You can create modules for different subjects or topics you are studying and reference them into the chat when needed.
+
+
 
 **Module Management**: Create, edit, and organise your chats into categories called modules with custom icons\
 **AI Chat Interface**: Engage in natural conversations with AI about your study materials\
@@ -76,11 +80,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 The app uses the following environment variables:
 
 - `CLERK_SECRET_KEY`: For authentication with Clerk
+- `CLERK_WEBHOOK_SECRET`: For authentication with Clerk
 - `CLERK_PUBLISHABLE_KEY`: For authentication with Clerk
-- `DATABASE_URL`: Your PostgreSQL connection string
-- `DIRECT_URL`: Direct URL to your PostgreSQL database (required for Prisma)
-- `GOOGLE_AI_API_KEY`: Google AI API key for Gemini models
-- `OPENAI_API_KEY`: OpenAI API key for GPT models
+- `DATABASE_URL`: Your PostgreSQL connection string (direct url)
+- `GOOGLE_GENERATIVE_AI_API_KEY`: Google AI API key for Gemini models
+- `AZURE_BASE_URL`: Azure OpenAI base URL for GPT models
+- `AZURE_API_KEY`: Azure OpenAI API key for GPT models
 
 ### Setting Up API Keys
 

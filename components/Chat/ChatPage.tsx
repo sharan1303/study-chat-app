@@ -211,47 +211,126 @@ export default function ChatPage({
         chatId: chatId,
         isAuthenticated: isAuthenticated,
       },
-      onResponse: (response: Response) => {
+      onResponse: async (response: Response) => {
+        console.log("API response received:", response.status, response.ok);
+
         // Try to extract model information from headers if available
         const modelHeader = response.headers.get("x-model-used");
         if (modelHeader) {
           setModelName(modelHeader);
         }
 
-        // Only update URL with chat ID for authenticated users
-        if (isAuthenticated) {
+        // Get the chat ID from the response headers if available
+        const responseChatId = response.headers.get("x-chat-id");
+        // Also get the chat title from headers if available
+        const responseChatTitle = response.headers.get("x-chat-title");
+
+        if (responseChatId) {
+          console.log("Received chat ID from API response:", responseChatId);
+          console.log(
+            "Received chat title from API response:",
+            responseChatTitle
+          );
+
+          // If we have a new chat ID from the server, update our state
+          if (optimisticChatId && responseChatId !== optimisticChatId) {
+            setOptimisticChatId(responseChatId);
+          }
+
+          // Update displayed title if we get one from the server
+          if (responseChatTitle) {
+            setDisplayTitle(responseChatTitle);
+          }
+
+          // Directly sync the new chat with the sidebar if this was a new chat
+          if (typeof window !== "undefined" && (window as any).__syncNewChat) {
+            // Create a minimal chat object to sync with the sidebar
+            const syncChat = {
+              id: responseChatId,
+              title:
+                responseChatTitle || displayTitle || initialTitle || "New Chat",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              moduleId: activeModule,
+              module:
+                activeModule && moduleDetails
+                  ? {
+                      id: moduleDetails.id,
+                      name: moduleDetails.name,
+                      icon: moduleDetails.icon || "\ud83d\udcda",
+                    }
+                  : null,
+            };
+
+            // Call the sidebar's sync function directly
+            console.log(
+              "Directly syncing new chat with sidebar:",
+              syncChat.id,
+              "title:",
+              syncChat.title
+            );
+            (window as any).__syncNewChat(syncChat);
+
+            // No longer the first message after we've created the chat
+            setIsFirstMessage(false);
+          }
+        }
+
+        // Only update URL with chat ID for authenticated users and only after a successful response
+        if (isAuthenticated && response.ok) {
           // Update URL to include the chat ID after user sends a message
           const currentPath = window.location.pathname;
+          const targetChatId = responseChatId || optimisticChatId || chatId;
 
-          // If we have an optimistic chat ID and we're on the base chat page
-          if (
-            optimisticChatId &&
-            (currentPath === "/chat" || !chatId || chatId === "")
-          ) {
-            router.replace(`/chat/${optimisticChatId}`, { scroll: false });
-            return;
-          }
+          // Only proceed if we have a valid chat ID
+          if (targetChatId) {
+            console.log("Updating URL with chat ID:", targetChatId);
 
-          // Skip URL update if chatId doesn't exist or is empty
-          if (!chatId || chatId === "") {
-            return;
-          }
+            // If we're on the base chat page, update the URL
+            if (currentPath === "/chat" || !currentPath.includes("/chat/")) {
+              // Update the URL without triggering a navigation
+              if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, "", `/chat/${targetChatId}`);
+                console.log(
+                  "Updated URL without navigation to preserve messages"
+                );
+              }
 
-          // Make sure chatId is defined before updating URL
-          if (currentPath === "/chat" && !activeModule) {
-            // Only update URL if we're on the main chat page and not in a module
-            router.replace(`/chat/${chatId}`, { scroll: false });
-          } else if (activeModule && moduleDetails) {
-            // For module chats, update URL to the proper format
-            const encodedName = encodeModuleSlug(moduleDetails.name);
+              // Force sidebar to update via window event if available
+              if (typeof window !== "undefined") {
+                // 1. chatCreated - this is what the sidebar is listening for
+                const chatCreatedEvent = new CustomEvent("chatCreated", {
+                  detail: { chatId: targetChatId },
+                });
+                window.dispatchEvent(chatCreatedEvent);
 
-            // More flexible path handling for module chats
-            // This will work for both initial module chat pages and existing chat pages
-            if (currentPath.includes(`/${encodedName}/chat`)) {
-              // Check if we need to update the URL (if it doesn't already contain the chat ID)
-              if (!currentPath.endsWith(`/${chatId}`)) {
-                const newPath = `/${encodedName}/chat/${chatId}`;
-                router.replace(newPath, { scroll: false });
+                // 2. refreshChatList - as a backup
+                const refreshEvent = new CustomEvent("refreshChatList", {
+                  detail: { chatId: targetChatId, forceRefresh: true },
+                });
+                window.dispatchEvent(refreshEvent);
+
+                console.log(
+                  "Dispatched chat update events for chat ID:",
+                  targetChatId
+                );
+              }
+            } else if (activeModule && moduleDetails) {
+              // For module chats, update URL to the proper format
+              const encodedName = encodeModuleSlug(moduleDetails.name);
+
+              if (encodedName) {
+                // Check if we need to update the URL (if it doesn't already contain the chat ID)
+                if (!currentPath.endsWith(`/${targetChatId}`)) {
+                  const newPath = `/${encodedName}/chat/${targetChatId}`;
+                  // Use the same history.replaceState approach to avoid navigation
+                  if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, "", newPath);
+                    console.log(
+                      "Updated module chat URL without navigation to preserve messages"
+                    );
+                  }
+                }
               }
             }
           }
@@ -393,22 +472,21 @@ export default function ChatPage({
       // Store the optimistic ID for updating the URL later
       setOptimisticChatId(generatedOptimisticId);
 
-      // Update URL immediately for new chats
-      if (
-        isAuthenticated &&
-        generatedOptimisticId &&
-        (chatId === "" || chatId === "new" || !chatId)
-      ) {
-        router.replace(`/chat/${generatedOptimisticId}`, { scroll: false });
-      }
-
       // No longer the first message
       setIsFirstMessage(false);
       hasUpdatedTitle.current = true;
     }
 
     // Build the request body with dynamic parameters
-    const bodyParams = {
+    const bodyParams: {
+      moduleId: string | null;
+      sessionId: string | null | undefined;
+      title: string | undefined;
+      forceOldest: boolean;
+      optimisticChatId: string | null;
+      saveHistory: boolean;
+      chatId?: string;
+    } = {
       moduleId: activeModule,
       sessionId: !isAuthenticated ? sessionId : undefined,
       title: displayTitle || initialTitle,
@@ -420,7 +498,7 @@ export default function ChatPage({
 
     // Ensure we have a valid chatId for new chats
     // If we're on an empty chatId and have no optimistic ID, generate one
-    if ((chatId === "" || !chatId) && !optimisticChatId) {
+    if ((chatId === "" || chatId === "new" || !chatId) && !optimisticChatId) {
       // Create a temporary ID using uuid if available, or timestamp
       const tempId =
         typeof crypto !== "undefined" && crypto.randomUUID
@@ -434,16 +512,19 @@ export default function ChatPage({
 
       // Add it to the request
       bodyParams.optimisticChatId = tempId;
+      bodyParams.chatId = tempId; // Also set as chatId to ensure consistency
 
-      // Update URL immediately for authenticated users
-      if (isAuthenticated) {
-        router.replace(`/chat/${tempId}`, { scroll: false });
-      }
+      // Don't navigate yet - wait for the API response
+    } else if (optimisticChatId) {
+      // Ensure we're always including the optimistic ID if it exists
+      bodyParams.optimisticChatId = optimisticChatId;
+      bodyParams.chatId = chatId || optimisticChatId; // Use existing chatId or optimisticChatId
     }
 
     console.log("Submitting with body params:", bodyParams);
 
     // Pass dynamic body parameters with this specific submission
+    // We'll rely on the onResponse callback to handle navigation
     handleSubmit(e as React.FormEvent<HTMLFormElement>, {
       body: bodyParams,
     });
