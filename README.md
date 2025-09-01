@@ -1,17 +1,17 @@
 # Study Chat - AI-Powered Personal Study Assistant
 
-AI-powered study assistant application built with Next.js and Vercel AI SDK helping students learn and understand their university subjects through organised and interactive chat conversations.
+AI-powered study assistant application built with Next.js and Vercel AI SDK helping students upload, organise and query their study materials through interactive AI chats.
 
 ## Project Overview
 
-Study Chat provides an intelligent chat interface where students can:
+Study Chat provides a chat interface where students can:
 
-- Study with AI assistants specialized for different modules
-- Upload lecture notes and study materials
-- Ask questions about specific selected documents
-- Search the internet for additional resources
+- Preconfigure agents system prompts with user defined context
+- Upload PDF, Word documents
+- Query uploaded documents
+- Web Search
 - Filter sources for academic papers
-- Categorise conversations and documents into modules to reflect their curriculum
+- Organise conversations and documents into modules (folders) to reflect their curriculum
 
 Using Vercel AI SDK to power conversations with AI models, it provides a good selection of models to use with a clean, modern UI built with shadcn/ui components.
 
