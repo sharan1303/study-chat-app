@@ -1,14 +1,13 @@
 import { google } from "@ai-sdk/google";
 import { createAzure } from "@ai-sdk/azure";
+import type { LanguageModel } from "ai";
 
 /**
  * Map of supported AI model IDs to their display names
  */
 export const SUPPORTED_MODELS = {
-  "gemini-2.0-flash": "Gemini 2.0 Flash",
-  "gemini-2.0-flash-lite": "Gemini 2.0 Flash Lite",
-  "gemini-2.5-flash-preview-04-17": "Gemini 2.5 Flash Preview",
-  "gpt-4o-mini": "GPT-4o mini"
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gpt-5.1-mini": "GPT-5.1 mini"
 } as const;
 
 /**
@@ -25,10 +24,8 @@ export type Provider = "google" | "azure";
  * Lookup for which provider supports which model ID
  */
 export const MODEL_TO_PROVIDER: Record<ModelId, Provider> = {
-  "gemini-2.0-flash": "google",
-  "gemini-2.0-flash-lite": "google",
-  "gemini-2.5-flash-preview-04-17": "google",
-  "gpt-4o-mini": "azure",
+  "gemini-2.5-flash": "google",
+  "gpt-5.1-mini": "azure",
 };
 
 /**
@@ -53,7 +50,7 @@ export const AVAILABLE_MODELS: AvailableModel[] = Object.entries(
  * Get the default model ID
  */
 export function getDefaultModelId(): ModelId {
-  return "gemini-2.0-flash";
+  return "gemini-2.5-flash";
 }
 
 /**
@@ -66,7 +63,7 @@ export function getDefaultModelId(): ModelId {
 export function getInitializedModel(
   modelId: string,
   useWebSearch: boolean = false
-) {
+): { model: LanguageModel; displayName: string } {
   // Default fallback model
   const defaultModelId = getDefaultModelId();
 
@@ -79,7 +76,7 @@ export function getInitializedModel(
     SUPPORTED_MODELS[actualModelId as ModelId] ||
     SUPPORTED_MODELS[defaultModelId];
 
-  let mainModel;
+  let mainModel: LanguageModel;
 
   try {
     // Get provider for this model
@@ -94,9 +91,14 @@ export function getInitializedModel(
     // Initialize model based on provider
     switch (provider) {
       case "google":
-        mainModel = google(actualModelId, {
-          useSearchGrounding: useWebSearch,
-        });
+        {
+          // Check if API key is available
+          if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+            throw new Error("GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set. Please add it to your .env.local file.");
+          }
+          // The google() function automatically reads from GOOGLE_GENERATIVE_AI_API_KEY env var
+          mainModel = google(actualModelId);
+        }
         break;
 
       case "azure":
@@ -104,7 +106,7 @@ export function getInitializedModel(
           const azure = createAzure({
             baseURL: process.env.AZURE_BASE_URL,
             apiKey: process.env.AZURE_API_KEY,
-            apiVersion: "2023-03-15-preview",
+            apiVersion: "2024-04-01-preview",
           });
         mainModel = azure(actualModelId);
         }
@@ -125,9 +127,14 @@ export function getInitializedModel(
     // Initialize fallback model
     switch (fallbackProvider) {
       case "google":
-        mainModel = google(defaultModelId, {
-          useSearchGrounding: useWebSearch,
-        });
+        {
+          // Check if API key is available
+          if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+            throw new Error("GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set. Please add it to your .env.local file.");
+          }
+          // The google() function automatically reads from GOOGLE_GENERATIVE_AI_API_KEY env var
+          mainModel = google(defaultModelId);
+        }
         break;
       case "azure":
         {
@@ -136,6 +143,7 @@ export function getInitializedModel(
             apiKey: process.env.AZURE_API_KEY,
             apiVersion: "2023-03-15-preview",
           });
+        // V2 API: azure() returns LanguageModelV2 natively
         mainModel = azure(defaultModelId);
         }
         break;

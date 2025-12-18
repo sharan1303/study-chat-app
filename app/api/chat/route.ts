@@ -1,4 +1,4 @@
-import { Message, streamText } from "ai";
+import { streamText, CoreMessage } from "ai";
 import { getModuleContext } from "@/lib/modules";
 import {
   getInitializedModel,
@@ -183,7 +183,7 @@ export async function POST(request: Request) {
     }
 
     // Process messages for content extraction and format adjustment
-    let processedMessages = messages.map((message: Message) => {
+    let processedMessages = messages.map((message: CoreMessage) => {
       // For all messages, just return as is - we'll handle content type differences when needed
       return message;
     });
@@ -327,14 +327,14 @@ export async function POST(request: Request) {
     }
 
     // Format messages for the model including the system message
-    const formattedMessages: Message[] = [
-      { id: "system", role: "system", content: systemMessage },
+    const formattedMessages: CoreMessage[] = [
+      { role: "system", content: systemMessage },
       ...processedMessages,
     ];
 
     // Create chat title from first user message
     const firstUserMessage = processedMessages.find(
-      (m: Message) => m.role === "user"
+      (m: CoreMessage) => m.role === "user"
     );
     let titleText = "New Chat";
 
@@ -357,11 +357,18 @@ export async function POST(request: Request) {
       const { model: mainModel, displayName: modelDisplayName } =
         getInitializedModel(modelId, useWebSearch);
 
+      // Validate model before using it
+      if (!mainModel) {
+        throw new Error("Failed to initialize AI model");
+      }
+
       // Use the streamText function from the AI SDK
-      const result = streamText({
-        model: mainModel,
-        messages: formattedMessages,
-        temperature: 0.1,
+      let result;
+      try {
+        result = streamText({
+          model: mainModel,
+          messages: formattedMessages,
+          temperature: 0.1,
 
         // tools: {
         //   web_search_preview: azure.tools.webSearchPreview({
@@ -459,7 +466,7 @@ export async function POST(request: Request) {
 
           // Step 1: Always extract file attachments from the last user message
           const lastUserMessage = processedMessages.find(
-            (msg: Message) => msg.role === "user"
+            (msg: CoreMessage) => msg.role === "user"
           );
 
           if (lastUserMessage) {
@@ -512,7 +519,7 @@ export async function POST(request: Request) {
             try {
               // For saving to database, simplify messages to string content
               const simplifiedMessages = processedMessages.map(
-                (message: Message) => {
+                (message: CoreMessage) => {
                   if (typeof message.content === "string") {
                     return { role: message.role, content: message.content };
                   }
@@ -737,10 +744,29 @@ export async function POST(request: Request) {
             }
           }
         },
-      });
+        });
+      } catch (streamError) {
+        console.error("Error calling streamText:", streamError);
+        throw new Error(
+          `Failed to initialize stream: ${
+            streamError instanceof Error ? streamError.message : String(streamError)
+          }`
+        );
+      }
 
-      // Get a data stream response and add model information in the header
-      const response = result.toDataStreamResponse();
+      // Get a text stream response and add model information in the header
+      // Check if result has the toTextStreamResponse method
+      if (!result || typeof result.toTextStreamResponse !== 'function') {
+        console.error("streamText result does not have toTextStreamResponse method:", {
+          resultType: typeof result,
+          resultKeys: result ? Object.keys(result) : 'null',
+          resultConstructor: result?.constructor?.name,
+          result: result
+        });
+        throw new Error("Invalid streamText result: missing toTextStreamResponse method");
+      }
+
+      const response = result.toTextStreamResponse();
       const headers = new Headers(response.headers);
       headers.set("x-model-used", modelDisplayName);
       headers.set("x-web-search-used", useWebSearch ? "true" : "false");
